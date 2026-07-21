@@ -47,6 +47,11 @@ models/*.tjs
 .env.local
 *.local
 
+# ESPHome secrets (template is committed as secrets.yaml.example)
+firmware/secrets.yaml
+firmware/secrets.yaml.*
+!firmware/secrets.yaml.example
+
 # Test artifacts
 .coverage
 .pytest_cache/
