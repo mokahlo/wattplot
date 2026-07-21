@@ -1,6 +1,16 @@
 """
 Wattplot v2 — Materials & hardware reference.
 
+DESIGN RULES (enforced across the model):
+  1. NO MITER CUTS. Every cut is a 90° square cut. Joints are butt, half-lap,
+     or lap. The diagonal brace has square ends that butt into the long rails.
+  2. ALL HARDWARE OFF THE SHELF. Hinges, clamps, bolts, screws, rod, pins.
+     Standard sizes from Home Depot, McMaster, or solar mounting suppliers.
+     No custom-fabricated metal parts.
+  3. SIMPLE COMMON DIMENSIONS. Long members from 8ft stock (96"), cross rails
+     from 2x6x8ft cut to 42", diagonal brace from 2x4x10ft (102"). No
+     fractional-inch stock lengths.
+
 Wood species, actual lumber dimensions, fasteners, metal hardware.
 Single source of truth alongside wattplot_params.py for the physical
 properties that the parametric FreeCAD model uses.

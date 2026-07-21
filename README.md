@@ -6,6 +6,22 @@ wind-load analysis, and a smart-folding controller into a single pipeline.
 
 > **Status:** pre-prototype. The mechanical / structural / aerodynamic design is validated by 3D model + ASCE 7-22 wind calc + geometric shadow raycaster. The smart controller (ESP32-based) and custom PCB are next steps.
 
+## Design rules (enforced)
+
+Three constraints guide every part of the design:
+
+1. **No miter cuts.** Every cut is a 90° square cut. Joints are butt, half-lap, or
+   lap. The diagonal brace has square ends that butt into the long rails — no
+   angled cuts at the corners. (You don't need a miter saw.)
+2. **All hardware off the shelf.** Hinges, panel clamps, bolts, screws, rod, and
+   pins are standard sizes from Home Depot, McMaster, or solar-mounting
+   suppliers (IronRidge / Unirac / Quick Mount). No custom metal parts.
+3. **Simple, common dimensions.** All lumber from standard stock lengths (8 ft,
+   10 ft, 12 ft) with reasonable waste (≤ 18" per board). No fractional-inch
+   stock lengths. The frame: 96" long rails (2x6x8ft, no waste), 42" cross
+   rails (cut from 2x6x8ft, 6" waste), 102" diagonal brace (from 2x4x10ft,
+   18" waste).
+
 ## Interactive 3D model
 
 [**Open the 3D viewer**](https://mokahlo.github.io/wattplot/) — drag to orbit, scroll to zoom. Loads the live STEP-derived STL.

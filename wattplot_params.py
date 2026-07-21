@@ -86,50 +86,65 @@ ACTUATOR = dict(
 # =============================================================================
 # FRAME (lumber perimeter around the panel — replaces the post+beam design)
 # =============================================================================
-# All-wood structural members. The panel is clamped to this frame, the frame
-# is hinged on the bed's south wall, and the actuator pushes the north rail.
-# Hardware (hinges, panel clamps) is metal — see docs/frame.md.
+# Design rules (enforced):
+#   1. NO MITER CUTS — every cut is a 90° square cut. Joints are butt, half-lap,
+#      or lap. The diagonal brace has square ends that butt into the long rails.
+#   2. ALL HARDWARE OFF THE SHELF — hinges, clamps, bolts, screws, rod, pins.
+#      Standard sizes from Home Depot, McMaster, or solar mounting suppliers.
+#   3. SIMPLE COMMON DIMENSIONS — long members from 8ft stock (96"), cross
+#      rails from 2x6x8ft cut to 42", diagonal brace from 2x4x10ft (102").
 #
 # All dimensions in inches. Nominal → actual: 2x4 = 1.5×3.5, 2x6 = 1.5×5.5,
 # 2x12 = 1.5×11.25. Use the actual values for modeling.
 FRAME = dict(
     # Long rails (parallel to panel long axis). 2x6 PT DF, actual 1.5×5.5.
-    # - length_in: runs along the panel's L axis (97" direction)
-    # - thickness_in: 1.5" in the plane of the panel face
-    # - height_in: 5.5" perpendicular to the panel face
+    # length_in = 96" = 8ft stock, no waste. The 97" panel overhangs 0.5" each
+    # end of the rail; clamps grip the panel frame at the ends.
     long_rail=dict(
         nominal="2x6",
         thickness_in=1.5,
         height_in=5.5,
-        length_in=88.5,    # panel_L - 0.5" clearance each end
+        length_in=96.0,
+        source="2x6x8ft, no waste",
         count=2,
     ),
     # Cross rails (perpendicular to long rails). 2x6 PT DF.
-    # - length_in: runs along the panel's W axis (44.6" direction)
+    # length_in = 42" (from 2x6x8ft, 6" waste per board, 2 cross rails per board).
+    # Cross rails butt into the inside faces of the long rails (no miter).
     cross_rail=dict(
         nominal="2x6",
         thickness_in=1.5,
         height_in=5.5,
-        length_in=41.6,    # panel_W - 2*thickness
+        length_in=42.0,
+        source="2x6x8ft cut to 42\", 6\" waste per board",
         count=2,
     ),
-    # Diagonal brace. 2x4 PT DF, only loaded at 90° tilt (keeps frame square).
+    # Diagonal brace. 2x4 PT DF, only loaded at 90° tilt.
+    # length_in = 102" (from 2x4x10ft, 18" waste). Square ends butt into the
+    # inside faces of the long rails — no miter cut at the corners.
     diagonal_brace=dict(
         nominal="2x4",
         thickness_in=1.5,
         height_in=3.5,
-        length_in=50.0,
+        length_in=102.0,
+        source="2x4x10ft, 18\" waste",
     ),
-    # Galvanized butt hinges, 4"×4" leaf, ½" pin. Spaced evenly along hinge axis.
+    # Galvanized butt hinges, 4"×4" leaf, ½" pin (Home Depot / McMaster).
+    # 4 hinges spaced 22" apart along the 88" hinge axis (centered, 4" margin
+    # on each end of the 96" bed wall). A single ½" × 72" steel rod threads
+    # through all 4 hinge knuckles (one continuous pin, off the shelf at HD).
     hinge=dict(
         type="galvanized_butt",
         leaf_in=4.0,
         pin_d_in=0.5,
         count=4,
-        spacing_in=22.0,   # 4 hinges along the 88.5" rail
+        spacing_in=22.0,
+        rod_length_in=72.0,                 # ½" × 72" steel rod (HD)
+        rod_source="Home Depot ½\" × 72\" steel rod",
     ),
     # Aluminum mid-clamps for the panel. 35mm channel fits most 156 half-cell
     # commercial panels. 2 per long rail + 1 per cross rail = 6 total.
+    # IronRidge / Unirac / Quick Mount all make compatible clamps (~$3 each).
     panel_clamp=dict(
         type="aluminum_mid",
         length_in=2.0,
@@ -137,6 +152,7 @@ FRAME = dict(
         thickness_in=0.4,
         per_long_rail=2,
         per_cross_rail=1,
+        source="IronRidge / Unirac mid-clamp, 35mm channel",
     ),
     # Actuator mount blocks. 2x6 PT DF clevis on the north rail of the frame
     # + matching block on the bed's north wall. ½" steel pin between them.

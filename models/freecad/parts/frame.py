@@ -1,13 +1,22 @@
 """
 Frame — 2x6 PT DF perimeter around the panel, plus 2x4 diagonal brace.
 
+Design rules (enforced):
+  1. NO MITER CUTS — all joints butt. Diagonal brace has square ends.
+  2. ALL HARDWARE OFF THE SHELF — standard sizes, see materials.py.
+  3. SIMPLE COMMON DIMENSIONS — long rails 96" (2x6x8ft, no waste),
+     cross rails 42" (cut from 2x6x8ft, 6" waste per board), diagonal brace
+     102" (cut from 2x4x10ft, 18" waste).
+
 Geometry at 0° tilt (panel flat over the bed):
-  - Frame interior: 97" (X) × 44.6" (Z) — matches the panel outer dims
-  - Long rails: 2x6 PT, 97" long, sit on the east and west edges of the panel
-  - Cross rails: 2x6 PT, 41.6" long, sit between the long rails at the panel ends
-  - Diagonal brace: 2x4 PT, ~103" long, runs corner to corner inside the frame
+  - Frame exterior: 96" (X) × 45.6" (Z) — long rails are 96", cross rails are 42"
+  - Frame interior: 93" (X) × 42" (Z) — between the long rails (93" between
+    the inside faces of the cross rails)
+  - Long rails at z=±22.3 (each 1.5" thick, 5.5" tall, 96" long)
+  - Cross rails at x=±48.5 (each 1.5" thick in X, 5.5" tall, 42" long)
+  - Diagonal brace: 2x4 PT, 102" long, runs corner to corner inside the frame
   - All sit on top of the south wall, hinged at z=22.3
-  - Bottom of frame is at y = SKID_H + H_wall = 14.25 (top of south wall)
+  - Bottom of frame is at y = SKID_H + H_wall = 14.25
 
 At any tilt angle θ (around the hinge axis along X), the entire frame is
 rotated by θ. The frame module builds it flat; assemble.py applies the tilt.
@@ -26,10 +35,15 @@ import FreeCAD as App
 import Part
 
 
-# Constants
+# Constants — read from wattplot_params.py (single source of truth)
 PANEL_L = PANEL["L_in"]            # 97
 PANEL_W = PANEL["W_in"]            # 44.6
 PANEL_T = PANEL["thickness_in"]    # 1.4
+
+# Frame dimensions — read from FRAME dict
+LONG_RAIL_L = FRAME["long_rail"]["length_in"]     # 96.0 (8ft, no waste)
+CROSS_RAIL_L = FRAME["cross_rail"]["length_in"]   # 42.0 (cut from 8ft)
+BRACE_L = FRAME["diagonal_brace"]["length_in"]    # 102.0 (from 2x4x10ft)
 
 WALL_T = LUMBER["2x12"]["actual_t"]   # 1.5
 WALL_H = LUMBER["2x12"]["actual_h"]   # 11.25
@@ -52,9 +66,9 @@ def make_frame_long_rail(doc, side="south", name=None):
 
     side: "south" (z=+22.3, hinged side) or "north" (z=-22.3, actuator side)
 
-    Rail is 97" long (X), 1.5" thick (Z), 5.5" tall (Y), bottom at y=14.25.
-    The rail's center-line Z position = ±(PANEL_W/2) = ±22.3, so the rail's
-    inner face is at z=±(22.3 - 1.5) = ±20.8 and outer face at z=±22.3.
+    Rail is LONG_RAIL_L=96" (X, 8ft stock no waste), 1.5" thick (Z), 5.5" tall
+    (Y), bottom at y=14.25. The 97" panel overhangs 0.5" each end; clamps
+    grip the panel frame at the ends.
     """
     if name is None:
         name = f"FrameLongRail_{side}"
@@ -68,8 +82,8 @@ def make_frame_long_rail(doc, side="south", name=None):
     else:
         raise ValueError(f"side must be 'north' or 'south', got {side!r}")
 
-    rail = box(PANEL_L, RAIL_H, RAIL_T,
-               x=-PANEL_L / 2.0,
+    rail = box(LONG_RAIL_L, RAIL_H, RAIL_T,
+               x=-LONG_RAIL_L / 2.0,
                y=FRAME_Y_BOTTOM,
                z=z_box)
     return add_feature(doc, name, rail)
@@ -80,61 +94,57 @@ def make_frame_cross_rail(doc, side="east", name=None):
 
     side: "east" (x=+48.5) or "west" (x=-48.5)
 
-    Rail is 1.5" thick (X), 5.5" tall (Y), 41.6" long (Z), bottom at y=14.25.
-    The rail fits between the long rails: Z extent [-20.8, +20.8] (= 41.6").
+    Rail is 1.5" thick (X), 5.5" tall (Y), CROSS_RAIL_L=42" long (Z),
+    bottom at y=14.25. Butt-jointed at both ends to the inside faces of
+    the long rails (no miter).
     """
     if name is None:
         name = f"FrameCrossRail_{side}"
 
     if side == "east":
-        x_outer = +PANEL_L / 2.0
-        x_box = x_outer - RAIL_T    # low-x corner of box = +47
+        # x_outer = +PANEL_L/2 (panel east edge)
+        x_box = (PANEL_L / 2.0) - RAIL_T   # low-x corner of box = +47
     elif side == "west":
-        x_outer = -PANEL_L / 2.0
-        x_box = x_outer             # low-x corner of box = -48.5
+        # x_outer = -PANEL_L/2
+        x_box = -(PANEL_L / 2.0)            # low-x corner of box = -48.5
     else:
         raise ValueError(f"side must be 'east' or 'west', got {side!r}")
 
-    cross_L_z = PANEL_W - 2.0 * RAIL_T   # 41.6
-    rail = box(RAIL_T, RAIL_H, cross_L_z,
+    rail = box(RAIL_T, RAIL_H, CROSS_RAIL_L,
                x=x_box,
                y=FRAME_Y_BOTTOM,
-               z=-cross_L_z / 2.0)
+               z=-CROSS_RAIL_L / 2.0)
     return add_feature(doc, name, rail)
 
 
 def make_diagonal_brace(doc, name="DiagonalBrace"):
-    """2x4 PT diagonal brace, spanning the frame interior corner to corner.
+    """2x4 PT diagonal brace, 102" long, runs corner to corner inside the frame.
 
-    Interior is (PANEL_L - 2*RAIL_T) × (PANEL_W - 2*RAIL_T) = 94" × 41.6".
-    Diagonal length = sqrt(94^2 + 41.6^2) ≈ 102.8".
+    Square ends butt into the inside faces of the long rails (no miter cut).
 
-    The brace is laid flat in the X-Z plane (in the plane of the frame),
-    with its center matching the frame center. Thickness (1.5") is in Y.
+    Interior dimensions:
+      - X extent (between cross rails):  PANEL_L - 2*RAIL_T = 97 - 3 = 94"
+      - Z extent (between long rails):   PANEL_W - 2*RAIL_T = 44.6 - 3 = 41.6"
+    Diagonal = sqrt(94^2 + 41.6^2) = sqrt(8836 + 1730.6) = sqrt(10566.6) ≈ 102.8"
+
+    We use the stock length 102" (from 2x4x10ft). The brace end sits ~0.4"
+    short of the inside corner (where the long rail meets the cross rail),
+    but the square butt joint lands cleanly on the inside face of the long rail.
     """
     interior_L = PANEL_L - 2 * RAIL_T   # 94
     interior_W = PANEL_W - 2 * RAIL_T   # 41.6
-    diagonal = math.sqrt(interior_L ** 2 + interior_W ** 2)  # ~102.8
-    # Use 102" (round to even inch)
-    brace_L = 102.0
-
-    # Place a 2x4 box of length brace_L along the X axis, then rotate about Y
-    # to match the diagonal angle. The angle from the +X axis is:
-    angle_rad = math.atan2(interior_W, interior_L)  # = atan2(41.6, 94) ≈ 23.86°
-    angle_deg = math.degrees(angle_rad)
+    angle_rad = math.atan2(interior_W, interior_L)  # ~23.86°
 
     # Build the brace centered at origin, lying along +X
-    brace = box(brace_L, BRACE_T, BRACE_H,
-                x=-brace_L / 2.0, y=0, z=-BRACE_H / 2.0)
+    brace = box(BRACE_L, BRACE_T, BRACE_H,
+                x=-BRACE_L / 2.0, y=0, z=-BRACE_H / 2.0)
 
-    # Rotate in the X-Z plane (around Y axis) by angle_deg
-    brace = brace.rotate(App.Vector(0, 0, 0), App.Vector(0, 1, 0), angle_deg)
+    # Rotate in the X-Z plane (around Y axis) by angle
+    brace = brace.rotate(App.Vector(0, 0, 0), App.Vector(0, 1, 0),
+                          math.degrees(angle_rad))
 
-    # Place it inside the frame, sitting on top of the south wall (y=14.25),
-    # and below the panel so the panel can sit on it. Actually, the brace
-    # is a structural member, so put it just above the frame bottom.
-    brace_y = FRAME_Y_BOTTOM + RAIL_T   # just above the bottom of the rails (in the 5.5" height)
-    # Translate to the center of the frame at this y
+    # Place the brace in the frame plane (just above the rail bottoms)
+    brace_y = FRAME_Y_BOTTOM + 0.5   # 0.5" above the bottom of the rails
     brace = brace.translate(App.Vector(0, brace_y, 0))
 
     return add_feature(doc, name, brace)
