@@ -32,16 +32,32 @@ Three constraints guide every part of the design:
 
 _(No physical build yet — placeholder for v1 prototype photos. Once you have a build, drop the images in `renders/build_photos/` and update this section.)_
 
-Suggested photo angles for a build log:
-- Overview: bed + posts + panel at 35° tilt
-- Smart controller PCB installed in its enclosure
-- Hinge detail (south wall, panel in flat and tilted positions)
-- Actuator mounted on the beam, connected to panel
-- Soil fill and tomato planting
-- Dashboard on a phone showing tilt, DLI, current draw
-- Winter scene at 90° vertical, full sun on the bed
+**Build the entire apparatus:** see [`docs/build_guide.md`](docs/build_guide.md) for
+the step-by-step assembly guide (8 phases, ~10-15 hours).
 
-Want a release-blocking photo template? Add an issue with the tag `build-photo`.
+**Test & validation:** see [`docs/test_checklist.md`](docs/test_checklist.md) for
+per-component and per-system tests, with a final sign-off checklist.
+
+**Photo template** (for the build log):
+
+| # | Subject | Angle | Notes |
+|---|---|---|---|
+| 1 | Overview of completed build | Iso from southeast, 20° elevation | Frame at 35° tilt, full bed |
+| 2 | Bed close-up | Front (south wall) | Show half-lap corners, 4× butt hinges on south wall |
+| 3 | Frame close-up | Iso from north | Show 2x6 PT perimeter + 2x4 diagonal brace |
+| 4 | Hinge detail | Side, 12" away | One hinge in close-up, show leaf + knuckle + ½" pin |
+| 5 | Actuator mount | Side | 2x6 PT clevis on north rail, 2x6 wall block, ½" pin |
+| 6 | Panel mounting | Above, looking down | 6× aluminum mid-clamps on the rails |
+| 7 | IMU on frame | Underside of north rail | BMI160 breakout screwed to the rail |
+| 8 | PCB in enclosure | Above, enclosure open | All JST-XH connectors, ESP32, IMU/INA219 visible |
+| 9 | Wiring close-up | Side, 6" away | Cable carrier with motor + IMU cables |
+| 10 | Soil sensors | Soil cross-section | DS18B20 + soil moisture in the bed |
+| 11 | Soil filled + planted | Front | 4 tomato seedlings, 11.25" soil depth |
+| 12 | Dashboard on phone | Phone in hand | HA dashboard showing tilt, DLI, current draw |
+| 13 | Frame at 90° (vertical) | Iso from east | BEDSUN mode, full sun on the bed |
+| 14 | Frame flat (storm) | Iso from east | FOLDING mode, canopy down |
+
+Add your photos to `renders/build_photos/` and link them in this section.
 
 ---
 
@@ -72,11 +88,20 @@ analysis/
   pcb_schematic.py                     ← PCB block-diagram generator
 renders/                               ← generated PNGs (mostly gitignored)
 firmware/                              ← ESPHome firmware for the controller
-docs/                                  ← GitHub Pages 3D viewer
+docs/                                  ← design + build + test docs (see below)
+  index.html                           ← GitHub Pages 3D viewer
+  control_law.md                       ← firmware spec (state machine, PI loop)
+  pcb_design.md                        ← custom PCB spec (KiCad-ready)
+  wiring.md                            ← pin-by-pin wiring from PCB to apparatus
+  sensor_placement.md                  ← where each sensor mounts + why
+  build_guide.md                       ← step-by-step build (8 phases, ~10-15 hours)
+  test_checklist.md                    ← per-component + integration tests
 ```
 
-Change a value in `wattplot_params.py`, run `python wattplot.py`, and the
-whole pipeline (3D model, shadow, sun sim, wind sim) updates in ~10 seconds.
+**All design rules, the build, the wiring, and the tests are documented.**
+`wattplot_params.py` is the single source of truth — change a value there
+and the whole pipeline (3D model, shadow, sun sim, wind sim) updates in
+~10 seconds.
 
 ---
 
@@ -236,9 +261,13 @@ Note: DPS5005 is the MPPT path. The 620W main panel feeds the DPS5005 via UART c
 - [x] Geometric shadow raycaster (uses actual 3D panel)
 - [x] Annual sun + yield simulator (5 tilt schedules, Phoenix weather)
 - [x] Engineering side-view drawings (with frame + actuator + hinge detail)
-- [x] PCB block diagram (controller + sensors)
+- [x] PCB spec (KiCad-ready) — `docs/pcb_design.md`
+- [x] Wiring diagram (pin-by-pin) — `docs/wiring.md`
+- [x] Sensor placement plan — `docs/sensor_placement.md`
+- [x] Build guide (8 phases, ~10-15 hours) — `docs/build_guide.md`
+- [x] Test & validation checklist — `docs/test_checklist.md`
 - [x] ESPHome firmware (PI controller, NWS polling, fold logic) — `firmware/`
-- [ ] Custom PCB (JLCPCB fab + assembly)
+- [ ] Order custom PCB from JLCPCB
 - [ ] Real-world deployment validation
 
 ## Prior art & acknowledgments
