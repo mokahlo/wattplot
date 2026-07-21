@@ -110,17 +110,21 @@ def main():
         d += elm.LED().at((-3, 0.8)).right().label('WS2812B\nGPIO25', loc='bottom', fontsize=7, color='gray')
 
         # === Bottom annotations ===
-        d += elm.Label().at((0, -0.3)).label('Power: 12V → MP1584 → 5V → AMS1117 → 3V3 → ESP32',
+        d += elm.Label().at((0, -0.3)).label('Power: 12V (battery) → MP1584 → 5V → AMS1117 → 3V3 → ESP32',
                                             fontsize=8, halign='center', color='gray')
-        d += elm.Label().at((0, -0.8)).label('Signal: anemometer → Schmitt → ESP32 → DRV8871 → actuator',
+        d += elm.Label().at((0, -0.8)).label('Battery charged by main 620W panel via DPS5005 MPPT (UART-controlled)',
                                             fontsize=8, halign='center', color='gray')
-        d += elm.Label().at((0, -1.3)).label('Safety: limit switches → ESP32 → H-bridge EN (cuts power on end-stop)',
+        d += elm.Label().at((0, -1.3)).label('Signal: motor current (INA219) + IMU (BMI160) → ESP32 → H-bridge → actuator',
                                             fontsize=8, halign='center', color='gray')
-        d += elm.Label().at((0, -2.0)).label('BOM @ 1k ≈ $15-22/board · 5 assembled ≈ $100 @ JLCPCB · ~1 wk turnaround',
+        d += elm.Label().at((0, -1.8)).label('Safety: limit switches → ESP32 → H-bridge EN + IMU sanity check',
                                             fontsize=8, halign='center', color='gray')
-        d += elm.Label().at((0, -2.5)).label('Schematic: SKiDL (Python) → netlist → KiCad layout',
+        d += elm.Label().at((0, -2.5)).label('Sensors: DS18B20 (panel temp, 1-Wire) + capacitive soil sensor (ADC)',
                                             fontsize=8, halign='center', color='gray')
-        d += elm.Label().at((0, -3.2)).label('Enclosure: IP65 ABS, 120×80×50mm, 4× M3 mount',
+        d += elm.Label().at((0, -3.0)).label('BOM @ 1k ≈ $15-22/board · 5 assembled ≈ $100 @ JLCPCB · ~1 wk turnaround',
+                                            fontsize=8, halign='center', color='gray')
+        d += elm.Label().at((0, -3.5)).label('Schematic: SKiDL (Python) → netlist → KiCad layout',
+                                            fontsize=8, halign='center', color='gray')
+        d += elm.Label().at((0, -4.0)).label('Enclosure: IP65 ABS, 120×80×50mm, 4× M3 mount',
                                             fontsize=8, halign='center', color='gray')
 
         out = os.path.join(os.path.dirname(__file__), "..", "renders", "wattplot_v2_pcb_schematic.png")

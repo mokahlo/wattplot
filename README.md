@@ -64,6 +64,42 @@ The bed is the **ballast** — no ground anchors. The smart controller uses a
 PI loop on motor current to reduce tilt under wind load, then back to the
 commanded angle when wind drops.
 
+## Power architecture — only two sources
+
+```
+            ┌─────────────────┐
+            │ 620W bifacial   │
+            │ main panel      │  ← the only solar source
+            └────┬────────────┘
+                 │  DC bus (30-40V, 0-18A)
+        ┌────────┴────────┐
+        │                 │
+        ▼                 ▼
+  ┌──────────┐      ┌──────────────┐
+  │ Micro-   │      │ DPS5005 MPPT │
+  │ inverter │      │ (commercial, │
+  │ (AC out) │      │  UART-ctrl)  │
+  └────┬─────┘      └──────┬───────┘
+       │                   │
+       ▼                   ▼
+   [240V AC]          ┌──────────┐
+                      │ 12V      │  ← the only battery
+                      │ LiFePO4  │
+                      └────┬─────┘
+                           │
+                           ▼
+                    ┌──────────────┐
+                    │  ESP32 +     │
+                    │  DRV8871     ├──► Linear actuator (panel tilt)
+                    │  BMI160 IMU  │     ↑ closed-loop position
+                    │  INA219      │     │ actual tilt
+                    │  DS18B20     │     │
+                    │  soil sensor │
+                    └──────────────┘
+```
+
+**Only two energy sources: the main 620W panel and the 12V battery.** No separate trickle panel. The main panel feeds both the microinverter (for AC) and a DPS5005 programmable buck converter (for 12V battery charging) — both from the same panel. The 620W panel produces 50–100× more energy than the controller needs, so it's a non-issue.
+
 ## Key design numbers (Phoenix, AZ, Cat II 700-yr, Exp C)
 
 - **Wind:** 115 mph 3-sec gust design. At 12" soil depth, structure passes
@@ -139,12 +175,16 @@ pip install numpy pandas matplotlib pvlib cadquery shapely cairosvg scipy
 | Skids | 4×4 PT pine, 8 ft, 2 ea | 30 |
 | Hinge | 1/2" × 6 ft continuous hinge, SS | 50 |
 | Panel | 620W bifacial (LONGi Hi-MO X10 or similar) | 200 |
+| Microinverter | Enphase IQ7+ or APsystems DS3, 240V, UL 1741 | 150 |
 | Linear actuator | 12V, 4" stroke, IP65, 330 lb | 60 |
-| ESP32 + custom PCB | w/ MPPT, INA219, sensors, comms | 120 |
+| **DPS5005 MPPT** | Ruideng programmable buck, UART-controlled, 50V/5A | 25 |
 | 12V 100Ah LiFePO4 | LiTime or similar | 230 |
-| 200W LED grow light | full spectrum, IP65 | 130 |
+| ESP32 + custom PCB | w/ DRV8871, INA219, BMI160, sensors | 120 |
+| 200W LED grow light | full spectrum, IP65 (v2) | 130 |
 | Misc (screws, bolts, wire, irrigation) | | 150 |
-| **Total parts** | | **~$1,370** |
+| **Total parts** | | **~$1,545** |
+
+Note: DPS5005 is the MPPT path. The 620W main panel feeds the DPS5005 via UART control from the ESP32 — 95% efficient, no custom magnetics design, hackable. The same panel also feeds the microinverter for AC output. No separate trickle panel needed.
 
 ## Project status
 
@@ -157,6 +197,58 @@ pip install numpy pandas matplotlib pvlib cadquery shapely cairosvg scipy
 - [ ] ESP32 prototype + firmware (PI controller, NWS polling, fold logic)
 - [ ] Custom PCB (JLCPCB fab + assembly)
 - [ ] Real-world deployment validation
+
+## Prior art & acknowledgments
+
+Wattplot builds on the work of many open-source projects. If you find their work useful, please support them.
+
+### Agrivoltaic simulation
+- **[NREL/bifacial_radiance](https://github.com/NREL/bifacial_radiance)** — gold-standard bifacial PV ray-tracer. Our 2D `shadow_raycaster.py` is a simplified version of what bifacial_radiance does in 3D.
+- **[NREL/InSPIRE](https://github.com/NREL/InSPIRE)** — agrivoltaic tutorials, scripts, and research workflows.
+- **[DailyAgrivoltaicOperation (astuhlmacher)](https://github.com/astuhlmacher/DailyAgrivoltaicOperation)** — dual-axis panel optimization under crop constraints, the academic version of what Wattplot does in firmware.
+- **[PASE 1.0](https://gitlab.uliege.be/pase/pase_1.0)** — Python Agrivoltaic Simulation Environment, energy + crop dual-objective.
+
+### Solar tracker controllers
+- **[Helioduino (NachtRaveVL)](https://github.com/NachtRaveVL/Simple-SolarTracker-Arduino)** — mature LDR-based sun tracker for Arduino. The reference for "professional grade" tracker control.
+- **[SolarArduino (HDwayne)](https://github.com/HDwayne/SolarArduino)** — ESP32 sun tracker with **wind safety using an anemometer** (folds to safety position for 15 min if wind > 5 m/s). The pattern for our wind-safety state machine in `docs/control_law.md` comes from here.
+- **[Sunchronizer (Nerdiyde)](https://github.com/Nerdiyde/Sunchronizer)** — ESP32 + 6000N linear actuator + **BMI160 IMU for closed-loop position feedback**. We adopted the IMU approach for the same reason (drift-free actual tilt angle).
+- **[f2knpw/ESP32_Solar_Tracker](https://github.com/f2knpw/ESP32_Solar_Tracker)** — Lite ESP32 solar tracker with sun-position calc, sleep mode, OTA.
+
+### Smart solar chargers (MPPT pattern)
+- **[OSPController (Open Solar Project)](https://github.com/opensolarproject/OSPController)** — ESP32 controls a commercial DPS5005 buck via UART for MPPT. **We adopted this exact pattern** — the DPS5005 in the Wattplot PCB is the MPPT path, controlled by the ESP32, no custom magnetics.
+- **[fugu-mppt-firmware (fl4p)](https://github.com/fl4p/fugu-mppt-firmware)** — ESP32 MPPT firmware, 95% efficient synchronous buck.
+- **[akgang ESP32 MPPT](https://github.com/akgang-rgb/ESP32-Smart-Solar-Controller-MPPT-Firmware-Web-Dashboard)** — single-file Arduino ESP32 MPPT with INA226, web dashboard, NASA POWER + OWM forecasts. The "single .ino file" philosophy is what we want for v1 prototype.
+
+### Weather + solar (IoT pattern)
+- **[SolarWS (BeardedTinker)](https://github.com/BeardedTinker/SolarWS)** — ESPHome weather station, deep sleep at night, OTA.
+- **[solar_weather (squidpickles)](https://github.com/squidpickles/solar_weather)** — ESPHome config for solar weather station.
+- **[Home Assistant Forecast.Solar integration](https://www.home-assistant.io/integrations/forecast_solar/)** — built-in solar production forecast for HA. A drop-in alternative to our NWS-based forecast.
+
+### DIY raised bed + solar
+- **[POSCAS](https://www.appropedia.org/Parametric_Open_Source_Cold-Frame_Agrivoltaic_Systems)** — Parametric Open Source Cold-Frame Agrivoltaic System. **The closest analog to Wattplot** in philosophy (open-source, parametric, agrivoltaic) but for a cold frame. Worth studying.
+- **[Vege Garden Automation (Rototron)](https://www.rototron.info/projects/micropython-vegetable-garden-automation-tutorial/)** — solar-powered soil sensors + MQTT + HA on a raised bed. **Validates the IoT + raised bed + solar pattern** Wattplot uses.
+
+### Standards
+- **[ASCE 7-22](https://www.asce.org/publications-and-news/asce-7)** — wind load provisions. Our `analysis/wind_load.py` uses ASCE 7-22 Table 26.10-1 for velocity pressure exposure coefficients.
+- **[pvlib](https://pvlib-python.readthedocs.io/)** — solar position + clear-sky modeling. Industry standard, NREL-developed.
+- **[IEC 61215 / UL 61730](https://en.wikipedia.org/wiki/Solar_panel)** — panel safety standards. Our 620W bifacial panel is certified to these.
+- **[UL 1741 / IEEE 1547](https://en.wikipedia.org/wiki/UL_1741)** — grid-tie inverter safety. We use a commercial microinverter (Enphase IQ7+, APsystems DS3) that meets these, so the user doesn't have to.
+
+### Plug-and-play solar laws (regulatory)
+- **Utah [SB 190](https://le.utah.gov/~2024/bills/sbillint/SB0190.html)** (2024) — first comprehensive balcony solar law, 800W plug-in allowance.
+- **California [AB 1076](https://leginfo.legislature.ca.gov/faces/billNavClient.xhtml?bill_id=202120220AB1076)** (2022) — most generous, 5 kW plug-in allowance.
+- **Colorado [HB 22-1015](https://leg.colorado.gov/bills/hb22-1015)** (2022) — 800W plug-in, similar to Utah.
+
+Wattplot's 620W panel is below the 800W threshold in Utah and Colorado, and well within California's 5 kW cap. Design fits the regulatory window for plug-and-play solar in all three states.
+
+### Tools we use
+- **[cadquery](https://github.com/CadQuery/cadquery)** — parametric 3D model
+- **[shapely](https://shapely.readthedocs.io/)** — 2D geometry for the shadow raycaster
+- **[cairosvg](https://cairosvg.org/)** — SVG → PNG rendering
+- **[matplotlib](https://matplotlib.org/)** — plots
+- **[three.js](https://threejs.org/)** — the interactive 3D viewer in `docs/`
+
+---
 
 ## License
 

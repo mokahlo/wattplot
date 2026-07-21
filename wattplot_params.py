@@ -84,6 +84,37 @@ ACTUATOR = dict(
 )
 
 # =============================================================================
+# MPPT SUBSYSTEM (charges the 12V battery from the main 620W panel)
+# =============================================================================
+# The 620W main panel feeds the microinverter (for AC out) AND a DPS5005
+# programmable buck converter (for 12V battery charging). No separate trickle
+# panel — the main panel is way more than enough to keep the controller
+# battery topped off (~50 Wh/day controller load vs ~2000+ Wh/day panel yield).
+MPPT = dict(
+    # DPS5005 programmable buck converter (Ruideng), UART-controlled
+    converter_model="DPS5005",
+    converter_input_v_max=60.0,        # 620W panel Vmp ~33V, Voc ~40V
+    converter_output_v_nom=14.4,      # 12V LiFePO4 charge voltage
+    converter_output_i_max=5.0,       # amps to battery
+    converter_efficiency=0.92,        # typical for DPS5005
+    uart_baud=9600,                   # DPS5005 serial protocol
+)
+
+# =============================================================================
+# IMU (panel tilt feedback — closed-loop position, not just step counting)
+# =============================================================================
+# A BMI160 IMU on the panel reports actual tilt via accelerometer fusion.
+# Without it, the actuator's open-loop position drifts; with it, we have
+# closed-loop position control. ~$2, I2C, easy to add to the PCB.
+IMU = dict(
+    model="BMI160",
+    interface="I2C",
+    sample_rate_hz=100,
+    tilt_accuracy_deg=0.5,
+    address=0x68,                     # default I2C address
+)
+
+# =============================================================================
 # CONTROL TARGETS
 # =============================================================================
 CONTROL = dict(
@@ -132,6 +163,8 @@ P = {
     "panel": PANEL,
     "soil": SOIL,
     "actuator": ACTUATOR,
+    "mppt": MPPT,
+    "imu": IMU,
     "control": CONTROL,
     "crop": CROP,
 }
