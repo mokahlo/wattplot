@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+env/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+*.bak
+*.tmp
+
+# Build / dist
+build/
+dist/
+*.egg
+
+# Generated render outputs (regenerable from source)
+renders/*.png
+models/*.step
+models/*.stl
+models/*.3mf
+models/*.wrl
+models/*.vrml
+models/*.tjs
+
+# Keep the viewer.html + STL in git (those are useful static assets)
+!renders/viewer.html
+!renders/wattplot_v2.stl
+
+# Local env / secrets
+.env
+.env.local
+*.local
+
+# Test artifacts
+.coverage
+.pytest_cache/
+test_output/
