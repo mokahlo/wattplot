@@ -15,7 +15,6 @@ import pvlib
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.colors import LinearSegmentedColormap
 
 # Allow imports from project root and sibling dirs
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -24,8 +23,8 @@ sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.join(ROOT, "models"))
 
 # Single source of truth for parameters
-from wattplot_params import LOCATION, BED, PANEL, SOIL, CROP
-from shadow_raycaster import compute_bed_sunlit_fraction
+from wattplot_params import LOCATION, BED, PANEL, CROP  # noqa: E402
+from shadow_raycaster import compute_bed_sunlit_fraction  # noqa: E402
 
 # ============================================================================
 # INPUTS (loaded from wattplot_params.py — single source of truth)
@@ -323,7 +322,7 @@ def run_simulation():
 def print_comparison(results):
     print()
     print('=' * 90)
-    print(f'Wattplot v2 — Phoenix 2025 — Sun + Tilt Simulator')
+    print('Wattplot v2 — Phoenix 2025 — Sun + Tilt Simulator')
     print('=' * 90)
     print()
     print(f'{"Schedule":<28} {"kWh":>7} {"DLI avg":>9} {"DLI winter":>11} '
@@ -349,7 +348,6 @@ def plot_results(results, df, outdir):
     # Reindex to full year
     full_year = pd.date_range(f'{YEAR}-01-01', f'{YEAR}-12-31', freq='D', tz=TZ)
     dli_by_doy_hour = dli_by_doy_hour.reindex(full_year).fillna(0)
-    doy = dli_by_doy_hour.index.dayofyear
 
     # Average DLI by month for each schedule
     fig, ax = plt.subplots(figsize=(13, 6))
@@ -377,8 +375,8 @@ def plot_results(results, df, outdir):
     ax.set_xticklabels(months)
     ax.set_xlabel("Month")
     ax.set_ylabel("Bed DLI (mol/m²/day)")
-    ax.set_title(f"Wattplot v2 — Monthly average bed DLI by tilt schedule\n"
-                 f"Phoenix AZ 33.45°N, 2025 clear-sky, 620W bifacial panel")
+    ax.set_title("Wattplot v2 — Monthly average bed DLI by tilt schedule\n"
+                 "Phoenix AZ 33.45°N, 2025 clear-sky, 620W bifacial panel")
     ax.grid(True, alpha=0.3)
     ax.axhline(DLI_OPTIMAL, color='green', linestyle=':', alpha=0.7, label=f'DLI optimal for tomato ({DLI_OPTIMAL})')
     ax.axhline(DLI_HEAT_STRESS, color='red', linestyle=':', alpha=0.7, label=f'Heat stress threshold ({DLI_HEAT_STRESS})')

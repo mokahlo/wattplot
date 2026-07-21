@@ -20,7 +20,6 @@ Usage:
 import argparse
 import os
 import sys
-import subprocess
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -28,8 +27,7 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "models"))
 sys.path.insert(0, os.path.join(HERE, "analysis"))
 
-import wattplot_params as P
-from wattplot_params import PANEL
+import wattplot_params as P  # noqa: E402
 
 
 def banner(text):
@@ -107,19 +105,17 @@ def main():
     if not args.skip_model:
         build_and_export_3d_model(args.tilt)
 
-    sim_results = None
     if not args.skip_sim:
-        sim_results = run_simulation()
+        run_simulation()
 
-    wind_runs = None
     if not args.skip_wind:
-        wind_runs = run_wind_load()
+        run_wind_load()
 
     elapsed = time.time() - t0
     print()
     print("=" * 70)
     print(f"  Pipeline complete in {elapsed:.1f}s")
-    print(f"  Output: models/, renders/, analysis/")
+    print("  Output: models/, renders/, analysis/")
     print("=" * 70)
 
 

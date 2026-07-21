@@ -15,19 +15,17 @@ Outputs:
 import os
 import sys
 import math
-import json
-import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle, FancyArrowPatch
+from matplotlib.patches import Rectangle
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401  (registers 3d projection)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, ROOT)
 
-from wattplot_params import LOCATION, BED, PANEL, SOIL
+from wattplot_params import LOCATION, BED, PANEL, SOIL  # noqa: E402
 
 # ----------------------------------------------------------------------------
 # INPUTS (loaded from wattplot_params.py — single source of truth)
@@ -299,15 +297,15 @@ def run_analysis():
 
     # ---------------- Markdown report ----------------
     md = []
-    md.append(f"# Wattplot v2 — Wind Load Analysis\n")
+    md.append("# Wattplot v2 — Wind Load Analysis\n")
     md.append(f"**Site:** {SITE['name']}  ")
-    md.append(f"**Standard:** ASCE 7-22, Risk Cat II, 700-yr MRI  ")
+    md.append("**Standard:** ASCE 7-22, Risk Cat II, 700-yr MRI  ")
     md.append(f"**Basic wind speed V:** {SITE['V_ult_mph']} mph 3-sec gust "
               f"({SITE['V_ult_ms']} m/s) at 33 ft, Exposure C  ")
     md.append(f"**Exposure:** {SITE['exposure']} (Kzt = {SITE['Kzt']}, Kd = {SITE['Kd']})  ")
     md.append(f"**Force coefficient Cf:** {CF} (open tilted plate, conservative)\n")
 
-    md.append(f"## Geometry\n")
+    md.append("## Geometry\n")
     md.append(f"- Panel: {PANEL_WIND['L_ft']} ft × {PANEL_WIND['W_ft']} ft × {PANEL_WIND['t_in']}\" "
               f"({PANEL_WIND['area_sqft']:.2f} sq ft, ~{PANEL_WIND['mass_lb']} lb)")
     md.append(f"- Bed: {BED_WIND['outer_L_ft']} ft × {BED_WIND['outer_W_ft']} ft × "
@@ -319,17 +317,17 @@ def run_analysis():
 
     md.append(f"## Dead load (ballast) at {BED_WIND['soil_depth_in']}\" soil depth\n")
     base = dead_load()
-    md.append(f"| Component | Weight |")
-    md.append(f"|---|---|")
+    md.append("| Component | Weight |")
+    md.append("|---|---|")
     md.append(f"| Soil ({base['soil_vol_cuft']:.2f} cu ft) | {base['soil_lb']:.0f} lb |")
     md.append(f"| Lumber (posts + beam + walls) | {base['wood_lb']:.0f} lb |")
     md.append(f"| Panel | {base['panel_lb']:.0f} lb |")
     md.append(f"| Hardware (hinges/bolts) | {base['hardware_lb']:.0f} lb |")
     md.append(f"| **Total dead load W** | **{base['total_lb']:.0f} lb** |\n")
 
-    md.append(f"## Force sweep across tilt angles\n")
-    md.append(f"| Tilt | qh (psf) | F_vert (uplift, lb) | F_horiz (drag, lb) | SF uplift | SF sliding | SF overturning |")
-    md.append(f"|---|---|---|---|---|---|---|")
+    md.append("## Force sweep across tilt angles\n")
+    md.append("| Tilt | qh (psf) | F_vert (uplift, lb) | F_horiz (drag, lb) | SF uplift | SF sliding | SF overturning |")
+    md.append("|---|---|---|---|---|---|---|")
     for r in rows:
         md.append(f"| {r['tilt_deg']}° | {wind_forces_on_panel(r['tilt_deg'])['qh_psf']:.1f} | "
                   f"{r['F_vert_lb']:.0f} | {r['F_horiz_lb']:.0f} | "
@@ -349,22 +347,22 @@ def run_analysis():
               f"(target ≥ {SF_TARGET['overturning']}) — "
               f"{'PASS' if r35['sf_overturning'] >= SF_TARGET['overturning'] else '**FAIL**'}\n")
 
-    md.append(f"## Recommended soil depth\n")
+    md.append("## Recommended soil depth\n")
     md.append(f"Worst-case uplift tilt is **{worst_tilt}°** (sin(2θ) is maximum at 45°).")
     md.append(f"To hit the overturning target SF ≥ {SF_TARGET['overturning']} at "
               f"{worst_tilt}° tilt and V = {SITE['V_ult_mph']} mph, you need approximately:\n")
     md.append(f"### **Soil depth ≥ {req_depth:.1f}\"** ({(req_depth/12):.2f} ft)\n")
-    md.append(f"At that depth:\n")
+    md.append("At that depth:\n")
     r_req = check_stability(worst_tilt, soil_depth_in=req_depth)
     md.append(f"- Total dead load: {r_req['W_lb']:.0f} lb")
     md.append(f"- SF uplift: {r_req['sf_uplift']:.2f}, "
               f"SF sliding: {r_req['sf_sliding']:.2f}, "
               f"SF overturning: {r_req['sf_overturning']:.2f}\n")
 
-    md.append(f"## Notes & caveats\n")
-    md.append(f"- **First-pass engineering, not stamped calcs.** If this is a real build "
-              f"in Phoenix city limits, the structure may need a permit and a PE stamp. "
-              f"Maricopa County wind amendments and IRC triggers are real.")
+    md.append("## Notes & caveats\n")
+    md.append("- **First-pass engineering, not stamped calcs.** If this is a real build "
+              "in Phoenix city limits, the structure may need a permit and a PE stamp. "
+              "Maricopa County wind amendments and IRC triggers are real.")
     md.append(f"- Cf = {CF} is conservative for an open plate. ASCE 7 doesn't have a "
               f"dedicated section for a one-panel solar canopy, so we used a free-plate "
               f"value. A real calc could refine with wind-tunnel data or a CFD check.")
@@ -373,8 +371,8 @@ def run_analysis():
     md.append(f"- Friction coefficient μ = {FRICTION_MU} is a conservative estimate for "
               f"PT pine on dirt. Wet/muddy ground could be 0.2-0.3; on a gravel pad or "
               f"concrete, could be 0.5-0.6.")
-    md.append(f"- The big lever here is **soil depth**. Every extra inch of soil is ~190 lb "
-              f"of ballast. If you want a margin, go deeper rather than wider.\n")
+    md.append("- The big lever here is **soil depth**. Every extra inch of soil is ~190 lb "
+              "of ballast. If you want a margin, go deeper rather than wider.\n")
 
     with open(out_md, "w", encoding="utf-8") as f:
         f.write("\n".join(md))
@@ -422,7 +420,6 @@ def run_analysis():
     fig, ax = plt.subplots(figsize=(12, 6))
     bedL = BED_WIND['outer_L_ft']
     bedW = BED_WIND['outer_W_ft']
-    wall_h = BED_WIND['wall_height_in']/12.0
 
     # Bed (top view rectangle)
     bed_rect = Rectangle((-bedL/2, 0), bedL, bedW, fill=True,

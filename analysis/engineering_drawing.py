@@ -5,13 +5,11 @@ Shows the structure in profile with dimensions, tilt angle, and wind forces.
 
 import os
 import math
-import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-from matplotlib.patches import Rectangle, FancyArrowPatch, Polygon
-from matplotlib.transforms import Affine2D
+from matplotlib.patches import Rectangle, Polygon
 
 # ----------------------------------------------------------------------------
 # Geometry (matches wattplot_v2_model.py)
@@ -40,7 +38,6 @@ def draw_tilt(tilt_deg):
 
     # World coords: X (east) horizontal, Y (up) vertical
     # Bed is at the origin, with X spanning 0..bed_outer_L, Y from 0..bed_wall_h
-    boL = P['bed_outer_L']
     bedW = P['bed_outer_W']
     wh   = P['bed_wall_h']
     wt   = P['bed_wall_thk']
@@ -185,7 +182,7 @@ def draw_tilt(tilt_deg):
     wind_y = high_y - 10
     ax.annotate("", xy=(wind_z, wind_y), xytext=(wind_z - 18, wind_y),
                 arrowprops=dict(arrowstyle='->', color='red', lw=2.0))
-    ax.text(wind_z - 22, wind_y + 2, f"Wind 115 mph\n(from south)", color='red', fontsize=10, ha='right', weight='bold')
+    ax.text(wind_z - 22, wind_y + 2, "Wind 115 mph\n(from south)", color='red', fontsize=10, ha='right', weight='bold')
 
     # Force vectors on panel (decomposed) -- computed for this tilt
     tilt_rad = math.radians(tilt_deg)

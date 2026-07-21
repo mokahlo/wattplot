@@ -56,3 +56,4 @@ firmware/secrets.yaml.*
 .coverage
 .pytest_cache/
 test_output/
+tools/ci_jobs*.json
