@@ -6,6 +6,29 @@ wind-load analysis, and a smart-folding controller into a single pipeline.
 
 > **Status:** pre-prototype. The mechanical / structural / aerodynamic design is validated by 3D model + ASCE 7-22 wind calc + geometric shadow raycaster. The smart controller (ESP32-based) and custom PCB are next steps.
 
+## Interactive 3D model
+
+[**Open the 3D viewer**](https://mokahlo.github.io/wattplot/) — drag to orbit, scroll to zoom. Loads the live STEP-derived STL.
+
+---
+
+## Build photos
+
+_(No physical build yet — placeholder for v1 prototype photos. Once you have a build, drop the images in `renders/build_photos/` and update this section.)_
+
+Suggested photo angles for a build log:
+- Overview: bed + posts + panel at 35° tilt
+- Smart controller PCB installed in its enclosure
+- Hinge detail (south wall, panel in flat and tilted positions)
+- Actuator mounted on the beam, connected to panel
+- Soil fill and tomato planting
+- Dashboard on a phone showing tilt, DLI, current draw
+- Winter scene at 90° vertical, full sun on the bed
+
+Want a release-blocking photo template? Add an issue with the tag `build-photo`.
+
+---
+
 ---
 
 ## What's in the box

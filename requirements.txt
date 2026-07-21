@@ -1,0 +1,14 @@
+# Wattplot v2 — runtime dependencies
+# (cadquery is optional for the simulator, required only for the 3D model
+# and exports. CI installs everything except cadquery for speed.)
+
+numpy>=1.24
+pandas>=2.0
+matplotlib>=3.7
+pvlib>=0.10
+shapely>=2.0
+scipy>=1.10
+
+# Optional: 3D model + exports + visualizations
+# cadquery>=2.4
+# cairosvg>=2.5

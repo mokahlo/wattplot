@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Wattplot v2 — 3D viewer</title>
+<style>
+  body { margin: 0; padding: 0; background: #1a1a1a; color: #eee; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; overflow: hidden; }
+  #info {
+    position: absolute; top: 12px; left: 12px; z-index: 10;
+    background: rgba(0,0,0,0.6); padding: 10px 14px; border-radius: 6px;
+    font-size: 13px; line-height: 1.5; max-width: 320px;
+  }
+  #info h1 { margin: 0 0 6px 0; font-size: 15px; color: #4dd0e1; }
+  #info b { color: #4dd0e1; }
+  #info .key { color: #ffb74d; }
+  #canvas-container { position: absolute; inset: 0; }
+  #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #888; font-size: 14px; }
+</style>
+</head>
+<body>
+<div id="info">
+  <h1>Wattplot v2 — Interactive 3D</h1>
+  <b>Drag</b> to orbit · <b>Scroll</b> to zoom · <b>Right-drag</b> to pan<br>
+  <b>Bed:</b> 8.0 × 3.72 ft, ~12" soil depth (ballast)<br>
+  <b>Panel:</b> 8.08 × 3.72 ft, ~620W bifacial @ 35° tilt<br>
+  <b>Posts:</b> 6×6, 10 ft, hinged at bed wall<br>
+  <span class="key">All units in inches in the model. 1 ft = 12 in.</span>
+</div>
+<div id="canvas-container"></div>
+<div id="loading">Loading model…</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+
+const container = document.getElementById('canvas-container');
+const loadingEl = document.getElementById('loading');
+
+// Scene
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a1a1a);
+
+// Camera
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 5000);
+camera.position.set(150, 100, 180);
+
+// Renderer
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+container.appendChild(renderer.domElement);
+
+// Controls
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 50, 0);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+
+// Lights
+const ambient = new THREE.AmbientLight(0xffffff, 0.55);
+scene.add(ambient);
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.85);
+dirLight.position.set(100, 200, 80);
+scene.add(dirLight);
+const dirLight2 = new THREE.DirectionalLight(0x88aaff, 0.3);
+dirLight2.position.set(-100, 80, -80);
+scene.add(dirLight2);
+
+// Grid
+const grid = new THREE.GridHelper(400, 40, 0x444444, 0x2a2a2a);
+grid.position.y = 0;
+scene.add(grid);
+
+// Axes
+const axes = new THREE.AxesHelper(40);
+axes.position.set(0, 0, 0);
+scene.add(axes);
+
+// Load STL
+const loader = new STLLoader();
+loader.load(
+  'wattplot_v2.stl',
+  (geometry) => {
+    geometry.computeVertexNormals();
+    geometry.center();
+
+    // Color by Y position (height): bed = wood, panel = solar blue, posts/beam = darker wood
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0x8d6e63,
+      metalness: 0.05,
+      roughness: 0.85,
+      flatShading: true,
+    });
+    const mesh = new THREE.Mesh(geometry, mat);
+    mesh.scale.set(1, 1, 1);
+    scene.add(mesh);
+
+    // Compute bounding box to fit camera
+    const box = new THREE.Box3().setFromObject(mesh);
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    camera.position.set(maxDim * 1.4, maxDim * 0.9, maxDim * 1.4);
+    controls.target.set(0, size.y * 0.3, 0);
+    controls.update();
+
+    loadingEl.style.display = 'none';
+  },
+  (xhr) => { /* progress */ },
+  (err) => {
+    console.error('STL load failed', err);
+    loadingEl.textContent = 'Failed to load model. Make sure wattplot_v2.stl is in this directory.';
+  }
+);
+
+// Resize
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// Animate
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>

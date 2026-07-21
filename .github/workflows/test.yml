@@ -1,0 +1,83 @@
+name: test
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  test:
+    name: Run pipeline + check parameters
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ matrix.python-version }}-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy pandas matplotlib pvlib shapely scipy
+
+      - name: Smoke test: import all modules
+        run: |
+          python -c "
+          import sys
+          sys.path.insert(0, '.')
+          from wattplot_params import LOCATION, BED, PANEL
+          print('Params OK:', LOCATION['name'])
+          "
+
+      - name: Run sun simulator
+        run: |
+          python analysis/sun_simulator.py
+
+      - name: Run wind load analysis
+        run: |
+          python analysis/wind_load.py
+
+      - name: Run shadow raycaster
+        run: |
+          python -c "
+          import sys
+          sys.path.insert(0, '.')
+          sys.path.insert(0, 'models')
+          from shadow_raycaster import compute_bed_sunlit_fraction
+          from wattplot_params import BED, PANEL
+          f = compute_bed_sunlit_fraction(35, 180, 80, BED['outer_L_in'], BED['outer_W_in'],
+                                            PANEL['L_in'], PANEL['W_in'],
+                                            BED['wall_h_in'], BED['outer_W_in']/2)
+          assert 0.0 <= f <= 1.0, f'bed sunlit out of range: {f}'
+          print(f'35-deg noon bed sunlit fraction: {f*100:.1f}% (sanity check passed)')
+          "
+
+      - name: Build PDF-ready engineering drawings
+        run: |
+          python analysis/engineering_drawing.py
+
+  lint:
+    name: Python lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff
+      - run: ruff check . --exclude renders --exclude models --exclude tools
