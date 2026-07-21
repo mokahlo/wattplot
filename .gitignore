@@ -57,3 +57,4 @@ firmware/secrets.yaml.*
 .pytest_cache/
 test_output/
 tools/ci_jobs*.json
+models/*.FCBak

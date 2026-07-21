@@ -84,6 +84,71 @@ ACTUATOR = dict(
 )
 
 # =============================================================================
+# FRAME (lumber perimeter around the panel — replaces the post+beam design)
+# =============================================================================
+# All-wood structural members. The panel is clamped to this frame, the frame
+# is hinged on the bed's south wall, and the actuator pushes the north rail.
+# Hardware (hinges, panel clamps) is metal — see docs/frame.md.
+#
+# All dimensions in inches. Nominal → actual: 2x4 = 1.5×3.5, 2x6 = 1.5×5.5,
+# 2x12 = 1.5×11.25. Use the actual values for modeling.
+FRAME = dict(
+    # Long rails (parallel to panel long axis). 2x6 PT DF, actual 1.5×5.5.
+    # - length_in: runs along the panel's L axis (97" direction)
+    # - thickness_in: 1.5" in the plane of the panel face
+    # - height_in: 5.5" perpendicular to the panel face
+    long_rail=dict(
+        nominal="2x6",
+        thickness_in=1.5,
+        height_in=5.5,
+        length_in=88.5,    # panel_L - 0.5" clearance each end
+        count=2,
+    ),
+    # Cross rails (perpendicular to long rails). 2x6 PT DF.
+    # - length_in: runs along the panel's W axis (44.6" direction)
+    cross_rail=dict(
+        nominal="2x6",
+        thickness_in=1.5,
+        height_in=5.5,
+        length_in=41.6,    # panel_W - 2*thickness
+        count=2,
+    ),
+    # Diagonal brace. 2x4 PT DF, only loaded at 90° tilt (keeps frame square).
+    diagonal_brace=dict(
+        nominal="2x4",
+        thickness_in=1.5,
+        height_in=3.5,
+        length_in=50.0,
+    ),
+    # Galvanized butt hinges, 4"×4" leaf, ½" pin. Spaced evenly along hinge axis.
+    hinge=dict(
+        type="galvanized_butt",
+        leaf_in=4.0,
+        pin_d_in=0.5,
+        count=4,
+        spacing_in=22.0,   # 4 hinges along the 88.5" rail
+    ),
+    # Aluminum mid-clamps for the panel. 35mm channel fits most 156 half-cell
+    # commercial panels. 2 per long rail + 1 per cross rail = 6 total.
+    panel_clamp=dict(
+        type="aluminum_mid",
+        length_in=2.0,
+        height_in=2.0,
+        thickness_in=0.4,
+        per_long_rail=2,
+        per_cross_rail=1,
+    ),
+    # Actuator mount blocks. 2x6 PT DF clevis on the north rail of the frame
+    # + matching block on the bed's north wall. ½" steel pin between them.
+    actuator_mount=dict(
+        block_nominal="2x6",
+        block_thickness_in=1.5,
+        block_height_in=5.5,
+        block_length_in=6.0,
+    ),
+)
+
+# =============================================================================
 # MPPT SUBSYSTEM (charges the 12V battery from the main 620W panel)
 # =============================================================================
 # The 620W main panel feeds the microinverter (for AC out) AND a DPS5005
@@ -160,6 +225,7 @@ P = {
     "location": LOCATION,
     "bed": BED,
     "structure": STRUCTURE,
+    "frame": FRAME,
     "panel": PANEL,
     "soil": SOIL,
     "actuator": ACTUATOR,

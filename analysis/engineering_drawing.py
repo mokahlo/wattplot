@@ -1,8 +1,15 @@
 """
 Wattplot v2 — 2D engineering side view.
 Shows the structure in profile with dimensions, tilt angle, and wind forces.
-"""
 
+Design (v2 — all-wood frame):
+  - Bed: 2x12 PT lumber, half-lap corners, on 4x4 skids, bottomless
+  - Frame: 2x6 PT perimeter around the panel, 2x4 PT diagonal brace
+  - Hinge: 4 × galvanized butt hinges, ½" pin, on the bed's south wall
+  - Panel clamp: 6 × aluminum mid-clamps on the rails
+  - Actuator mount: 2x6 clevis on the north rail, 2x6 block on north wall
+  - No posts, no beam — the wood frame is the structure
+"""
 import os
 import math
 import matplotlib
@@ -12,211 +19,236 @@ import matplotlib.patches as mpatches
 from matplotlib.patches import Rectangle, Polygon
 
 # ----------------------------------------------------------------------------
-# Geometry (matches wattplot_v2_model.py)
+# Geometry (matches wattplot_params.py + models/freecad/parts/*.py)
 # ----------------------------------------------------------------------------
+import sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from wattplot_params import BED, PANEL
+from models.freecad.materials import LUMBER
+
 P = dict(
-    bed_outer_L   = 96.0,    # in
-    bed_outer_W   = 44.6,
-    bed_wall_thk  = 1.5,
-    bed_wall_h    = 12.0,
-    post_side     = 5.5,
-    post_height   = 120.0,
-    post_inset    = 6.0,
-    beam_side     = 5.5,
-    beam_attach_h = 108.0,
-    beam_length   = 84.0,
-    panel_L       = 97.0,
-    panel_W       = 44.6,
-    panel_t       = 1.4,
-    panel_tilt    = 35.0,
+    bed_outer_L   = BED['outer_L_in'],
+    bed_outer_W   = BED['outer_W_in'],
+    bed_wall_thk  = LUMBER['2x12']['actual_t'],   # 1.5
+    bed_wall_h    = LUMBER['2x12']['actual_h'],   # 11.25 (actual 2x12, not nominal 12)
+    skid_h        = BED['skid_h_in'],
+    panel_L       = PANEL['L_in'],
+    panel_W       = PANEL['W_in'],
+    panel_t       = PANEL['thickness_in'],
+    panel_tilt    = PANEL['panel_tilt_deg'],
+    # Frame members
+    rail_W        = LUMBER['2x6']['actual_t'],   # 1.5
+    rail_H        = LUMBER['2x6']['actual_h'],   # 5.5
+    brace_W       = LUMBER['2x4']['actual_t'],   # 1.5
+    brace_H       = LUMBER['2x4']['actual_h'],   # 3.5
 )
 
 
 def draw_tilt(tilt_deg):
     P['panel_tilt'] = float(tilt_deg)
-    fig, ax = plt.subplots(figsize=(13, 9))
+    fig, ax = plt.subplots(figsize=(14, 10))
 
-    # World coords: X (east) horizontal, Y (up) vertical
-    # Bed is at the origin, with X spanning 0..bed_outer_L, Y from 0..bed_wall_h
+    # World coords (side view = YZ plane looking from +X east).
+    # In 2D: x_2d = Z (south=north), y_2d = Y (up).
+    # +Z = south, -Z = north.
     bedW = P['bed_outer_W']
     wh   = P['bed_wall_h']
     wt   = P['bed_wall_thk']
+    skid_h = P['skid_h']
 
-    # The "side view" shows the cross-section. We pick a Z slice (z = boW/2 = max width).
-    # Actually, the side view shows the YZ plane (looking from +X).
-    # In the side view, we show the bed (Y from 0 to wh, Z from -bedW/2 to +bedW/2).
+    bed_z0 = -bedW/2   # north outer face
+    bed_z1 =  bedW/2   # south outer face
 
-    # Use a 2D coord system where horizontal is Z (south=north) and vertical is Y.
-    # So: x_2d = Z, y_2d = Y.
-
-    bed_z0 = -bedW/2
-    bed_z1 =  bedW/2
-
-    # ---- Bed (rectangle) ----
-    bed = Rectangle((bed_z0, 0), bedW, wh, facecolor='#8d6e63',
-                    edgecolor='black', linewidth=1.2, zorder=2, label='Planter bed (8×3.7 ft, 12" walls)')
+    # ---- Bed walls (south + north visible in side view) ----
+    bed = Rectangle((bed_z0, 0), bedW, wh,
+                    facecolor='#8d6e63', edgecolor='black',
+                    linewidth=1.2, zorder=2,
+                    label='Planter bed (8×3.7 ft, 2x12 PT walls, 11.25" soil depth)')
     ax.add_patch(bed)
 
     # Soil
-    sd = 12.0
-    soil = Rectangle((bed_z0 + wt, 0), bedW - 2*wt, sd, facecolor='#5d4037',
-                     edgecolor='none', alpha=0.7, zorder=1, label='Soil ballast (~2000 lb wet)')
+    sd = wh
+    soil = Rectangle((bed_z0 + wt, 0), bedW - 2*wt, sd,
+                     facecolor='#5d4037', edgecolor='none', alpha=0.7, zorder=1,
+                     label='Soil ballast (~2000 lb wet)')
     ax.add_patch(soil)
 
     # Skid
-    skid_h = 3.0
-    skid = Rectangle((bed_z0, -skid_h), bedW, skid_h, facecolor='#5d4037',
-                     edgecolor='black', linewidth=0.8, zorder=1.5)
+    skid = Rectangle((bed_z0, -skid_h), bedW, skid_h,
+                     facecolor='#5d4037', edgecolor='black',
+                     linewidth=0.8, zorder=1.5)
     ax.add_patch(skid)
 
-    # ---- Posts (north side, at z = -bedW/2 + wt/2, on top of north wall) ----
-    z_post = -bedW/2 + wt/2
-    ps = P['post_side']
-    ph = P['post_height']
-    post = Rectangle((z_post - ps/2, wh), ps, ph, facecolor='#6d4c41',
-                     edgecolor='black', linewidth=1.0, zorder=2.5,
-                     label='6×6 post (10 ft, hinged at bed wall)')
-    ax.add_patch(post)
+    # ---- Frame (long rails — south + north — sit on top of the bed walls) ----
+    rail_t = P['rail_W']    # 1.5
+    rail_h = P['rail_H']    # 5.5
+    frame_y = wh            # bottom of frame at top of bed wall
+    # South long rail (hinged)
+    south_rail = Rectangle((bedW/2 - rail_t, frame_y), rail_t, rail_h,
+                           facecolor='#a1887f', edgecolor='black',
+                           linewidth=1.0, zorder=2.5,
+                           label='Frame long rail (2x6 PT)')
+    ax.add_patch(south_rail)
+    # North long rail (actuator side)
+    north_rail = Rectangle((-bedW/2, frame_y), rail_t, rail_h,
+                           facecolor='#a1887f', edgecolor='black',
+                           linewidth=1.0, zorder=2.5)
+    ax.add_patch(north_rail)
 
-    # ---- Beam (horizontal, between posts at high side) ----
-    bs = P['beam_side']
-    bl = P['beam_length']
-    bh = P['beam_attach_h']
-    beam = Rectangle((z_post - bl/2, wh + bh - bs/2), bl, bs, facecolor='#6d4c41',
-                     edgecolor='black', linewidth=1.0, zorder=2.5)
-    ax.add_patch(beam)
+    # ---- Hinge (on top of south wall, between wall and frame) ----
+    hinge_y = frame_y
+    hinge_z = bedW/2
+    # Hinge pin (small cylinder, drawn as a black bar)
+    hinge = Rectangle((hinge_z - 0.25, hinge_y - 1.0), 0.5, 2.0,
+                      facecolor='#37474f', edgecolor='black', linewidth=0.8, zorder=4,
+                      label='4× butt hinge, ½" pin')
+    ax.add_patch(hinge)
+    # Hinge leaves
+    wall_leaf = Rectangle((hinge_z - 2, hinge_y - 0.1), 4, 0.1,
+                          facecolor='#90a4ae', edgecolor='black', linewidth=0.5, zorder=3.5)
+    rail_leaf = Rectangle((hinge_z - rail_t, hinge_y + 0.0), rail_t, 0.1,
+                          facecolor='#90a4ae', edgecolor='black', linewidth=0.5, zorder=3.5)
+    ax.add_patch(wall_leaf)
+    ax.add_patch(rail_leaf)
 
-    # ---- Panel ----
-    pL = P['panel_L']
+    # ---- Panel + tilted frame north rail ----
     pW = P['panel_W']
     pt = P['panel_t']
     tilt = math.radians(P['panel_tilt'])
-    hinge_z = bedW/2  # south wall top
-    hinge_y = wh
 
-    # Build panel as a rectangle, rotate about hinge, place
-    # In local frame: rectangle from (-pL/2, -pt/2) to (pL/2, pt/2)
-    # But in side view we see the panel as a 2D shape (its YZ projection).
-    # The panel is 3.72 ft in Z (the tilted direction) and 1.4" in Y (thickness).
-    # After rotation by tilt about the X axis (the long axis of the panel),
-    # the YZ projection of the panel is a tilted rectangle.
+    # Panel hinge at the top of the south wall, at z=bedW/2, y=wh
+    # When tilted by angle θ, the north end of the panel rises:
+    # high edge in (Y, Z): (wh + pW*sin(tilt), bedW/2 - pW*cos(tilt))
+    high_y = wh + pW * math.sin(tilt)
+    high_z = bedW/2 - pW * math.cos(tilt)
 
-    # The panel "tilted" face: from hinge (z=hinge_z, y=hinge_y) extending in direction
-    # (cos(tilt+90°), sin(tilt+90°)) in YZ? Actually:
-    # Panel normal is (0, cos(tilt), -sin(tilt)) [up and toward south = +Z]
-    # Panel extends from hinge in direction (-Z, +Y) = (-cos(tilt), +sin(tilt)) in YZ
-    # Wait, let me think. The panel long axis is X, the tilt direction is YZ.
-    # Tilt angle is from horizontal. Un-rotated panel: lies in XZ plane, normal in +Y.
-    # Rotated by tilt about X axis: panel long axis still along X, but the panel
-    # itself is tilted up. The "tilt direction" is in the YZ plane.
-    # From hinge, the panel extends in direction (-sin(tilt), -cos(tilt)) in (Y, Z)?
-    # Let's just compute the high edge in (Y, Z):
-    # The panel width direction is from hinge to high edge: this direction in (Y, Z) is
-    # (sin(tilt), -cos(tilt))? Let's check at tilt=0: panel lies flat, direction is (0, -1)
-    # in (Y, Z) — extends in -Z (north). At tilt=90: panel vertical, direction is (1, 0) in
-    # (Y, Z) — extends in +Y (up). At tilt=35: direction is (sin(35), -cos(35)) = (0.574, -0.819).
-    # So high edge relative to hinge: (Y, Z) = hinge + pW * (sin(tilt), -cos(tilt))
-    # = (hinge_y + pW*sin(tilt), hinge_z - pW*cos(tilt))
-
-    high_y = hinge_y + pW * math.sin(tilt)
-    high_z = hinge_z - pW * math.cos(tilt)
-
-    # Panel as polygon (top face only, visible from south):
-    # 4 corners in (z, y) since the side view shows YZ plane:
-    #   hinge-low:  (hinge_z, hinge_y)
-    #   hinge-high: (hinge_z, hinge_y + pt) -- but in YZ this is a thin strip
-    #   high-low:   (high_z, high_y)
-    #   high-high:  (high_z, high_y + pt)
-    # For the side view, just show the bottom face (top is parallel, very close).
-
-    panel_low = Polygon(
-        [(hinge_z, hinge_y), (high_z, high_y),
-         (high_z, high_y + pt), (hinge_z, hinge_y + pt)],
+    # Panel as a thin polygon
+    panel = Polygon(
+        [(bedW/2, wh), (high_z, high_y),
+         (high_z, high_y + pt), (bedW/2, wh + pt)],
         facecolor='#1a237e', edgecolor='black', linewidth=1.0, zorder=3,
         label=f'Panel (8.08×3.72 ft, ~620W bifacial @ {P["panel_tilt"]:.0f}°)'
     )
-    ax.add_patch(panel_low)
+    ax.add_patch(panel)
 
-    # Hinge line
-    ax.plot([hinge_z, hinge_z], [hinge_y - 0.5, hinge_y + 1.5], 'k-', linewidth=2, zorder=4)
+    # Tilted north rail — sits on top of the panel's north edge.
+    # At tilt, the rail's hinge side stays at (bedW/2 - rail_t, wh+rail_h)
+    # and the free end follows the panel tilt. The 4 corners of the top face
+    # are computed by rotating the rail's cross-section about the south hinge.
+    rail_north_top = Polygon(
+        [(bedW/2 - rail_t, wh + rail_h),
+         (high_z - rail_t * math.cos(tilt), high_y + rail_h * math.cos(tilt) + pt),
+         (high_z, high_y + pt + rail_h),
+         (bedW/2, wh + rail_h)],
+        facecolor='#a1887f', edgecolor='black', linewidth=0.8, zorder=2.5
+    )
+    ax.add_patch(rail_north_top)
 
-    # ---- Annotations ----
-    # Tilt angle arc
+    # Diagonal brace (visible in side view as a tilted line inside the frame).
+    # Note: we don't draw the brace in the side view — it's a 2x4 in the
+    # frame's plane, parallel to the panel face. It would appear edge-on in
+    # this view as a thin line, which doesn't add information.
+
+    # ---- Actuator (between bed's north wall block and the frame's north rail) ----
+    # The actuator is a 4" stroke linear actuator. At any tilt, it spans
+    # between the bed's north wall (fixed block) and the frame's north rail
+    # (which moves with the tilt). The actuator is drawn as a thick line
+    # with a motor body and a rod.
+    actuator_mount_n = (-bedW/2, wh)              # on top of north wall
+    # Frame north rail top: at tilt, the rail top edge has moved up.
+    # Use the tilted north rail's top inside corner as the actuator attach point.
+    actuator_mount_f = (high_z, high_y + pt)      # bottom of tilted north rail (frame side)
+    # Draw the actuator body + rod
+    act = Polygon(
+        [actuator_mount_n, (actuator_mount_n[0] + 0.5, actuator_mount_n[1]),
+         (actuator_mount_f[0] + 0.5, actuator_mount_f[1]), actuator_mount_f],
+        facecolor='#455a64', edgecolor='black', linewidth=0.6, zorder=2.7,
+        label='Linear actuator (4" stroke, 330 lbf)'
+    )
+    ax.add_patch(act)
+
+    # ---- Tilt angle arc ----
     arc_center = (hinge_z, hinge_y)
     arc_r = 14
-    angle_start = 180  # pointing west (-Z) in the side view
-    angle_end = 180 - math.degrees(tilt)
+    # At 0° tilt, the panel lies in the XZ plane (in side view, it's a horizontal line at y=wh).
+    # The arc goes from "flat" (angle 0, pointing -Z) to "tilted" (angle = tilt, pointing up-left).
+    # The horizontal line in side view is the -Z direction. The tilt direction is up-and-to-the-left.
+    # The angle arc goes from -Z (180° in screen coords where +X is 0°) to the panel direction.
+    # Panel direction from hinge in 2D = (high_z - hinge_z, high_y - hinge_y) = (-pW*cos(tilt), pW*sin(tilt))
+    # Angle of this vector from +X axis = atan2(pW*sin(tilt), -pW*cos(tilt)) = pi - tilt
+    # In screen coords (y goes down), atan2 gives... let's just draw the arc from "south" (0°)
+    # to the panel direction (which is up-and-to-the-left, so a negative angle in matplotlib's
+    # standard convention).
     arc = mpatches.Arc(arc_center, 2*arc_r, 2*arc_r, angle=0,
-                       theta1=angle_end, theta2=angle_start,
+                       theta1=180 - math.degrees(tilt), theta2=180,
                        color='red', linewidth=1.5, zorder=5)
     ax.add_patch(arc)
     ax.text(hinge_z - arc_r*1.4, hinge_y + 2,
             f"{P['panel_tilt']:.0f}° tilt", color='red', fontsize=11, weight='bold')
 
-    # Height dimension
-    ax.annotate("", xy=(bedW/2 + 4, 0), xytext=(bedW/2 + 4, wh + bh + bs),
-                arrowprops=dict(arrowstyle='<->', color='blue', lw=1.2))
-    ax.text(bedW/2 + 6, (wh + bh + bs)/2, f"{((wh + bh + bs)/12):.1f} ft\ncanopy height",
-            color='blue', fontsize=10, va='center')
-
-    # Panel length dimension
-    ax.annotate("", xy=(hinge_z, hinge_y - 4), xytext=(high_z, high_y - 4),
-                arrowprops=dict(arrowstyle='<->', color='green', lw=1.0))
-    mid_z = (hinge_z + high_z) / 2
-    mid_y = (hinge_y + high_y) / 2 - 4
-    ax.text(mid_z, mid_y - 4, f'Panel {pW/12:.2f} ft\n(tilted direction)',
-            color='green', fontsize=9, ha='center')
-
+    # ---- Dimension annotations ----
     # Bed width
     ax.annotate("", xy=(bed_z0, -skid_h - 5), xytext=(bed_z1, -skid_h - 5),
                 arrowprops=dict(arrowstyle='<->', color='black', lw=0.8))
     ax.text(0, -skid_h - 9, f'Bed: {bedW/12:.2f} ft wide',
             ha='center', fontsize=9)
 
+    # Frame height (rail height above the wall)
+    ax.annotate("", xy=(bedW/2 + 4, wh), xytext=(bedW/2 + 4, wh + rail_h),
+                arrowprops=dict(arrowstyle='<->', color='blue', lw=1.0))
+    ax.text(bedW/2 + 6, wh + rail_h/2, f"{rail_h:.1f}\"\n2x6 rail",
+            color='blue', fontsize=9, va='center')
+
+    # Panel high Y dimension (when tilted)
+    ax.annotate("", xy=(high_z + 2, wh), xytext=(high_z + 2, high_y),
+                arrowprops=dict(arrowstyle='<->', color='green', lw=1.0))
+    ax.text(high_z + 4, (wh + high_y)/2, f"high\n{((high_y-wh)/12):.1f} ft",
+            color='green', fontsize=8, va='center')
+
     # Soil label
     ax.text(0, sd/2, 'Soil\nballast', ha='center', va='center',
             color='white', fontsize=10, weight='bold')
 
-    # Wind arrow (south, hitting the panel)
-    wind_z = -bedW/2 - 8
-    wind_y = high_y - 10
-    ax.annotate("", xy=(wind_z, wind_y), xytext=(wind_z - 18, wind_y),
+    # Wind arrow (from south, hitting the panel)
+    wind_y = high_y - 8
+    ax.annotate("", xy=(bedW/2 + 4, wind_y), xytext=(bedW/2 + 20, wind_y),
                 arrowprops=dict(arrowstyle='->', color='red', lw=2.0))
-    ax.text(wind_z - 22, wind_y + 2, "Wind 115 mph\n(from south)", color='red', fontsize=10, ha='right', weight='bold')
+    ax.text(bedW/2 + 22, wind_y + 2, "Wind 115 mph\n(from south)", color='red', fontsize=10, ha='left', weight='bold')
 
-    # Force vectors on panel (decomposed) -- computed for this tilt
+    # Force vectors on panel (decomposed)
     tilt_rad = math.radians(tilt_deg)
-    fv = round(24.5 * (P['panel_L']/12) * (P['panel_W']/12) * 1.5 * math.sin(tilt_rad) * math.cos(tilt_rad))  # uplift
-    fh = round(24.5 * (P['panel_L']/12) * (P['panel_W']/12) * 1.5 * math.sin(tilt_rad) * math.sin(tilt_rad))  # drag
-    centroid_y = (hinge_y + high_y) / 2
-    centroid_z = (hinge_z + high_z) / 2
-    ax.annotate("", xy=(centroid_z, centroid_y + 12), xytext=(centroid_z, centroid_y),
+    fv = round(24.5 * (P['panel_L']/12) * (P['panel_W']/12) * 1.5 * math.sin(tilt_rad) * math.cos(tilt_rad))
+    fh = round(24.5 * (P['panel_L']/12) * (P['panel_W']/12) * 1.5 * math.sin(tilt_rad) * math.sin(tilt_rad))
+    centroid_y = (wh + high_y) / 2
+    centroid_z = (bedW/2 + high_z) / 2
+    ax.annotate("", xy=(centroid_z, centroid_y + 10), xytext=(centroid_z, centroid_y),
                 arrowprops=dict(arrowstyle='->', color='#c0392b', lw=1.5))
-    ax.text(centroid_z + 1, centroid_y + 14, f"↑ {fv} lb\nuplift", color='#c0392b', fontsize=8)
-    ax.annotate("", xy=(centroid_z - 12, centroid_y), xytext=(centroid_z, centroid_y),
+    ax.text(centroid_z + 1, centroid_y + 12, f"↑ {fv} lb\nuplift", color='#c0392b', fontsize=8)
+    ax.annotate("", xy=(centroid_z - 10, centroid_y), xytext=(centroid_z, centroid_y),
                 arrowprops=dict(arrowstyle='->', color='#2c3e50', lw=1.5))
-    ax.text(centroid_z - 14, centroid_y + 2, f"{fh} lb →\ndrag", color='#2c3e50', fontsize=8, ha='right')
+    ax.text(centroid_z - 12, centroid_y + 2, f"{fh} lb →\ndrag", color='#2c3e50', fontsize=8, ha='right')
 
-    # Bed pivot label
+    # Pivot for overturning (north-bottom corner)
     pivot = (-bedW/2, 0)
     ax.plot(*pivot, 'ko', markersize=6, zorder=5)
     ax.annotate("Pivot for\noverturning", pivot, textcoords="offset points",
                 xytext=(-90, -10), fontsize=8, color='black')
 
     # ---- Layout ----
-    ax.set_xlim(-bedW - 30, bedW + 30)
-    ax.set_ylim(-15, wh + bh + bs + 20)
+    ax.set_xlim(-bedW - 5, bedW + 35)
+    ax.set_ylim(-15, max(wh + rail_h + 5, high_y + 10))
     ax.set_aspect('equal')
-    ax.set_xlabel("Z (south ←  → north, inches)")
+    ax.set_xlabel("Z (north ←  → south, inches)")
     ax.set_ylabel("Y (up, inches)")
-    ax.set_title("Wattplot v2 — Side view (looking from east)\n"
-                 f"8×3.7 ft bed, 6×6 posts, {pL/12:.1f}×{pW/12:.2f} ft panel @ {P['panel_tilt']:.0f}° tilt, "
-                 f"hinge on south wall, ballasted by soil")
+    ax.set_title(f"Wattplot v2 — Side view (looking from east)\n"
+                 f"8×3.7 ft bed, 2x6 PT frame around panel, "
+                 f"620W bifacial @ {P['panel_tilt']:.0f}° tilt, hinged on south wall")
     ax.grid(True, alpha=0.3, linestyle=':')
     ax.legend(loc='upper right', fontsize=8, framealpha=0.9)
 
     plt.tight_layout()
-    out = os.path.join(os.path.dirname(__file__), "..", "renders", f"wattplot_v2_side_view_{tilt_deg:03d}.png")
+    out = os.path.join(os.path.dirname(__file__), "..", "renders",
+                       f"wattplot_v2_side_view_{tilt_deg:03d}.png")
     plt.savefig(out, dpi=140)
     plt.close()
     print(f"[drawing] wrote {out}")

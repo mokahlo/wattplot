@@ -38,28 +38,84 @@ def banner(text):
 
 
 def build_and_export_3d_model(tilt_override=None):
-    """Build the cadquery 3D model, export to STEP/STL/3MF/VRML."""
-    banner("STEP 1/3 — Build & export 3D model")
+    """Build the FreeCAD 3D model, export to STEP/STL/FCStd.
+
+    The model is built by `models/freecad/assemble.py` (one FreeCAD Part::Feature
+    per part), then exported to STEP (parametric CAD), STL (mesh), and saved
+    as a .FCStd file (the editable FreeCAD document).
+
+    Requires FreeCAD 1.0+. The script auto-detects `freecadcmd` in the
+    standard install locations, or uses $FREECADCMD if set.
+    """
+    banner("STEP 1/3 — Build & export 3D model (FreeCAD)")
     if tilt_override is not None:
         P.PANEL['panel_tilt_deg'] = tilt_override
         print(f"  Override: panel tilt = {tilt_override}°")
 
-    from export_3d import build_model
-    from cadquery import exporters
+    freecadcmd = _find_freecadcmd()
+    if freecadcmd is None:
+        print("  [model] FreeCAD not found — skipping 3D model export.")
+        print("         Install FreeCAD 1.0+ from https://www.freecad.org/")
+        print("         or set $FREECADCMD to your FreeCADCmd.exe path.")
+        return
 
-    model = build_model().val()
+    print(f"  Using: {freecadcmd}")
+    runner = os.path.join(HERE, "models", "freecad", "_run.py")
+    cmd = [freecadcmd, runner]
+    print(f"  Running: {' '.join(cmd)}")
+    import subprocess
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    # Print only the lines after the FreeCAD banner so we see our [freecad] log
+    for line in result.stdout.splitlines():
+        if line.startswith("[freecad]"):
+            print(f"  {line}")
+    if result.returncode != 0:
+        print(f"  [model] FreeCAD exited with code {result.returncode}")
+        if result.stderr:
+            print("  stderr (last 10 lines):")
+            for line in result.stderr.splitlines()[-10:]:
+                print(f"    {line}")
+        return
+
+    # Show the exported files
     models_dir = os.path.join(HERE, "models")
-    os.makedirs(models_dir, exist_ok=True)
-
-    for ext in ["STEP", "STL", "3MF", "VRML"]:
-        out = os.path.join(models_dir, f"wattplot_v2.{ext.lower()}")
-        if ext == "STL":
-            exporters.export(model, out, exportType=ext, tolerance=0.5)
-        else:
-            exporters.export(model, out, exportType=ext)
-        size_kb = os.path.getsize(out) / 1024
-        print(f"  Exported {ext:5s}: {os.path.basename(out)} ({size_kb:.1f} KB)")
+    for fname in ("wattplot_v2.step", "wattplot_v2.stl", "wattplot_v2.fcstd"):
+        path = os.path.join(models_dir, fname)
+        if os.path.exists(path):
+            size_kb = os.path.getsize(path) / 1024
+            print(f"  Exported: {fname} ({size_kb:.1f} KB)")
     print(f"  Current panel tilt (from shared params): {P.PANEL['panel_tilt_deg']}°")
+
+
+def _find_freecadcmd():
+    """Find the freecadcmd executable. Checks (in order):
+      1. $FREECADCMD environment variable
+      2. C:\\Program Files\\FreeCAD *\\bin\\freecadcmd.exe
+      3. freecadcmd on PATH
+    Returns the full path, or None if not found.
+    """
+    import shutil
+    import glob
+
+    env = os.environ.get("FREECADCMD")
+    if env and os.path.isfile(env):
+        return env
+
+    # Windows default locations
+    for pattern in [
+        r"C:\Program Files\FreeCAD *\bin\freecadcmd.exe",
+        r"C:\Program Files (x86)\FreeCAD *\bin\freecadcmd.exe",
+    ]:
+        matches = glob.glob(pattern)
+        if matches:
+            return matches[0]
+
+    # Linux/macOS fallback
+    found = shutil.which("freecadcmd")
+    if found:
+        return found
+
+    return None
 
 
 def run_simulation():

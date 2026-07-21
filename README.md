@@ -34,35 +34,49 @@ Want a release-blocking photo template? Add an issue with the tag `build-photo`.
 ## What's in the box
 
 ```
-wattplot.py                       ← top-level pipeline:  python wattplot.py
-wattplot_params.py                 ← single source of truth for ALL parameters
+wattplot.py                            ← top-level pipeline:  python wattplot.py
+wattplot_params.py                     ← single source of truth for ALL parameters
 models/
-  wattplot_v2_model.py             ← cadquery 3D model (parametric)
-  shadow_raycaster.py              ← geometric bed-shadow from 3D panel
-  export_3d.py                     ← exports STEP / STL / 3MF / VRML
-  render_3d_views.py               ← matplotlib 3D previews
-  render_svg_views.py              ← cadquery orthographic SVGs
+  freecad/                             ← FreeCAD parametric 3D model
+    materials.py                       ← wood species, fasteners, hardware
+    parts/                             ← one file per part (bed_wall, frame,
+      _helpers.py, bed_wall.py,        ←   hinge, panel_clamp, actuator_mount,
+      frame.py, panel.py, hinge.py,    ←   skids, diagonal_brace, ...)
+      panel_clamp.py, skid.py,
+      actuator_mount.py
+    assemble.py                         ← imports all parts, exports STEP+STL+FCStd
+    _run.py                             ← freecadcmd entry point
+  legacy_cadquery/                     ← old cadquery model (archived)
+  shadow_raycaster.py                  ← geometric bed-shadow from 3D panel
+  render_3d_views.py, render_svg_views.py
 analysis/
-  sun_simulator.py                 ← annual kWh, bed DLI, tomato yield
-  wind_load.py                     ← ASCE 7-22 force + safety factors
-  engineering_drawing.py           ← side-view engineering drawings
-  pcb_schematic.py                 ← PCB block-diagram generator
-renders/                           ← generated PNGs (gitignored or committed)
+  sun_simulator.py                     ← annual kWh, bed DLI, tomato yield
+  wind_load.py                         ← ASCE 7-22 force + safety factors
+  engineering_drawing.py               ← side-view engineering drawings
+  pcb_schematic.py                     ← PCB block-diagram generator
+renders/                               ← generated PNGs (mostly gitignored)
+firmware/                              ← ESPHome firmware for the controller
+docs/                                  ← GitHub Pages 3D viewer
 ```
 
 Change a value in `wattplot_params.py`, run `python wattplot.py`, and the
-whole pipeline (3D model, shadow, sun sim, wind sim) updates in ~8 seconds.
+whole pipeline (3D model, shadow, sun sim, wind sim) updates in ~10 seconds.
 
 ---
 
 ## The design (one paragraph)
 
-An 8 ft × 3.7 ft × 12" soil-filled cedar planter with a 620 W bifacial solar
-panel hinged on the south wall. Two 6×6×10 ft posts on the north side support
-a horizontal beam. The panel tilts 0–90° (storm fold → sun-on-bed vertical).
-The bed is the **ballast** — no ground anchors. The smart controller uses a
-PI loop on motor current to reduce tilt under wind load, then back to the
-commanded angle when wind drops.
+An 8 ft × 3.7 ft × 12" soil-filled planter with a 620 W bifacial solar
+panel **surrounded by an all-wood frame** (2x6 PT Douglas Fir perimeter +
+2x4 PT diagonal brace). The frame is hinged on the south wall by four
+galvanized butt hinges, and the north rail is pushed by a 4" stroke linear
+actuator. The panel tilts 0–90° (storm fold → sun-on-bed vertical). The bed
+is the **ballast** — no ground anchors. The smart controller uses a PI loop
+on motor current to reduce tilt under wind load, then back to the commanded
+angle when wind drops.
+
+**Frame material:** all lumber for sustainability (FSC Douglas Fir where
+available). Hardware (hinges, panel clamps) is metal where the load demands.
 
 ## Power architecture — only two sources
 
@@ -159,42 +173,55 @@ open renders/viewer.html
 ### Dependencies
 
 - Python 3.10+
-- `numpy`, `pandas`, `matplotlib`, `pvlib`, `cadquery`, `shapely`, `cairosvg`, `scipy`
+- `numpy`, `pandas`, `matplotlib`, `pvlib`, `shapely`, `scipy` (for analysis)
+- **FreeCAD 1.0+** (for the 3D model — `freecadcmd` is auto-detected on
+  Windows in `C:\Program Files\FreeCAD *\bin\`)
+- `ruff` (for lint)
 
 ```bash
-pip install numpy pandas matplotlib pvlib cadquery shapely cairosvg scipy
+pip install numpy pandas matplotlib pvlib shapely scipy ruff
 ```
+
+The 3D model is built by FreeCAD. On Windows with FreeCAD 1.0+ installed
+in the default location, the orchestrator finds it automatically. To
+override, set `$FREECADCMD` to the path of `freecadcmd.exe`.
 
 ## Hardware reference (target spec, not yet built)
 
 | Component | Spec | ~$ |
 |---|---|---|
-| Bed walls | 2x6 PT pine stacked, 8×3.7 ft, 12" deep | 250 |
-| Posts | 6×6×10 ft PT pine, 2 ea | 100 |
-| Beam | 6×6×7 ft PT pine | 50 |
-| Skids | 4×4 PT pine, 8 ft, 2 ea | 30 |
-| Hinge | 1/2" × 6 ft continuous hinge, SS | 50 |
-| Panel | 620W bifacial (LONGi Hi-MO X10 or similar) | 200 |
-| Microinverter | Enphase IQ7+ or APsystems DS3, 240V, UL 1741 | 150 |
+| Bed walls | 2x12 PT Douglas Fir, 4 × 8 ft + 1 × 8 ft, 11.25" actual depth | 100 |
+| Frame rails | 2x6 PT DF, 2 × 8 ft long + 2 × 8 ft cross | 60 |
+| Diagonal brace | 2x4 PT DF, 1 × 10 ft | 15 |
+| Skids | 4x4 PT DF, 2 × 8 ft | 30 |
+| Hinges | 4 × galvanized butt hinges 4"×4", ½" pin, +96" ½" rod | 35 |
+| Panel clamps | 6 × aluminum mid-clamps, 35mm channel | 18 |
 | Linear actuator | 12V, 4" stroke, IP65, 330 lb | 60 |
 | **DPS5005 MPPT** | Ruideng programmable buck, UART-controlled, 50V/5A | 25 |
+| Panel | 620W bifacial (LONGi Hi-MO X10 or similar) | 200 |
+| Microinverter | Enphase IQ7+ or APsystems DS3, 240V, UL 1741 | 150 |
 | 12V 100Ah LiFePO4 | LiTime or similar | 230 |
 | ESP32 + custom PCB | w/ DRV8871, INA219, BMI160, sensors | 120 |
 | 200W LED grow light | full spectrum, IP65 (v2) | 130 |
-| Misc (screws, bolts, wire, irrigation) | | 150 |
-| **Total parts** | | **~$1,545** |
+| Misc (screws, bolts, wire, irrigation) | | 50 |
+| **Total parts** | | **~$1,225** |
+
+All structural lumber is FSC Douglas Fir where available. No welding. No
+concrete. See `bom.md` for sourcing notes.
 
 Note: DPS5005 is the MPPT path. The 620W main panel feeds the DPS5005 via UART control from the ESP32 — 95% efficient, no custom magnetics design, hackable. The same panel also feeds the microinverter for AC output. No separate trickle panel needed.
 
 ## Project status
 
-- [x] Parametric 3D model (cadquery) with STEP / STL / 3MF / VRML export
+- [x] Parametric 3D model (FreeCAD) with STEP / STL / FCStd export, one
+      file per part (`models/freecad/parts/`)
+- [x] All-wood perimeter frame design (2x6 rails + 2x4 brace, half-lap bed corners)
 - [x] ASCE 7-22 wind load analysis, Phoenix, Exp C, Cat II 700-yr
 - [x] Geometric shadow raycaster (uses actual 3D panel)
 - [x] Annual sun + yield simulator (5 tilt schedules, Phoenix weather)
-- [x] Engineering side-view drawings
+- [x] Engineering side-view drawings (with frame + actuator + hinge detail)
 - [x] PCB block diagram (controller + sensors)
-- [ ] ESP32 prototype + firmware (PI controller, NWS polling, fold logic)
+- [x] ESPHome firmware (PI controller, NWS polling, fold logic) — `firmware/`
 - [ ] Custom PCB (JLCPCB fab + assembly)
 - [ ] Real-world deployment validation
 
