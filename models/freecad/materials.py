@@ -43,6 +43,9 @@ WOOD = dict(
 # Real dimensions of dressed (S4S) lumber. PT lumber may swell slightly when
 # first wet; design with the actual dimensions below.
 LUMBER = {
+    "1x2":  {"actual_t": 0.75, "actual_h": 1.5},
+    "1x3":  {"actual_t": 0.75, "actual_h": 2.5},
+    "1x4":  {"actual_t": 0.75, "actual_h": 3.5},
     "2x4":  {"actual_t": 1.5,  "actual_h": 3.5},
     "2x6":  {"actual_t": 1.5,  "actual_h": 5.5},
     "2x8":  {"actual_t": 1.5,  "actual_h": 7.25},
@@ -55,6 +58,9 @@ LUMBER = {
 
 # Per-foot weight of common sizes (PT DF, ~35 pcf)
 LUMBER_WEIGHT_LB_PER_FT = {
+    "1x2":  0.59,
+    "1x3":  0.97,
+    "1x4":  1.28,
     "2x4":  1.28,
     "2x6":  2.00,
     "2x8":  2.64,

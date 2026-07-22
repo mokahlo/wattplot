@@ -250,3 +250,80 @@ P = {
     "control": CONTROL,
     "crop": CROP,
 }
+
+# =============================================================================
+# MINI (1/5-scale, fully functional — design validation prototype)
+# =============================================================================
+# A small, windowsill-sized build used to validate the design before
+# committing to the full-size apparatus. Same design rules, same firmware,
+# same PCB — just smaller dimensions and the smallest off-shelf hardware.
+#
+# Why "1/5" is approximate:
+#   - LENGTH scales 1/5 (19" vs full 96")
+#   - WIDTH is ~1/4 (11" vs full 44.6") — the off-shelf Newpowa 10W panel
+#     (17.32" × 8.46") is wider than 1/5 of 44.6" (= 8.92"), so the bed
+#     is slightly wider to fit the panel + 1x2 frame rails
+#   - SOIL DEPTH is NOT 1/5 (1/5 of 11.25" = 2.25" is too shallow for plants)
+#     — we use 1x4 actual 3.5" depth for a real (small) plant
+#   - PANEL is the closest off-shelf match: Newpowa 10W 12V Mono,
+#     17.32" × 8.46" × 0.71" (within 2% of 1/5 on length, 5% on width)
+#   - Hardware is the smallest standard: 1.5" butt hinges, 1" stroke
+#     micro actuator, ⅜" hinge pin
+#   - Electronics are identical to the full-size build (same firmware,
+#     same PCB, same sensors) — only the frame + bed scale
+#
+# If the mini works on the bench for a week, the full-size will work too.
+# This is the "fail fast, fail cheap" iteration.
+MINI = dict(
+    # ----- bed dimensions -----
+    bed_outer_L_in=19.0,            # 1/5 of full (96")
+    bed_outer_W_in=10.0,            # sized to fit panel (8.46") + 2x 1x2 rails (1.5")
+                                   # interior = 10 - 1.5 = 8.5" (panel fits with 0.04" margin)
+    bed_wall_thk_in=0.75,           # 1x4 actual
+    bed_wall_h_in=3.5,              # 1x4 actual (real soil depth for small plant)
+    skid_h_in=0.75,                 # 1x2 actual
+    skid_side_in=1.5,               # 2x2 actual
+
+    # ----- frame: 19" × 11" rectangle, 1x2 PT rails -----
+    long_rail_length_in=19.0,       # 1x2x19" (cut from 1x2x8ft, 77" waste)
+    cross_rail_length_in=9.5,       # 11 - 2*0.75 (frame thickness)
+    long_rail_thk_in=0.75,          # 1x2 actual (0.75 × 1.5)
+    long_rail_h_in=1.5,
+    cross_rail_thk_in=0.75,
+    cross_rail_h_in=1.5,
+    diagonal_brace_length_in=20.0,  # sqrt(17.5^2 + 9.5^2) ≈ 19.9"; 20" from 1x2x24" offcut
+
+    # ----- hinge: 1.5" butt hinge with ⅜" pin (smallest standard off-shelf) -----
+    hinge_leaf_in=1.5,
+    hinge_pin_d_in=0.375,
+    hinge_count=2,                  # 2 hinges (vs 4 in full-size) — smaller load
+    hinge_rod_length_in=24.0,       # ⅜" x 24" steel rod (Home Depot)
+
+    # ----- panel: Newpowa 10W 12V Mono, 17.32" × 8.46" × 0.71" -----
+    # (the closest off-shelf panel to 1/5 of the full-size 97" × 44.6" panel)
+    panel_L_in=17.32,
+    panel_W_in=8.46,
+    panel_t_in=0.71,
+    panel_wattage=10,
+    panel_voc_V=21.6,               # Newpowa 10W specs: Voc=21.6V, Vmp=18V
+    panel_vmp_V=18.0,
+    panel_imp_A=0.57,
+
+    # ----- actuator: 1" stroke 12V micro (smallest standard) -----
+    actuator_stroke_in=1.0,
+    actuator_rated_force_lb=25,     # micro actuator, ~$15 on Amazon
+
+    # ----- clamps: 4 total (2 per long rail) -----
+    # Aluminum mid-clamps for ~18mm panel frame channel (smaller than 35mm full-size)
+    panel_clamp_size_in=1.0,
+    panel_clamp_count=4,
+
+    # ----- electronics: identical to full-size -----
+    # ESP32-WROOM-32 (same)
+    # DPS5005 MPPT (same — 5A is overkill but it's off-shelf)
+    # BMI160 IMU (same)
+    # INA219 current sensor (same)
+    # DS18B20 temp (same)
+    # Soil moisture sensor (same)
+    # Battery: 12V 5Ah LiFePO4 (smallest practical, ~$50)
+)
