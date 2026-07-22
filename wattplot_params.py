@@ -252,78 +252,77 @@ P = {
 }
 
 # =============================================================================
-# MINI (1/5-scale, fully functional — design validation prototype)
+# MINI v2 (40" × 22" bed, 100W bifacial, 24" stroke actuator for true 90°)
 # =============================================================================
-# A small, windowsill-sized build used to validate the design before
-# committing to the full-size apparatus. Same design rules, same firmware,
-# same PCB — just smaller dimensions and the smallest off-shelf hardware.
+# A benchtop validation prototype. Larger than the original 1/5 mini (which
+# couldn't fit a real bifacial off-shelf and had too short a stroke for 90°),
+# but still small enough to fit on a workbench. Validates:
+#   - 100W bifacial panel (real power generation, real rear-side gain)
+#   - 24" stroke actuator (true 0-90° tilt range)
+#   - Same firmware, same sensors, same MPPT controller
 #
-# Why "1/5" is approximate:
-#   - LENGTH scales 1/5 (19" vs full 96")
-#   - WIDTH is ~1/4 (11" vs full 44.6") — the off-shelf Newpowa 10W panel
-#     (17.32" × 8.46") is wider than 1/5 of 44.6" (= 8.92"), so the bed
-#     is slightly wider to fit the panel + 1x2 frame rails
-#   - SOIL DEPTH is NOT 1/5 (1/5 of 11.25" = 2.25" is too shallow for plants)
-#     — we use 1x4 actual 3.5" depth for a real (small) plant
-#   - PANEL is the closest off-shelf match: Newpowa 10W 12V Mono,
-#     17.32" × 8.46" × 0.71" (within 2% of 1/5 on length, 5% on width)
-#   - Hardware is the smallest standard: 1.5" butt hinges, 1" stroke
-#     micro actuator, ⅜" hinge pin
-#   - Electronics are identical to the full-size build (same firmware,
-#     same PCB, same sensors) — only the frame + bed scale
+# This is roughly 1/2.4 of the full-size (96" × 44.6" → 40" × 22"),
+# bigger than the 1/5 windowsill mini, more "real" as a system.
+#
+# Design rules (enforced):
+#   1. NO MITER CUTS — every cut is a 90° square cut.
+#   2. ALL HARDWARE OFF THE SHELF — Home Depot, Amazon, McMaster.
+#   3. SIMPLE COMMON DIMENSIONS — 2x2 / 1x4 / 2x4 from 8ft stock.
 #
 # If the mini works on the bench for a week, the full-size will work too.
-# This is the "fail fast, fail cheap" iteration.
 MINI = dict(
     # ----- bed dimensions -----
-    bed_outer_L_in=19.0,            # 1/5 of full (96")
-    bed_outer_W_in=10.0,            # sized to fit panel (8.46") + 2x 1x2 rails (1.5")
-                                   # interior = 10 - 1.5 = 8.5" (panel fits with 0.04" margin)
+    bed_outer_L_in=40.0,            # sized to fit panel (38.58") + 2x 2x2 rails (3")
+                                   # interior = 40 - 3 = 37" (panel fits with 0.58" margin)
+    bed_outer_W_in=22.0,            # sized to fit panel (20.87") + 2x 2x2 rails (3")
+                                   # interior = 22 - 3 = 19" (panel fits with 1.87" margin)
     bed_wall_thk_in=0.75,           # 1x4 actual
     bed_wall_h_in=3.5,              # 1x4 actual (real soil depth for small plant)
-    skid_h_in=0.75,                 # 1x2 actual
+    skid_h_in=1.5,                  # 2x2 actual
     skid_side_in=1.5,               # 2x2 actual
 
-    # ----- frame: 19" × 11" rectangle, 1x2 PT rails -----
-    long_rail_length_in=19.0,       # 1x2x19" (cut from 1x2x8ft, 77" waste)
-    cross_rail_length_in=9.5,       # 11 - 2*0.75 (frame thickness)
-    long_rail_thk_in=0.75,          # 1x2 actual (0.75 × 1.5)
+    # ----- frame: 40" × 22" rectangle, 2x2 PT rails -----
+    long_rail_length_in=40.0,       # 2x2x40" (cut from 2x2x8ft, 56" waste per board)
+    cross_rail_length_in=19.0,      # 22 - 2*1.5 (frame thickness)
+    long_rail_thk_in=1.5,          # 2x2 actual (1.5 × 1.5)
     long_rail_h_in=1.5,
-    cross_rail_thk_in=0.75,
+    cross_rail_thk_in=1.5,
     cross_rail_h_in=1.5,
-    diagonal_brace_length_in=20.0,  # sqrt(17.5^2 + 9.5^2) ≈ 19.9"; 20" from 1x2x24" offcut
+    diagonal_brace_length_in=42.0,  # sqrt(37^2 + 19^2) = 41.6"; 42" from 2x4x8ft (12" waste)
 
-    # ----- hinge: 1.5" butt hinge with ⅜" pin (smallest standard off-shelf) -----
-    hinge_leaf_in=1.5,
-    hinge_pin_d_in=0.375,
-    hinge_count=2,                  # 2 hinges (vs 4 in full-size) — smaller load
-    hinge_rod_length_in=24.0,       # ⅜" x 24" steel rod (Home Depot)
+    # ----- hinge: 4" butt hinge with ⅜" pin (full-size hinge for bigger load) -----
+    hinge_leaf_in=4.0,
+    hinge_pin_d_in=0.5,             # ½" pin (vs ⅜" in v1 mini) for the heavier panel
+    hinge_count=2,                  # 2 hinges (smaller load than full-size 4)
+    hinge_rod_length_in=44.0,       # ½" x 44" steel rod (Home Depot)
 
-    # ----- panel: Newpowa 10W 12V Mono, 17.32" × 8.46" × 0.71" -----
-    # (the closest off-shelf panel to 1/5 of the full-size 97" × 44.6" panel)
-    panel_L_in=17.32,
-    panel_W_in=8.46,
-    panel_t_in=0.71,
-    panel_wattage=10,
-    panel_voc_V=21.6,               # Newpowa 10W specs: Voc=21.6V, Vmp=18V
+    # ----- panel: Newpowa 100W 12V Bifacial, 38.58" × 20.87" × 1.18" -----
+    # (smallest off-the-shelf bifacial panel that gives meaningful power)
+    panel_L_in=38.58,
+    panel_W_in=20.87,
+    panel_t_in=1.18,
+    panel_wattage=100,
+    panel_voc_V=22.0,               # typical 100W 12V mono bifacial: Voc=22V, Vmp=18V
     panel_vmp_V=18.0,
-    panel_imp_A=0.57,
+    panel_imp_A=5.56,               # 100W / 18V = 5.56A
 
-    # ----- actuator: 1" stroke 12V micro (smallest standard) -----
-    actuator_stroke_in=1.0,
-    actuator_rated_force_lb=25,     # micro actuator, ~$15 on Amazon
+    # ----- actuator: 24" stroke 12V 330 lbf (for true 90° tilt) -----
+    actuator_stroke_in=24.0,        # ECO-WORTHY or WindyNation, ~$80-100
+    actuator_rated_force_lb=330,
 
-    # ----- clamps: 4 total (2 per long rail) -----
-    # Aluminum mid-clamps for ~18mm panel frame channel (smaller than 35mm full-size)
-    panel_clamp_size_in=1.0,
-    panel_clamp_count=4,
+    # ----- clamps: 6 total (2 per long rail + 1 per cross rail) -----
+    # Aluminum mid-clamps for 35mm panel frame channel (same as full-size)
+    panel_clamp_size_in=2.0,        # IronRidge / Unirac standard
+    panel_clamp_count=6,
 
     # ----- electronics: identical to full-size -----
     # ESP32-WROOM-32 (same)
-    # DPS5005 MPPT (same — 5A is overkill but it's off-shelf)
+    # DPS5005 MPPT (same — 5A, well within 100W panel's 5.56A Imp)
     # BMI160 IMU (same)
     # INA219 current sensor (same)
     # DS18B20 temp (same)
     # Soil moisture sensor (same)
-    # Battery: 12V 5Ah LiFePO4 (smallest practical, ~$50)
+
+    # ----- battery: 12V 20Ah LiFePO4 (heavier load than v1 mini's 5Ah) -----
+    battery_ah=20,
 )

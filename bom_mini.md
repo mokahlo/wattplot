@@ -1,16 +1,21 @@
-# Wattplot Mini v1 — Bill of Materials
+# Wattplot Mini v2 — Bill of Materials
 
-1/5-scale, fully functional design-validation prototype. Sits on a
-workbench or window sill. Build before committing to the full-size
-build to validate the geometry, the hinge mechanism, the actuator
-travel, the sensor placement, and the controller logic.
+Benchtop design-validation prototype. **40"×22" bed, 100W bifacial
+panel, 24" stroke linear actuator** — large enough to fit a real
+off-the-shelf bifacial panel, small enough to sit on a workbench.
 
-**Total cost: ~$100-130. Total build time: ~3-4 hours.**
+Build before committing to the full-size build to validate:
+- Real 100W bifacial gain (rear-side albedo)
+- 24" stroke actuator travel for true 0-90° tilt
+- 2x2 frame structural behavior
+- Same firmware / sensors / MPPT / wiring as the full-size
+
+**Total cost: ~$220-280. Total build time: ~4-5 hours.**
 
 Same design rules as the full-size build (`bom.md`):
 1. **No miter cuts** — every cut is a 90° square cut.
 2. **All hardware off the shelf** — Home Depot, Amazon, McMaster.
-3. **Simple, common dimensions** — all from 8ft stock, 1x2 / 1x4 / 2x2 PT DF.
+3. **Simple, common dimensions** — all from 8ft stock, 1x4 / 2x2 / 2x4 PT DF.
 
 ---
 
@@ -19,54 +24,41 @@ Same design rules as the full-size build (`bom.md`):
 ### Bed walls (1x4 PT DF, actual 0.75" × 3.5")
 | Qty | Size | Length | Use | Source / waste |
 |---|---|---|---|---|
-| 2 | 1x4 | 19" | Long walls (N and S sides), half-lap corners | 1x4x8ft, 77" waste per board |
-| 1 | 1x4 | 8.5" + 8.5" = 17" | Short walls (E and W ends) | 1x4x8ft, 79" waste |
+| 2 | 1x4 | 40" | Long walls (N and S), half-lap corners | 1x4x8ft, 56" waste per board |
+| 2 | 1x4 | 20.5" | Short walls (E and W), half-lap corners | 1x4x8ft, 4 short walls from 1 board (82" used, 14" waste) |
 
 **Lumber for bed walls: 3 boards, ~6 bf**
 
-### Frame rails (1x2 PT DF, actual 0.75" × 1.5")
+### Frame rails (2x2 PT DF, actual 1.5" × 1.5")
 | Qty | Size | Length | Use | Source / waste |
 |---|---|---|---|---|
-| 2 | 1x2 | 19" | Long rails (E and W sides) | 1x2x8ft, 77" waste |
-| 1 | 1x2 | 8.5" + 8.5" = 17" | Cross rails (N and S ends) | 1x2x8ft, 79" waste |
+| 2 | 2x2 | 40" | Long rails (E and W sides of panel) | 2x2x8ft, 56" waste per board |
+| 2 | 2x2 | 19" | Cross rails (N and S ends of panel) | 2x2x8ft, 4 cross rails from 1 board (76" used, 20" waste) |
 
-**Lumber for frame rails: 2 boards (1 long + 1 cross source), ~3 bf**
+**Lumber for frame rails: 3 boards, ~6 bf**
 
-Wait — long rails and cross rails from the same 1x2x8ft board? 4 rails
-of 19" = 76" total, leaving 20" of waste. That's 1 board. Plus 4 rails
-of 8.5" = 34" total, that's < 1 board. So:
-
-- 1 board: 4 × 19" long rails (76" used, 20" waste)
-- 1 board: 2 × 8.5" + 2 × 8.5" = 4 cross rails from 1 board (34" used, 62" waste)
-
-Total 1x2 boards: 2 (1 for long rails, 1 for cross rails). Or 1 board
-for the 4 cross rails (4 × 8.5" = 34", which fits in one 96" board with
-62" waste).
-
-**Lumber for frame rails: 3 boards, ~5 bf**
-
-### Diagonal brace (1x2 or 2x2, 20" long)
+### Diagonal brace (2x4 PT DF, actual 1.5" × 3.5")
 | Qty | Size | Length | Use | Source / waste |
 |---|---|---|---|---|
-| 1 | 1x2 (or 2x2) | 20" | Diagonal brace | Offcut from any 1x2 / 2x2 board |
+| 1 | 2x4 | 42" | Diagonal brace, square ends butt into long rails | 2x4x8ft, 54" waste |
+
+**Lumber for brace: 1 board offcut, ~2 bf**
 
 ### Bed skids (2x2 PT DF, actual 1.5" × 1.5")
 | Qty | Size | Length | Use | Source / waste |
 |---|---|---|---|---|
-| 2 | 2x2 | 19" | Long skids, under the long walls | 2x2x8ft, 77" waste per board |
+| 2 | 2x2 | 40" | Long skids, under the long walls | 2x2x8ft, 56" waste per board |
 
-**Lumber for skids: 1 board, 2 bf** (2 skids from 1 board, 38" used, 58"
-waste)
+**Lumber for skids: 1 board, 2 bf** (2 skids from 1 board, 80" used, 16" waste)
 
 ### Total lumber
 
 | Material | Boards | Cost |
 |---|---|---|
 | 1x4x8ft (3 boards) | 3 | ~$15 |
-| 1x2x8ft (3 boards) | 3 | ~$10 |
-| 2x2x8ft (1 board) | 1 | ~$5 |
-| 1x2 offcut (diagonal) | 0 | $0 |
-| **Total lumber** | **7 boards** | **~$30** |
+| 2x2x8ft (4 boards) | 4 | ~$20 |
+| 2x4x8ft (1 board for brace) | 1 | ~$7 |
+| **Total lumber** | **8 boards** | **~$42** |
 
 ---
 
@@ -75,29 +67,31 @@ waste)
 ### Hinges + continuous hinge pin
 | Qty | Item | Source | Cost |
 |---|---|---|---|
-| 2 | 1.5" butt hinge, ⅜" pin (galvanized) | Home Depot | ~$3 ea = **$6** |
-| 1 | ⅜" × 24" steel rod (continuous hinge pin) | Home Depot | **$3** |
+| 2 | 4" butt hinge, ½" pin (galvanized) | Home Depot | ~$5 ea = **$10** |
+| 1 | ½" × 44" steel rod (continuous hinge pin) | Home Depot | **$6** |
 
 ### Panel + mounting
 | Qty | Item | Source | Cost |
 |---|---|---|---|
-| 1 | Newpowa 10W 12V Mono solar panel, 17.32" × 8.46" × 0.71" | Amazon | **$25** |
-| 4 | 1" aluminum mid-clamps, 18mm channel, M8 bolt | Amazon | ~$2 ea = **$8** |
+| 1 | Newpowa 100W 12V Bifacial solar panel, 38.58" × 20.87" × 1.18" | Amazon | **$90** |
+| 6 | 2" aluminum mid-clamps, 35mm channel, M8 bolt | Amazon | ~$3 ea = **$18** |
 
 ### Actuator + clevis
 | Qty | Item | Source | Cost |
 |---|---|---|---|
-| 1 | 1" stroke 12V micro linear actuator, 25 lbf | Amazon | **$15** |
-| 2 | ⅜" cotter pins (for clevis) | Hardware store | **$1** |
+| 1 | 24" stroke 12V linear actuator, 330 lbf (ECO-WORTHY or WindyNation) | Amazon | **$90** |
+| 2 | ½" clevis pins + cotter pins | Hardware store | **$3** |
 
 ### Fasteners
 | Qty | Item | Use |
 |---|---|---|
-| 16 | #6 × 1.5" wood screws | Frame joints, half-lap corners |
-| 8 | ⅛" × 1" wood screws | Cleats, bracket mounting |
-| 1 | 1A in-line fuse (PTC resettable) | Battery protection |
+| 24 | #8 × 2" deck screws (HDG) | Bed half-lap corners, frame corners |
+| 8 | #6 × 1.5" wood screws | Diagonal brace to frame |
+| 6 | M8 × 1.5" stainless bolts + EPDM washers | Mid-clamps to rails |
+| 8 | 5/16" × 3" lag bolts (HDG) | Hinges to bed wall and frame rail |
+| 2 | ½" × 3" clevis pins + cotter pins | Actuator clevis to mount blocks |
 
-**Total fasteners: ~$5**
+**Total fasteners: ~$15**
 
 ### Electronics (same as full-size, minus PCB)
 
@@ -109,12 +103,12 @@ waste)
 | 1 | INA219 current sensor breakout | Mouser | **$2** |
 | 1 | DS18B20 temperature sensor (waterproof) | Amazon | **$3** |
 | 1 | Capacitive soil moisture sensor | Amazon | **$3** |
-| 1 | 12V 5Ah LiFePO4 battery (with BMS) | Amazon | **$50** |
+| 1 | 12V 20Ah LiFePO4 battery (with BMS) | Amazon | **$80** |
 | 1 | Breadboard or perfboard (for prototyping) | Amazon | **$5** |
 | ~30 | Jumper wires (M-F, M-M, F-F) | Amazon | **$3** |
 | 1 | USB-C cable (for ESP32 programming) | Amazon | **$3** |
 
-**Total electronics: ~$100**
+**Total electronics: ~$130**
 
 (Optional: use the full-size PCB from `docs/pcb_design.md` for $5 + $15
 shipping from JLCPCB. Replaces the breadboard + jumper wires above.)
@@ -125,16 +119,17 @@ shipping from JLCPCB. Replaces the breadboard + jumper wires above.)
 
 | Category | Cost |
 |---|---|
-| Lumber (7 boards) | $30 |
-| Hinges + pin | $9 |
-| Panel + clamps | $33 |
-| Actuator + clevis | $16 |
-| Fasteners | $5 |
-| Electronics (ESP32 + DPS5005 + sensors + battery) | $100 |
-| **Total** | **~$190** |
+| Lumber (8 boards) | $42 |
+| Hinges + pin | $16 |
+| Panel + clamps | $108 |
+| Actuator + clevis | $93 |
+| Fasteners | $15 |
+| Electronics (ESP32 + DPS5005 + sensors + battery) | $130 |
+| **Total** | **~$400** |
 
-(The full-size build is ~$1,400; the mini is ~14% of that, with most of
-the cost in the electronics which are identical between mini and full-size.)
+(The full-size build is ~$1,400; the mini is ~29% of that, with most
+of the cost in the panel + actuator + battery which are sized for the
+mini but use the same form factor as the full-size.)
 
 ---
 
@@ -145,7 +140,7 @@ the cost in the electronics which are identical between mini and full-size.)
 - ❌ Steel angle iron / Unistrut
 - ❌ Miter saw (all cuts are 90° square cuts)
 - ❌ Custom-fabricated metal parts
-- ❌ Permit (this is a small benchtop prototype)
+- ❌ Permit (this is a benchtop prototype)
 
 ---
 
@@ -154,8 +149,25 @@ the cost in the electronics which are identical between mini and full-size.)
 - Circular saw (or have the lumber yard pre-cut)
 - Drill / impact driver
 - ⅛" drill bit (for wood screws)
-- 5/64" drill bit (for hinge screws)
+- 5/16" drill bit (for lag bolts)
+- M8 hex driver (for mid-clamp bolts)
 - Tape measure, square, level
 - Wire stripper
 - Multimeter
 - Soldering iron (for the perfboard, if not using a breadboard)
+
+---
+
+## Sizing note (read this!)
+
+The 100W panel (38.58" × 20.87") is **larger than the frame's interior**
+(40 − 2×1.5 = 37" × 22 − 2×1.5 = 19"). The panel sits on top of the
+frame rails and overhangs the frame interior by ~0.79" on the long sides
+and ~0.94" on the short sides. This is the same overhang pattern as the
+full-size build (the full-size 97" × 44.6" panel also overhangs the
+93" × 41.6" frame interior).
+
+The mid-clamps grip the panel frame at the rail positions, so the panel
+is held firmly even though it extends past the rails. **Do not** try to
+make the panel fit inside the frame interior — it won't, and the
+mid-clamps need the panel to be on top of the rails, not tucked inside.
