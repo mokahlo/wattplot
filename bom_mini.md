@@ -124,14 +124,28 @@ mini doesn't need that.
 | 1 | ESP32-C3 PRO Mini dev board (or any ESP32) | Mouser | **$5** (already ordered) |
 | 1 | BMI160 IMU breakout | Mouser | **$2** |
 | 1 | INA219 current sensor breakout | Mouser | **$2** |
-| 1 | DS18B20 temperature sensor (waterproof) | Amazon | **$3** |
-| 1 | Capacitive soil moisture sensor | Amazon | **$3** |
+| 3 | DS18B20 waterproof temperature sensors (panel, soil, battery) | Amazon | **$11** (5-pack) |
+| 1 | Capacitive soil moisture sensor V1.2 (5-pack for spares) | Amazon | **$9** |
 | 1 | 12V 7Ah LiFePO4 battery (with BMS) | Amazon | **$25** (already ordered) |
 | 1 | Breadboard or perfboard (for prototyping) | Amazon | **$5** |
 | ~30 | Jumper wires (M-F, M-M, F-F) | Amazon | **$3** |
 | 1 | USB-C cable (for ESP32 programming) | Amazon | **$3** |
 
-**Total electronics: ~$51 new + $50 already ordered = $101**
+**Total electronics: ~$61 new + $50 already ordered = $111**
+
+### Watering system (v2.3 — smart planter)
+
+| Qty | Item | Source | Cost |
+|---|---|---|---|
+| 1 | 12V peristaltic pump (food-safe, ~0.5 L/min) | Amazon | **$15-20** |
+| 1 | 1-channel 5V relay module (low-level trigger, for ESP32) | Amazon | **$3-5** |
+| 1 | 5-gallon bucket with lid (reservoir, 18.9 L) | Home Depot | **$5** |
+| 10 ft | 1/4" vinyl tubing (food-safe, for drip line) | Amazon | **$8** |
+| 1 | Pressure-compensating drip emitter (2 GPH) | Amazon | **$5** (5-pack) |
+| 2 | 1/4" tubing barb fittings (for pump inlet/outlet) | Amazon | **$3** |
+| 4 | Zip ties (for securing tubing) | Home Depot | **$2** |
+
+**Total watering system: ~$41-48**
 
 ---
 
@@ -144,13 +158,13 @@ mini doesn't need that.
 | Panel + clamps | $33 | — | $33 |
 | Kickstand actuator + pins | $17 | already ordered | $17 |
 | Fasteners | $8 | — | $8 |
-| Electronics (DPS5005, sensors, breadboard) | $51 | $50 (battery + ESP32) | $101 |
-| **Total** | **$137** | **$50** | **~$187** |
+| Electronics (DPS5005, sensors, breadboard) | $61 | $50 (battery + ESP32) | $111 |
+| Watering system (pump + reservoir + drip) | $45 | — | $45 |
+| **Total** | **$192** | **$50** | **~$242** |
 
-(The full-size build is ~$1,400; the mini is ~13% of that.)
+**v2.3 adds ~$45 (watering system) on top of v2.2 — full smart planter.**
 
-**Compared to v2.1 (100W bifacial, 24" actuator): saves $250**
-**Compared to v1 (19"×10", 1" actuator): same cost, bigger bed, real panel**
+(The full-size build is ~$1,400; the mini v2.3 is ~17% of that.)
 
 ---
 

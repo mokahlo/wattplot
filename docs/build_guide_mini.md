@@ -461,11 +461,117 @@ to the full-size firmware.
 
 ---
 
+## Phase 10: Watering System (Day 2, ~45 min)
+
+The mini v2.3 is a **smart planter**: it reads soil moisture, decides
+when to water, and runs a 12V pump through a relay. The full design
+spec is in `docs/watering.md`.
+
+### 10.1 Mount the pump and reservoir
+
+**Tools:** screwdriver, drill (if mounting pump)
+
+**Process:**
+1. Place the 5-gallon bucket (reservoir) on the workbench to the right
+   of the bed, slightly behind the pump position.
+2. Fill with water (and optional liquid fertilizer).
+3. Place the 12V peristaltic pump next to the bucket (or on a small
+   shelf above the water level).
+4. Secure the pump with zip ties or double-sided tape so it doesn't
+   move when water sloshes.
+
+### 10.2 Run the drip line
+
+**Tools:** scissors, 1/4" tubing cutter (or sharp knife)
+
+**Process:**
+1. Cut ~4-6 ft of 1/4" vinyl tubing.
+2. Push one end onto the pump's outlet barb.
+3. Run the tubing from the pump to the bed's soil surface (route along
+   the workbench, up the bed's east wall, over the bed's frame, into the
+   soil).
+4. Cut the other end at the soil surface, attach a pressure-compensating
+   drip emitter (2 GPH), and insert the emitter 1" deep into the soil.
+5. Cut another 6" of tubing, connect from the pump inlet to the
+   reservoir (submerge the inlet end, weight it down so it stays in
+   the water).
+
+**Verification:** prime the pump (let it run for ~5 sec until water
+flows through the line). Check for leaks at the connections.
+
+### 10.3 Wire the relay and pump
+
+**Tools:** wire stripper, small screwdriver (for relay terminals)
+
+**Process:**
+1. Mount the 1-channel relay module on the bed's east short wall,
+   near the breadboard.
+2. Connect:
+   - **Battery 12V+** → relay COM terminal
+   - **Relay NO (normally open)** → pump + (red wire)
+   - **Pump - (black wire)** → battery 12V- (GND bus)
+   - **Relay VCC** → ESP32 5V (or 3.3V, depending on relay module)
+   - **Relay GND** → ESP32 GND
+   - **Relay IN** → ESP32 GPIO 5
+3. Test: in Home Assistant, toggle `switch.watering_pump` ON. Pump
+   should run for the set duration, then auto-stop.
+
+### 10.4 Install the temperature sensors
+
+**Tools:** wire stripper, small screwdriver, thermal tape (or zip ties)
+
+**Process (DS18B20 sensors, all on the same 1-Wire bus on GPIO 10):**
+1. **Panel temp:** attach a DS18B20 to the back of the panel with
+   thermal tape. Route the wire along the panel edge to the bed's
+   hinge area, then to the breadboard.
+2. **Soil temp:** bury a DS18B20 2" deep in the soil (next to the soil
+   moisture sensor).
+3. **Battery temp:** tape a DS18B20 to the side of the battery with
+   Kapton tape (handles the heat).
+4. All 3 sensors share VCC (3.3V), GND, and the data line (GPIO 10) with
+   a single 4.7kΩ pullup resistor.
+
+**Verification:** in Home Assistant, verify all 3 temperature sensors
+show reasonable values (panel ~20-40°C, soil ~15-30°C, battery ~15-30°C).
+
+### 10.5 Install the soil moisture sensor
+
+**Tools:** none (sensor just inserts into soil)
+
+**Process:**
+1. Insert the Stemedu V1.2 capacitive sensor 2" deep into the bed
+   soil, near the center.
+2. Connect: VCC → 3.3V, GND → GND, AOUT → ESP32 GPIO 4 (ADC).
+
+**Verification:** sensor should read ~30-60% (dry to wet). In HA,
+`sensor.soil_moisture_pct` should show a stable value. Test by
+sprinkling water on the soil — value should increase.
+
+### 10.6 Test the watering automation
+
+**Process:**
+1. In Home Assistant, verify these entities exist:
+   - `sensor.soil_moisture_pct` (read from V1.2 sensor)
+   - `sensor.panel_temp_c` (DS18B20 on panel)
+   - `sensor.soil_temp_c` (DS18B20 in soil)
+   - `sensor.battery_temp_c` (DS18B20 on battery)
+   - `switch.watering_pump` (toggle to test)
+   - `switch.watering_automation` (turn ON for auto mode)
+2. Force a watering event: in HA, set `sensor.soil_moisture_pct` to 25
+   (below the 30% threshold), wait 15 seconds. The pump should run for
+   12 seconds (~100 mL water).
+3. Verify `sensor.water_ml_today` increments by ~100 mL.
+4. Verify `sensor.watering_events_today` increments by 1.
+5. Test safety blocks: set panel temp to 50°C, verify watering is
+   blocked.
+
+---
+
 ## Final build checklist
 
 - [ ] Bed is level, square, and full of soil
 - [ ] Frame hinges smoothly from 0° to ~35° tilt
-- [ ] Hinge pin (⅜" × 22") is fully seated
+- [ ] Hinge pin is fully seated
 - [ ] Panel is firmly clamped to the frame (4 mid-clamps)
 - [ ] Top kickstand bracket is mounted on panel's underside, 2" north of south edge
 - [ ] Bottom kickstand block is mounted on bed's south wall, low position
@@ -479,5 +585,11 @@ to the full-size firmware.
 - [ ] State machine transitions are working
 - [ ] MPPT is converging
 - [ ] Firmware has `max_tilt_deg = 35.0` configured
+- [ ] **Pump is mounted, reservoir is filled, drip line is primed**
+- [ ] **Pump wiring through relay is correct (test in HA)**
+- [ ] **3 DS18B20 sensors are reading (panel, soil, battery)**
+- [ ] **Soil moisture sensor is reading 30-60%**
+- [ ] **Auto-watering fires when soil drops below 30%**
+- [ ] **Safety blocks work (high temp, low battery, nighttime)**
 
-**Mini complete. Apply learnings to the full-size build.**
+**Mini v2.3 complete. A real smart planter. Apply learnings to the full-size build.**

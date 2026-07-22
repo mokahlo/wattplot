@@ -328,4 +328,38 @@ MINI = dict(
 
     # ----- battery: 12V 7Ah LiFePO4 (ordered) -----
     battery_ah=7,
+
+    # ----- smart planter: sensors + watering system (v2.3) -----
+    # Sensors (all on the same 1-Wire bus except soil moisture which is analog)
+    panel_temp_sensor="DS18B20",    # back of panel, for MPPT temp derating
+    soil_temp_sensor="DS18B20",      # buried in soil, for plant health
+    battery_temp_sensor="DS18B20",   # on battery, for safety cutoff
+    soil_moisture_sensor="V1.2_capacitive",  # Stemedu V1.2, analog output
+    soil_moisture_dry_pct=30,        # below this, trigger watering (herbs)
+    soil_moisture_wet_pct=60,        # above this, skip watering
+
+    # Watering system (peristaltic pump + relay)
+    pump_model="peristaltic_12V",    # 12V DC peristaltic pump, ~$20
+    pump_flow_rate_ml_per_sec=8,    # ~0.5 L/min = 8 mL/sec typical
+    pump_max_runtime_sec=30,        # safety: never run more than 30s
+    pump_water_volume_ml_default=100,  # ~12 sec at 8 mL/sec = 100 mL per event
+    pump_max_events_per_day=3,       # safety: max 3 watering events per 24h
+    watering_block_panel_temp_c=45,  # don't water if panel > 45C (heat stress)
+    watering_block_battery_v=11.5,   # don't water if battery < 11.5V
+    watering_block_night=True,       # don't water at night (no solar charging)
+
+    # Reservoir (5-gallon bucket, 18.9 L)
+    reservoir_volume_l=18.9,
+    reservoir_days_autonomy=14,      # 18.9L / ~1.3L/day = ~14 days
+
+    # ESP32 pin assignments (ESP32-C3 PRO Mini)
+    pin_onewire=10,                  # DS18B20 data (with 4.7k pullup to 3.3V)
+    pin_soil_moisture=4,              # capacitive V1.2 analog out
+    pin_pump_relay=5,                # relay control (low-side switch)
+    pin_dps5005_tx=20,               # DPS5005 UART RX (ESP32 TX -> DPS RX)
+    pin_dps5005_rx=21,               # DPS5005 UART TX (ESP32 RX <- DPS TX)
+    pin_imu_sda=8,                   # I2C SDA (BMI160 + INA219)
+    pin_imu_scl=9,                   # I2C SCL
+    pin_limit_0=6,                   # 0-deg limit switch
+    pin_limit_35=7,                  # 35-deg limit switch
 )
