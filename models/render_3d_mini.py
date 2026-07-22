@@ -75,6 +75,51 @@ def add_box(ax, cx, cy, cz, sx, sy, sz, color, alpha=1.0):
         ax.add_collection3d(coll)
 
 
+def _make_cyl_between(x1, y1, z1, x2, y2, z2, radius, color):
+    """Make a cylinder along the line from (x1,y1,z1) to (x2,y2,z2).
+    Returns list of (polygon, color) tuples for the cylinder side + caps.
+    """
+    import math as _math
+    dx, dy, dz = x2 - x1, y2 - y1, z2 - z1
+    L = _math.sqrt(dx*dx + dy*dy + dz*dz)
+    if L < 1e-9:
+        return []
+    ux, uy, uz = dx / L, dy / L, dz / L
+    # Find two perpendicular vectors in the plane perpendicular to (ux,uy,uz)
+    if abs(ux) < 0.9:
+        v1x, v1y, v1z = 1, 0, 0
+    else:
+        v1x, v1y, v1z = 0, 1, 0
+    # v1 = v1 - (v1.u) * u
+    dot = v1x*ux + v1y*uy + v1z*uz
+    v1x, v1y, v1z = v1x - dot*ux, v1y - dot*uy, v1z - dot*uz
+    norm = _math.sqrt(v1x*v1x + v1y*v1y + v1z*v1z)
+    v1x, v1y, v1z = v1x / norm, v1y / norm, v1z / norm
+    # v2 = u x v1
+    v2x, v2y, v2z = uy*v1z - uz*v1y, uz*v1x - ux*v1z, ux*v1y - uy*v1x
+    # Generate side as N-gon
+    N = 16
+    faces = []
+    base_pts = []
+    top_pts = []
+    for i in range(N):
+        theta = 2 * _math.pi * i / N
+        cx_off = radius * (_math.cos(theta) * v1x + _math.sin(theta) * v2x)
+        cy_off = radius * (_math.cos(theta) * v1y + _math.sin(theta) * v2y)
+        cz_off = radius * (_math.cos(theta) * v1z + _math.sin(theta) * v2z)
+        base_pts.append((x1 + cx_off, y1 + cy_off, z1 + cz_off))
+        top_pts.append((x2 + cx_off, y2 + cy_off, z2 + cz_off))
+    # Side faces (rectangles)
+    for i in range(N):
+        j = (i + 1) % N
+        face = [base_pts[i], top_pts[i], top_pts[j], base_pts[j]]
+        faces.append((face, color))
+    # End caps
+    faces.append((base_pts, color))  # base cap (reversed for outward normal)
+    faces.append((list(reversed(top_pts)), color))  # top cap
+    return faces
+
+
 def render_mini(outdir=None):
     if outdir is None:
         outdir = os.path.join(HERE, "..", "renders")
@@ -181,19 +226,29 @@ def render_mini(outdir=None):
     for x in [-13, +13]:
         add_box(ax, x, FRAME_Y_BOTTOM, BED_W/2, HINGE_LEAF, 0.4, 0.5, COL_HINGE, alpha=0.8)
 
-    # Actuator mount blocks
-    add_box(ax, 0, FRAME_Y_TOP + 0.75, -BED_W/2, 4.0, 1.5, 1.5, (0.5, 0.45, 0.4), alpha=0.8)
-    add_box(ax, 0, FRAME_Y_BOTTOM + 0.75, -BED_W/2 - 1.5, 4.0, 1.5, 1.5, (0.5, 0.45, 0.4), alpha=0.8)
+    # Kickstand actuator on south side (low side, 0-35° tilt range)
+    # Bottom mount: 2x2 block on bed's south wall, low
+    add_box(ax, 0, 0.75, BED_W/2 + 0.75, 4.0, 1.5, 1.5, (0.5, 0.45, 0.4), alpha=0.9)
+    # Top mount: 2x2 bracket hanging below the panel
+    add_box(ax, 0, 4.75, 5.0 - 0.75, 4.0, 1.5, 1.5, (0.5, 0.45, 0.4), alpha=0.9)
+    # Actuator body (cylinder) from bottom pin to top pin
+    act_faces = _make_cyl_between(0, 1.5, 12.5, 0, 4.0, 5.0, 0.375, (0.7, 0.7, 0.7))
+    if act_faces:
+        verts = [poly for poly, _ in act_faces]
+        colors = [col for _, col in act_faces]
+        coll = Poly3DCollection(verts, facecolors=colors, edgecolors='black',
+                                linewidths=0.3, alpha=0.85)
+        ax.add_collection3d(coll)
 
     ax.set_xlim(-25, 25)
-    ax.set_ylim(0, 10)
-    ax.set_zlim(-16, 16)
-    # Camera looking from the south (panel-side), so the panel is in the foreground
-    ax.view_init(elev=35, azim=120)
+    ax.set_ylim(0, 12)
+    ax.set_zlim(-18, 18)
+    # Camera looking from the south-east (so kickstand is in the foreground)
+    ax.view_init(elev=15, azim=145)
     ax.set_xlabel("X (east, in)")
     ax.set_ylabel("Y (up, in)")
     ax.set_zlabel("Z (south, in)")
-    ax.set_title(f"Wattplot Mini v2 — Iso view ({BED_L:.0f}\"x{BED_W:.0f}\", 100W bifacial, 24\" actuator)",
+    ax.set_title(f"Wattplot Mini v2.1 — Iso view ({BED_L:.0f}\"x{BED_W:.0f}\", 100W bifacial, 4\" kickstand actuator, 0-35° tilt)",
                  fontsize=11)
     plt.tight_layout()
     out = os.path.join(outdir, "wattplot_v2_mini_iso.png")

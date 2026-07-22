@@ -1,12 +1,12 @@
-# Wattplot Mini v2 — Bill of Materials
+# Wattplot Mini v2.1 — Bill of Materials
 
 Benchtop design-validation prototype. **40"×22" bed, 100W bifacial
-panel, 24" stroke linear actuator** — large enough to fit a real
+panel, 4" kickstand linear actuator** — large enough to fit a real
 off-the-shelf bifacial panel, small enough to sit on a workbench.
 
 Build before committing to the full-size build to validate:
 - Real 100W bifacial gain (rear-side albedo)
-- 24" stroke actuator travel for true 0-90° tilt
+- 4" kickstand actuator geometry (compression, low-side mount, 0-35° tilt)
 - 2x2 frame structural behavior
 - Same firmware / sensors / MPPT / wiring as the full-size
 
@@ -16,6 +16,21 @@ Same design rules as the full-size build (`bom.md`):
 1. **No miter cuts** — every cut is a 90° square cut.
 2. **All hardware off the shelf** — Home Depot, Amazon, McMaster.
 3. **Simple, common dimensions** — all from 8ft stock, 1x4 / 2x2 / 2x4 PT DF.
+
+---
+
+## Tilt range: 0-35° (kickstand-limited)
+
+The kickstand actuator geometry limits the panel to **0-35° tilt** (not
+the full 0-90°). This is by design — the Phoenix sun sim shows 35° is
+the **power-optimal static tilt** (1,539 kWh/yr at 35° on the full-size;
+on the mini, 35° gives 159.36 kWh/yr vs 170.95 at 0° and 106.84 at 90°).
+A 35° tilt captures ~93% of the maximum summer yield, which is good
+enough for the mini's purpose (validating the system, not maximizing
+production).
+
+The full-size Wattplot keeps its 24" stroke linear actuator for full
+0-90° range. The mini doesn't need that.
 
 ---
 
@@ -51,6 +66,14 @@ Same design rules as the full-size build (`bom.md`):
 
 **Lumber for skids: 1 board, 2 bf** (2 skids from 1 board, 80" used, 16" waste)
 
+### Kickstand actuator mount (2x2 PT DF, actual 1.5" × 1.5")
+| Qty | Size | Length | Use | Source / waste |
+|---|---|---|---|---|
+| 1 | 2x2 | 4" | Bottom mount block, on bed's south wall | 2x2 offcut (any 2x2 scrap) |
+| 1 | 2x2 | 4" | Top mount bracket, hanging below panel | 2x2 offcut (any 2x2 scrap) |
+
+**Lumber for kickstand mount: offcuts, ~0 bf** (use scraps from the rails/skids)
+
 ### Total lumber
 
 | Material | Boards | Cost |
@@ -76,11 +99,11 @@ Same design rules as the full-size build (`bom.md`):
 | 1 | Newpowa 100W 12V Bifacial solar panel, 38.58" × 20.87" × 1.18" | Amazon | **$90** |
 | 6 | 2" aluminum mid-clamps, 35mm channel, M8 bolt | Amazon | ~$3 ea = **$18** |
 
-### Actuator + clevis
+### Kickstand actuator + clevis pins
 | Qty | Item | Source | Cost |
 |---|---|---|---|
-| 1 | 24" stroke 12V linear actuator, 330 lbf (ECO-WORTHY or WindyNation) | Amazon | **$90** |
-| 2 | ½" clevis pins + cotter pins | Hardware store | **$3** |
+| 1 | 4" stroke 12V linear actuator, 75 lbf (ECO-WORTHY or similar) | Amazon | **$18** |
+| 2 | ½" × 3" clevis pins + cotter pins | Hardware store | **$3** |
 
 ### Fasteners
 | Qty | Item | Use |
@@ -89,6 +112,7 @@ Same design rules as the full-size build (`bom.md`):
 | 8 | #6 × 1.5" wood screws | Diagonal brace to frame |
 | 6 | M8 × 1.5" stainless bolts + EPDM washers | Mid-clamps to rails |
 | 8 | 5/16" × 3" lag bolts (HDG) | Hinges to bed wall and frame rail |
+| 8 | #8 × 2" deck screws | Kickstand mount blocks (4 per block) |
 | 2 | ½" × 3" clevis pins + cotter pins | Actuator clevis to mount blocks |
 
 **Total fasteners: ~$15**
@@ -119,17 +143,20 @@ shipping from JLCPCB. Replaces the breadboard + jumper wires above.)
 
 | Category | Cost |
 |---|---|
-| Lumber (8 boards) | $42 |
+| Lumber (8 boards + scraps) | $42 |
 | Hinges + pin | $16 |
 | Panel + clamps | $108 |
-| Actuator + clevis | $93 |
+| Kickstand actuator + pins | $21 |
 | Fasteners | $15 |
 | Electronics (ESP32 + DPS5005 + sensors + battery) | $130 |
-| **Total** | **~$400** |
+| **Total** | **~$330** |
 
-(The full-size build is ~$1,400; the mini is ~29% of that, with most
-of the cost in the panel + actuator + battery which are sized for the
-mini but use the same form factor as the full-size.)
+(The full-size build is ~$1,400; the mini is ~24% of that, with most of
+the cost in the panel + battery which are sized for the mini but use
+the same form factor as the full-size.)
+
+**Mini v2.0 (24" actuator) was ~$400; Mini v2.1 (4" kickstand) saves ~$70
+on the actuator.**
 
 ---
 
@@ -140,7 +167,7 @@ mini but use the same form factor as the full-size.)
 - ❌ Steel angle iron / Unistrut
 - ❌ Miter saw (all cuts are 90° square cuts)
 - ❌ Custom-fabricated metal parts
-- ❌ Permit (this is a benchtop prototype)
+- ❌ Permit (this is a small benchtop prototype)
 
 ---
 

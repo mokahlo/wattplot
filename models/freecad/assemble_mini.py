@@ -73,7 +73,7 @@ def build_mini_assembly(doc=None, name="Wattplot_Mini"):
     frame, frame_parts = make_frame_assembly(doc)
     panel = make_panel(doc)
     hinges_obj, hinges = make_all_hinges(doc)
-    act = make_actuator_mount(doc)
+    act, act_parts = make_actuator_mount(doc)
     for o in frame_parts:
         set_color(o, COL_FRAME)
     set_color(panel, COL_PANEL)

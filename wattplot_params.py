@@ -306,9 +306,23 @@ MINI = dict(
     panel_vmp_V=18.0,
     panel_imp_A=5.56,               # 100W / 18V = 5.56A
 
-    # ----- actuator: 24" stroke 12V 330 lbf (for true 90° tilt) -----
-    actuator_stroke_in=24.0,        # ECO-WORTHY or WindyNation, ~$80-100
-    actuator_rated_force_lb=330,
+    # ----- actuator: 4" stroke 12V 75 lbf KICKSTAND (low side, 0-35° tilt) -----
+    # Kickstand geometry: actuator mounted on the bed's south wall (low side)
+    # with one end on the wall and the other end on the panel's underside.
+    # Limited to 0-35° tilt (the power-optimal range per the Phoenix sun sim:
+    # 159 kWh/yr at 35° vs 170 kWh/yr at 0° but 0° is just a flat panel).
+    # Benefits: $18 small actuator vs $90 24" stroke, in compression (safer
+    # in wind, fails to flat if power dies), much more compact.
+    actuator_stroke_in=4.0,         # ECO-WORTHY 4" stroke 12V 75 lbf, ~$18
+    actuator_rated_force_lb=75,
+    # Kickstand geometry (relative to bed corner at south wall outer face):
+    #   Bottom mount (fixed): on bed's south wall, y=0.75 (skid mid-height)
+    #   Top mount (moving): on panel's underside, ~6" north of south edge
+    #   Lever arm: 6" from hinge axis to top mount
+    #   Geometry chosen for 4" stroke to cover 0-35° tilt comfortably
+    kickstand_lever_arm_in=6.0,    # distance from hinge axis to top mount
+    kickstand_top_mount_offset_in=6.0,  # how far north of hinge on panel
+    max_tilt_deg=35.0,              # firmware should cap tilt at this value
 
     # ----- clamps: 6 total (2 per long rail + 1 per cross rail) -----
     # Aluminum mid-clamps for 35mm panel frame channel (same as full-size)

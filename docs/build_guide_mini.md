@@ -1,12 +1,14 @@
-# Wattplot Mini v2 — Build Guide
+# Wattplot Mini v2.1 — Build Guide
 
 Benchtop design-validation prototype. **40"×22" bed, 100W bifacial
-panel, 24" stroke linear actuator** — large enough to fit a real
-off-the-shelf bifacial panel and reach true 90° tilt, small enough
-to sit on a workbench.
+panel, 4" kickstand linear actuator** — large enough to fit a real
+off-the-shelf bifacial panel, small enough to sit on a workbench.
+
+**Tilt range: 0-35°** (limited by the kickstand geometry; matches the
+power-optimal range per the Phoenix sun sim).
 
 **Build time:** ~4-5 hours
-**Build cost:** ~$220-280 (lumber + 100W panel + 24" actuator + battery)
+**Build cost:** ~$220-280 (lumber + 100W panel + 4" kickstand actuator + battery)
 
 ---
 
@@ -14,7 +16,7 @@ to sit on a workbench.
 
 ### Lumber (all PT DF)
 - 3 × 1x4x8ft (bed walls: 2 long + 1 short-wall source)
-- 4 × 2x2x8ft (2 for long rails, 1 for cross rails, 1 for skids, 1 extra)
+- 4 × 2x2x8ft (2 for long rails, 1 for cross rails, 1 for skids, 1 extra for kickstand mount scraps)
 - 1 × 2x4x8ft (diagonal brace)
 
 If pre-cut at the lumber yard:
@@ -24,12 +26,13 @@ If pre-cut at the lumber yard:
 - 2 × 2x2 @ 19" (cross rails, 4 per board)
 - 2 × 2x2 @ 40" (skids, 1 per board)
 - 1 × 2x4 @ 42" (diagonal brace, offcut from 8ft)
+- 2 × 2x2 @ 4" (kickstand mount blocks, offcuts from any 2x2 board)
 
 ### Hardware
 - 2 × 4" butt hinges, ½" pin (Home Depot, ~$5 ea)
 - 1 × ½" × 44" steel rod (Home Depot, ~$6) — continuous hinge pin
 - 1 × 100W 12V bifacial solar panel, 38.58" × 20.87" × 1.18" (Newpowa, Amazon, ~$90)
-- 1 × 24" stroke 12V linear actuator, 330 lbf (ECO-WORTHY or WindyNation, Amazon, ~$90)
+- 1 × **4" stroke 12V linear actuator, 75 lbf** (ECO-WORTHY 4" 75 lbf, Amazon, **~$18**)
 - 6 × 2" aluminum mid-clamps for 35mm panel frame channel (Amazon, ~$3 ea = $18)
 - 24 × #8 × 2" deck screws (HDG, ~$5)
 - 8 × #6 × 1.5" wood screws (for diagonal brace, ~$2)
@@ -72,7 +75,7 @@ Each bed wall has a 1.5" wide × 0.375" deep notch at each end.
 
 **Tools:** drill, ⅛" pilot bit, #8 × 2" deck screws, square
 
-For v2 (bigger than v1), use #8 × 2" deck screws (instead of #6 × 1.5")
+For v2.1 (bigger than v1), use #8 × 2" deck screws (instead of #6 × 1.5")
 at each corner for stronger joints (the bed is bigger and the soil load
 is heavier).
 
@@ -146,7 +149,7 @@ lag bolts (5/16" × 3" HDG), measuring tape
 6. Attach the frame leaf to the frame's south rail with 5/16" × 3" lag bolts.
 7. The frame should now hinge freely.
 
-**Verification:** frame hinges smoothly between 0° and ~90° tilt. The
+**Verification:** frame hinges smoothly between 0° and ~35° tilt. The
 ½" hinge pin holes in both hinges are aligned (the continuous pin passes
 through both).
 
@@ -161,8 +164,7 @@ through both).
 3. The pin should extend ~1" past the last hinge on each end.
 
 **Verification:** pin is fully seated. Frame hinges smoothly with the pin
-in place. You should be able to manually tilt the frame from 0° to
-nearly 90° (the actuator will be the limiting factor for full 90° travel).
+in place.
 
 ---
 
@@ -203,49 +205,88 @@ all four sides (0.79" long, 0.94" short).
 **Verification:** panel is firmly attached. Try to wiggle it — should
 not move.
 
+### 3.4 Install the kickstand TOP mount bracket
+
+**Tools:** drill, ⅛" pilot bit, #8 × 2" deck screws
+
+**Process:**
+1. Cut a 4" length of 2x2 (offcut from any 2x2 scrap).
+2. Position the bracket on the **underside** of the panel, **6 inches
+   north of the south edge** of the panel.
+3. The bracket should be flush with the panel's south frame edge (in z
+   direction), and sit just below the panel's underside (panel underside
+   is at y=5.5, bracket top is at y=5.5, bracket bottom is at y=4.0).
+4. **Attach the bracket to the panel's aluminum frame**, not the bed.
+   The bracket moves WITH the panel as the panel tilts.
+5. Pre-drill 2 holes through the bracket's top face into the panel
+   frame's channel (or use a small L-bracket if the panel frame
+   doesn't accept direct screws).
+6. Drive #8 × 2" deck screws.
+
+**Verification:** the bracket hangs from the panel's underside, 6"
+north of the south edge. The bracket moves up/down as you manually
+tilt the panel.
+
 ---
 
-## Phase 4: Actuator Mount (Day 1, ~30 min)
+## Phase 4: Kickstand Actuator Mount (Day 1, ~30 min)
 
-### 4.1 Mount the wall block on the bed's north wall
-
-**Tools:** drill, ⅛" pilot bit, #8 × 2" deck screws
-
-**Process:**
-1. Take a 2x2x4" block (cut from leftover 2x2 scrap).
-2. Mount it on top of the bed's north wall, at the outer face (z=-22),
-   centered along X.
-3. Pre-drill 2 holes and drive #8 × 2" screws down through the block
-   into the wall.
-
-### 4.2 Mount the clevis on the frame's north rail
+### 4.1 Mount the bottom block on the bed's south wall
 
 **Tools:** drill, ⅛" pilot bit, #8 × 2" deck screws
 
 **Process:**
-1. Take another 2x2x4" block.
-2. Mount it on top of the frame's north rail, at the outer face,
-   centered along X.
-3. Pre-drill and screw into the rail.
+1. Cut a 4" length of 2x2 (offcut from any 2x2 scrap).
+2. Mount the block on the **outer face** of the bed's south wall, at the
+   **bottom** (on top of the skid, at the outer face).
+3. Position: y=0 to 1.5 (from ground to top of skid), z=11 to 12.5
+   (outer face of south wall), x=-2 to +2 (centered along bed length).
+4. Pre-drill 2 holes and drive #8 × 2" screws through the block into
+   the bed's south wall.
 
-### 4.3 Mount the actuator between the blocks
+**Verification:** block is firmly attached to the bed's south wall, low.
 
-**Tools:** ½" clevis pin, cotter pin, mallet
+### 4.2 Insert the bottom pin
+
+**Tools:** ½" clevis pin, rubber mallet
 
 **Process:**
-1. The 24" stroke actuator has a ½" pin on each end (body side and
-   rod side).
-2. Pin the body-side clevis to the wall block (on the bed).
-3. Pin the rod-side clevis to the clevis block (on the frame).
+1. The bottom pin is a ½" × 4.5" steel pin that goes through the
+   bottom block, perpendicular to the actuator's axis (i.e., along the
+   X axis, parallel to the bed length).
+2. Drill a ½" hole through the block (centered, 1.5" above the block's
+   bottom and 1" outside the wall's outer face).
+3. Insert the pin through the hole. The pin should extend ~1.5" past
+   each side of the block.
+
+**Verification:** pin is in place, sticking out both sides of the block.
+
+### 4.3 Mount the kickstand actuator between the pins
+
+**Tools:** ½" clevis pin + cotter pin, rubber mallet
+
+**Process:**
+1. The 4" stroke 12V 75 lbf linear actuator has a ½" clevis pin hole
+   on each end (body side and rod side).
+2. Pin the body-side clevis to the **bottom pin** (on the bed's south
+   wall, low position).
+3. Pin the rod-side clevis to the **top pin** (on the panel's underside
+   bracket).
 4. Use cotter pins to keep the clevis pins from sliding out.
 
-**Verification:** actuator is pinned at both ends. Manually extend and
-retract the rod — the frame should tilt up and down.
+**Geometry check:** at 0° panel tilt, the actuator is at its **collapsed**
+length (~7.5" between pin centers). When the panel tilts up, the top
+pin moves up and inward, and the actuator **extends** by ~1.5" to
+reach the 35° tilt position.
 
-**NOTE on geometry:** the 24" stroke actuator is sized for ~85-90° tilt
-with this geometry. If the frame binds before reaching 90°, the actuator
-may need a longer bracket extension. See the `actuator_mount.py` source
-in the model for the geometric analysis.
+**Verification:** actuator is pinned at both ends. Manually extend and
+retract the rod — the panel should tilt up and down. Test the range:
+- At fully retracted rod, panel should be flat (0°)
+- At fully extended rod, panel should be at ~35° tilt
+
+If the panel binds before reaching 35°, the actuator's top bracket
+may need to be repositioned. If the actuator doesn't have enough stroke,
+you've hit the geometry limit of the 4" actuator.
 
 ---
 
@@ -297,8 +338,8 @@ Before applying power, verify:
 
 **Tools:** multimeter, 5A fuse
 
-For v2, use a 5A fuse (the 24" stroke actuator can pull more current
-than the v1 mini's 1A).
+For v2.1, use a 5A fuse (the 4" stroke actuator pulls less current
+than the v2.0's 24" actuator, so 5A is plenty of headroom).
 
 **Process:**
 1. Place the 12V 20Ah LiFePO4 battery next to the bed.
@@ -325,7 +366,21 @@ than the v1 mini's 1A).
    - DPS5005 detected
    - State: FOLDING (safe default)
 
-### 6.4 Test each sensor
+### 6.4 Configure max tilt
+
+The firmware should be configured to cap tilt at **35°** (the
+kickstand's mechanical limit). Set this in the ESPHome `globals`:
+```yaml
+globals:
+  - id: max_tilt_deg
+    type: float
+    initial_value: '35.0'
+```
+
+And reference `max_tilt_deg` in the tilt control loop. (Already done in
+the current `wattplot.yaml` if you set `MINI["max_tilt_deg"]` as the cap.)
+
+### 6.5 Test each sensor
 
 For each sensor, verify it's reading sensible values (see
 `docs/test_checklist.md` Phase A for the full list).
@@ -385,13 +440,13 @@ Run the mini on your workbench for a week. Monitor:
 - MPPT efficiency (panel power → battery power)
 - DLI computation (is the bed DLI sensible for plants?)
 - WiFi connectivity (does HA see the device?)
-- Actuator travel (does it reach 0° and 90°?)
+- Actuator travel (does the kickstand reach 0° and 35°?)
 
 ### 9.2 What to learn from the mini
 
 After a week, you'll know:
-- Whether the hinge geometry is right (does the frame bind?)
-- Whether the 24" actuator has enough travel (does it reach 90°?)
+- Whether the kickstand geometry is right (does the panel bind?)
+- Whether the 4" actuator has enough travel (does it reach 35°?)
 - Whether the IMU is accurate enough (or needs filtering)
 - Whether the MPPT loop converges (or oscillates)
 - Whether the state machine behaves as expected
@@ -407,15 +462,20 @@ to the full-size firmware.
 ## Final build checklist
 
 - [ ] Bed is level, square, and full of soil
-- [ ] Frame hinges smoothly from 0° to ~90° tilt
+- [ ] Frame hinges smoothly from 0° to ~35° tilt
 - [ ] Hinge pin (½" × 44") is fully seated
 - [ ] Panel is firmly clamped to the frame (6 mid-clamps)
-- [ ] Actuator is mounted and pinned at both ends
+- [ ] Top kickstand bracket is mounted on panel's underside, 6" north of south edge
+- [ ] Bottom kickstand block is mounted on bed's south wall, low position
+- [ ] Kickstand actuator is pinned at both ends
+- [ ] Panel reaches 0° when actuator is fully retracted
+- [ ] Panel reaches ~35° when actuator is fully extended
 - [ ] IMU is reading tilt correctly
 - [ ] Battery is connected and charging via MPPT
 - [ ] Solar panel is producing 80-90W peak in full sun
 - [ ] ESP32 is online in Home Assistant
 - [ ] State machine transitions are working
 - [ ] MPPT is converging
+- [ ] Firmware has `max_tilt_deg = 35.0` configured
 
 **Mini complete. Apply learnings to the full-size build.**
