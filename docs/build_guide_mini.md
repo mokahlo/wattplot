@@ -1,4 +1,4 @@
-# Wattplot Mini v2.2 — Build Guide
+# Wattplot Mini v2.4 — Build Guide
 
 Benchtop design-validation prototype. **18"×14" bed, ECO-WORTHY
 10W panel, 100mm kickstand linear actuator** — sized to match the
@@ -8,7 +8,8 @@ parts you already ordered.
 power-optimal range per the Phoenix sun sim).
 
 **Build time:** ~3-4 hours
-**Build cost:** ~$130-170 (new parts: DPS5005 MPPT, sensors, lumber, hardware)
+**Build cost:** ~$193 (new parts: DPS5005 MPPT, sensors, lumber, hardware,
+solenoid watering). Already have: $50 (battery, ESP32, actuator, panel).
 
 ---
 
@@ -461,45 +462,80 @@ to the full-size firmware.
 
 ---
 
-## Phase 10: Watering System (Day 2, ~45 min)
+## Phase 10: Watering System (solenoid on tap) (Day 2, ~45 min)
 
-The mini v2.3 is a **smart planter**: it reads soil moisture, decides
-when to water, and runs a 12V pump through a relay. The full design
-spec is in `docs/watering.md`.
+The mini v2.4 is a **smart planter**: it reads soil moisture + temps,
+decides when to water, and energizes a 12V solenoid to drip-feed the
+bed from your house's cold water tap. No pump, no reservoir, no
+refilling. The full design spec is in `docs/watering.md`.
 
-### 10.1 Mount the pump and reservoir
+### 10.1 Tee into the cold water supply
 
-**Tools:** screwdriver, drill (if mounting pump)
+**Tools:** adjustable wrench, tube cutter (or hacksaw), Teflon tape
 
 **Process:**
-1. Place the 5-gallon bucket (reservoir) on the workbench to the right
-   of the bed, slightly behind the pump position.
-2. Fill with water (and optional liquid fertilizer).
-3. Place the 12V peristaltic pump next to the bucket (or on a small
-   shelf above the water level).
-4. Secure the pump with zip ties or double-sided tape so it doesn't
-   move when water sloshes.
+1. Pick your tie-in point. The easiest options are:
+   - **Outdoor hose bib** (e.g. on a patio wall): screw a 1/4" barb
+     adapter directly into the faucet spout
+   - **Under-sink cold water line**: cut the 3/8" or 1/2" copper
+     pipe, install a 1/4" tee, restore flow
+2. **Shut off the water first.** Open the closest faucet to drain
+   residual pressure.
+3. Cut the pipe (or unscrew the hose bib spout if going that route).
+4. Wrap the tee threads with 2-3 layers of Teflon tape, install the
+   tee, hand-tighten, then snug with the wrench (don't over-torque
+   on plastic fittings).
+5. Restore water pressure and check for leaks. Wait 5 minutes, check
+   again.
+6. Attach a 1/4" barb to the tee's 1/4" outlet.
 
-### 10.2 Run the drip line
+**Verification:** no leaks at the tee after 5 min under pressure.
+
+### 10.2 Run the supply line to the bed
 
 **Tools:** scissors, 1/4" tubing cutter (or sharp knife)
 
 **Process:**
-1. Cut ~4-6 ft of 1/4" vinyl tubing.
-2. Push one end onto the pump's outlet barb.
-3. Run the tubing from the pump to the bed's soil surface (route along
-   the workbench, up the bed's east wall, over the bed's frame, into the
-   soil).
-4. Cut the other end at the soil surface, attach a pressure-compensating
-   drip emitter (2 GPH), and insert the emitter 1" deep into the soil.
-5. Cut another 6" of tubing, connect from the pump inlet to the
-   reservoir (submerge the inlet end, weight it down so it stays in
-   the water).
+1. Cut a length of 1/4" vinyl tubing (typically 5-20 ft depending on
+   the run from tee to bed).
+2. Push one end onto the tee's 1/4" barb.
+3. Route the tubing from the tee to the bed (along the wall, across
+   the floor, up to the workbench level). Use zip ties every 2-3 ft
+   to keep it tidy.
+4. (Optional) Install a 5-30 PSI pressure regulator in the line, set
+   to ~15 PSI for the drip emitter. Not strictly required if your
+   emitter is rated for full house pressure (40-80 PSI), but it gives
+   you a more consistent flow rate.
+5. Leave the other end of the supply line at the bed, ready to
+   connect to the solenoid inlet.
 
-**Verification:** prime the pump (let it run for ~5 sec until water
-flows through the line). Check for leaks at the connections.
+**Verification:** briefly open the upstream valve (or unscrew the
+supply tubing from where the solenoid will go) and confirm water
+flows. Reconnect and leave the system pressurized but the solenoid
+closed.
 
-### 10.3 Wire the relay and pump
+### 10.3 Mount the solenoid
+
+**Tools:** screwdriver, drill, zip ties (or screws)
+
+**Process:**
+1. Mount the 12V DC normally-closed solenoid valve on the bed's east
+   short wall, at ~6" height (above any potential splash zone).
+   Zip-tie it to the bed's frame, or screw it to a small block of
+   1x2 first and then screw the block to the bed wall.
+2. The solenoid has a flow direction arrow — make sure INLET faces
+   the supply tubing, OUTLET faces the drip line.
+3. Connect the supply tubing to the solenoid INLET.
+4. Cut ~3-4 ft of 1/4" tubing, connect to the solenoid OUTLET, run
+   it to the bed's soil surface.
+5. Attach a pressure-compensating drip emitter (2 GPH) to the other
+   end, insert the emitter 1" deep into the soil near the plant.
+
+**Verification:** with the solenoid DE-energized (no relay trigger),
+no water should flow (NC = normally closed). With the relay on
+manually, water should drip from the emitter at ~2 mL/sec.
+
+### 10.4 Wire the relay and solenoid
 
 **Tools:** wire stripper, small screwdriver (for relay terminals)
 
@@ -508,15 +544,21 @@ flows through the line). Check for leaks at the connections.
    near the breadboard.
 2. Connect:
    - **Battery 12V+** → relay COM terminal
-   - **Relay NO (normally open)** → pump + (red wire)
-   - **Pump - (black wire)** → battery 12V- (GND bus)
+   - **Relay NO (normally open)** → solenoid + (red wire)
+   - **Solenoid - (black wire)** → battery 12V- (GND bus)
    - **Relay VCC** → ESP32 5V (or 3.3V, depending on relay module)
    - **Relay GND** → ESP32 GND
    - **Relay IN** → ESP32 GPIO 5
-3. Test: in Home Assistant, toggle `switch.watering_pump` ON. Pump
-   should run for the set duration, then auto-stop.
+3. Test: in Home Assistant, toggle `switch.watering_solenoid` ON
+   for 10 seconds. Solenoid should click open, water should flow,
+   then auto-stop at the 30-second watchdog.
 
-### 10.4 Install the temperature sensors
+**Important:** if the solenoid wires are reversed, no harm done
+(it's a DC coil, not polarized), but the flow direction arrow on
+the body MUST be correct — reversed flow will leak through the
+diaphragm when closed.
+
+### 10.5 Install the temperature + soil moisture sensors
 
 **Tools:** wire stripper, small screwdriver, thermal tape (or zip ties)
 
@@ -524,46 +566,65 @@ flows through the line). Check for leaks at the connections.
 1. **Panel temp:** attach a DS18B20 to the back of the panel with
    thermal tape. Route the wire along the panel edge to the bed's
    hinge area, then to the breadboard.
-2. **Soil temp:** bury a DS18B20 2" deep in the soil (next to the soil
-   moisture sensor).
+2. **Soil temp:** bury a DS18B20 2" deep in the soil (next to the
+   soil moisture sensor).
 3. **Battery temp:** tape a DS18B20 to the side of the battery with
    Kapton tape (handles the heat).
-4. All 3 sensors share VCC (3.3V), GND, and the data line (GPIO 10) with
-   a single 4.7kΩ pullup resistor.
+4. All 3 sensors share VCC (3.3V), GND, and the data line (GPIO 10)
+   with a single 4.7kΩ pullup resistor.
+5. **Soil moisture:** Insert the Stemedu V1.2 capacitive sensor 2"
+   deep into the bed soil, near the center. Connect: VCC → 3.3V,
+   GND → GND, AOUT → ESP32 GPIO 4 (ADC).
 
-**Verification:** in Home Assistant, verify all 3 temperature sensors
-show reasonable values (panel ~20-40°C, soil ~15-30°C, battery ~15-30°C).
+**Verification:** in Home Assistant, verify all 4 sensors show
+reasonable values (panel ~20-40°C, soil ~15-30°C, battery ~15-30°C,
+moisture 30-60%).
 
-### 10.5 Install the soil moisture sensor
-
-**Tools:** none (sensor just inserts into soil)
+### 10.6 Verify energy + SOC + POA monitoring
 
 **Process:**
-1. Insert the Stemedu V1.2 capacitive sensor 2" deep into the bed
-   soil, near the center.
-2. Connect: VCC → 3.3V, GND → GND, AOUT → ESP32 GPIO 4 (ADC).
+1. The INA219 (panel V/I), DPS5005 (battery V), and BMI160 (tilt)
+   are already wired from Phase 5. Verify these entities in HA:
+   - `sensor.panel_voltage_v` (should read ~17-21V in sun)
+   - `sensor.panel_current_a` (should read 0-0.58A in sun)
+   - `sensor.panel_power_w` (V × I, should peak ~8-10W in full sun)
+   - `sensor.battery_v` (should read ~12-13.6V)
+   - `sensor.battery_soc_pct` (should follow the LiFePO4 curve)
+   - `sensor.current_tilt_deg` (should match panel angle)
+   - `sensor.poa_irradiance_w_m2` (should peak ~900-1000 W/m²
+     at solar noon on a clear day)
+   - `sensor.panel_efficiency_pct` (should be 12-18% on a good day)
+   - `sensor.energy_today_kwh` (should accumulate ~30-50 Wh/day
+     in good sun, = 0.03-0.05 kWh/day)
+   - `sensor.energy_total_kwh` (lifetime counter)
+2. If `poa_irradiance_w_m2` reads 0 or wildly off, check the
+   latitude/longitude in the firmware config (should be 33.45,
+   -112.07 for Phoenix) and the time sync (NTP or manual).
+3. If `panel_efficiency_pct` reads >20%, the panel area calculation
+   is wrong — double check `panel_L_in × panel_W_in` in
+   `wattplot_params.py`.
 
-**Verification:** sensor should read ~30-60% (dry to wet). In HA,
-`sensor.soil_moisture_pct` should show a stable value. Test by
-sprinkling water on the soil — value should increase.
-
-### 10.6 Test the watering automation
+### 10.7 Test the watering automation
 
 **Process:**
 1. In Home Assistant, verify these entities exist:
-   - `sensor.soil_moisture_pct` (read from V1.2 sensor)
-   - `sensor.panel_temp_c` (DS18B20 on panel)
-   - `sensor.soil_temp_c` (DS18B20 in soil)
-   - `sensor.battery_temp_c` (DS18B20 on battery)
-   - `switch.watering_pump` (toggle to test)
-   - `switch.watering_automation` (turn ON for auto mode)
-2. Force a watering event: in HA, set `sensor.soil_moisture_pct` to 25
-   (below the 30% threshold), wait 15 seconds. The pump should run for
-   12 seconds (~100 mL water).
+   - `sensor.soil_moisture_pct`
+   - `sensor.panel_temp_c` / `sensor.soil_temp_c` / `sensor.battery_temp_c`
+   - `sensor.battery_v` / `sensor.battery_soc_pct`
+   - `sensor.poa_irradiance_w_m2`
+   - `sensor.energy_today_kwh`
+   - `switch.watering_solenoid` (manual toggle)
+   - `switch.watering_automation` (auto mode)
+2. Force a watering event: in HA, set `sensor.soil_moisture_pct` to
+   25 (below the 30% threshold), wait 15 seconds. The solenoid
+   should click open for 50 seconds (~100 mL water).
 3. Verify `sensor.water_ml_today` increments by ~100 mL.
 4. Verify `sensor.watering_events_today` increments by 1.
-5. Test safety blocks: set panel temp to 50°C, verify watering is
-   blocked.
+5. Test safety blocks:
+   - Set `sensor.panel_temp_c` to 50°C → watering is blocked
+   - Set `sensor.battery_v` to 11.0V → watering is blocked
+   - Set `sensor.battery_soc_pct` to 15 → watering is blocked
+   - At night (`panel_power_w` < 0.5W) → watering is blocked
 
 ---
 
@@ -585,11 +646,17 @@ sprinkling water on the soil — value should increase.
 - [ ] State machine transitions are working
 - [ ] MPPT is converging
 - [ ] Firmware has `max_tilt_deg = 35.0` configured
-- [ ] **Pump is mounted, reservoir is filled, drip line is primed**
-- [ ] **Pump wiring through relay is correct (test in HA)**
+- [ ] **Solenoid is mounted, tee is in the cold water line, drip emitter is in soil**
+- [ ] **Solenoid wiring through relay is correct (test in HA, click on/off)**
 - [ ] **3 DS18B20 sensors are reading (panel, soil, battery)**
 - [ ] **Soil moisture sensor is reading 30-60%**
+- [ ] **INA219 reads panel V×I; panel_power_w peaks at 8-10W in full sun**
+- [ ] **battery_soc_pct follows the LiFePO4 curve**
+- [ ] **poa_irradiance_w_m2 peaks at ~900-1000 W/m² at solar noon**
+- [ ] **panel_efficiency_pct is 12-18%**
+- [ ] **energy_today_kwh accumulates ~0.03-0.05 kWh/day**
 - [ ] **Auto-watering fires when soil drops below 30%**
-- [ ] **Safety blocks work (high temp, low battery, nighttime)**
+- [ ] **Safety blocks work (high temp, low battery, low SOC, nighttime)**
 
-**Mini v2.3 complete. A real smart planter. Apply learnings to the full-size build.**
+**Mini v2.4 complete. A real smart planter with full energy telemetry.
+Apply learnings to the full-size build.**

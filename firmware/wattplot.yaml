@@ -123,6 +123,10 @@ bmi160:
 # (Single INA219 in the motor line gives current. For panel V/I, add a
 # second INA219 at address 0x41 on the panel side. For v1 we use the
 # motor INA219's bus_voltage as a proxy; second INA219 is a v2 add.)
+
+# v2.4: panel-side INA219 for energy monitoring. Solder the A0 address
+# pad on the second INA219 to set it to 0x41. Place it in series with
+# the panel + lead (between panel and DPS5005 input).
 ina219:
   - id: ina_motor
     i2c_id: i2c_main
@@ -140,6 +144,25 @@ ina219:
     bus_voltage:
       name: "Panel Bus V"
       id: panel_voltage
+      unit_of_measurement: "V"
+      accuracy_decimals: 2
+
+  - id: ina_panel
+    i2c_id: i2c_main
+    address: 0x41
+    shunt_resistance: 0.1Ω
+    max_current: 1.0A
+    update_interval: 1s
+    current:
+      name: "Panel Current"
+      id: panel_current
+      unit_of_measurement: "A"
+      accuracy_decimals: 3
+      filters:
+        - multiply: 0.001  # mA to A
+    bus_voltage:
+      name: "Panel V"
+      id: panel_v
       unit_of_measurement: "V"
       accuracy_decimals: 2
 
@@ -227,6 +250,134 @@ sensor:
       if (isnan(v)) return NAN;
       return v * 2.0;
 
+  # ===== v2.4: Energy + SOC + POA + Efficiency =====
+  # Panel power (W) from panel V × I (computed, not measured)
+  - platform: template
+    id: panel_power_w
+    name: "Panel Power"
+    unit_of_measurement: "W"
+    accuracy_decimals: 2
+    update_interval: 1s
+    lambda: |-
+      float v = id(panel_v).state;
+      float i = id(panel_current).state;
+      if (isnan(v) || isnan(i)) return NAN;
+      return v * i;
+
+  # Battery SOC via LiFePO4 voltage lookup table (12V 4S, 13.6V=100% .. 10.5V=0%)
+  - platform: template
+    id: battery_soc
+    name: "Battery SOC"
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: |-
+      float v = id(battery_voltage).state;
+      if (isnan(v)) return NAN;
+      // LiFePO4 voltage -> SOC lookup (interpolated)
+      // 13.6V=100, 13.4=95, 13.3=90, 13.2=80, 13.0=60, 12.8=40, 12.5=20, 12.0=10, 10.5=0
+      const float lut_v[] = {13.6, 13.4, 13.3, 13.2, 13.0, 12.8, 12.5, 12.0, 10.5};
+      const float lut_s[] = { 100,   95,   90,   80,   60,   40,   20,   10,    0};
+      if (v >= lut_v[0]) return 100;
+      if (v <= lut_v[8]) return 0;
+      for (int i = 0; i < 8; i++) {
+        if (v >= lut_v[i+1] && v <= lut_v[i]) {
+          return lut_s[i+1] + (lut_s[i] - lut_s[i+1]) *
+                 (v - lut_v[i+1]) / (lut_v[i] - lut_v[i+1]);
+        }
+      }
+      return 0;
+
+  # POA irradiance (W/m^2) - Plane of Array, from solar position + tilt + clear-sky
+  # Phoenix lat 33.45°N. Computes direct + diffuse on the tilted panel.
+  - platform: template
+    id: poa_irradiance
+    name: "POA Irradiance"
+    unit_of_measurement: "W/m²"
+    accuracy_decimals: 0
+    update_interval: 60s
+    lambda: |-
+      // Get current time. Use ESPHome's time component or RTC.
+      auto now = id(sntp_time).now();
+      if (!now.is_valid()) return NAN;
+      int doy = now.day_of_year;  // 1-365
+      float hour = now.hour + now.minute / 60.0 + now.second / 3600.0;
+      // Phoenix coordinates (33.45°N, -112.07°W, no DST)
+      const float lat = 33.45 * M_PI / 180.0;
+      // Solar declination
+      float dec = 23.45 * sin((360.0 / 365.0) * (doy - 81) * M_PI / 180.0)
+                  * M_PI / 180.0;
+      // Equation of time + longitude correction for solar time (simplified)
+      float lon_correction = -112.07 / 15.0;  // hours
+      float solar_hour = hour + lon_correction;
+      float hour_angle = (solar_hour - 12.0) * 15.0 * M_PI / 180.0;
+      // Solar altitude
+      float sin_alt = sin(lat) * sin(dec) + cos(lat) * cos(dec) * cos(hour_angle);
+      if (sin_alt <= 0.01) return 0;  // sun below horizon
+      float altitude = asin(sin_alt);
+      // Air mass (Kasten & Young)
+      float am = 1.0 / (sin_alt + 0.50572 *
+             pow(6.07995 + altitude * 180.0 / M_PI, -1.6364));
+      // Clear-sky direct normal irradiance (Ineichen simplified)
+      float dni = 1361.0 * pow(0.7, pow(am, 0.678));
+      // Panel tilt (from runtime state)
+      float tilt = id(panel_tilt).state * M_PI / 180.0;
+      if (isnan(tilt)) tilt = 0;
+      // For Phoenix south-facing panel, azimuth_sun ≈ 180° at noon,
+      // panel_azimuth = 180°, so cos(aoi) ≈ cos(altitude - tilt).
+      // Simplified aoi for south-facing panel:
+      float aoi = fabs(altitude - tilt);
+      if (aoi > M_PI / 2.0) return 0;
+      float poa_direct = dni * cos(aoi);
+      // Diffuse: isotropic sky model, ~10% of DNI as DHI
+      float dhi = 0.10 * dni;
+      float poa_diffuse = dhi * (1.0 + cos(tilt)) / 2.0;
+      return poa_direct + poa_diffuse;
+
+  # Panel efficiency = (V*I) / (POA * area) * 100
+  # ECO-WORTHY 10W: 13.3" × 8.1" = 0.0695 m^2
+  - platform: template
+    id: panel_efficiency
+    name: "Panel Efficiency"
+    unit_of_measurement: "%"
+    accuracy_decimals: 1
+    update_interval: 60s
+    lambda: |-
+      float p = id(panel_power_w).state;
+      float poa = id(poa_irradiance).state;
+      if (isnan(p) || isnan(poa)) return NAN;
+      if (poa < 50.0) return 0;  // noise floor at low light
+      const float area_m2 = 13.3 * 8.1 * 0.00064516;  // in^2 to m^2
+      return 100.0 * p / (poa * area_m2);
+
+  # Energy total (lifetime, persists across reboots, capped at 10 MWh)
+  - platform: template
+    id: energy_total
+    name: "Energy Total"
+    unit_of_measurement: "kWh"
+    accuracy_decimals: 3
+    update_interval: 60s
+    lambda: |-
+      // Read from the persistent global (g_energy_total_kwh, restore_value: true)
+      return id(g_energy_total_kwh);
+
+  # Daily energy (reset at midnight)
+  - platform: template
+    id: energy_today
+    name: "Energy Today"
+    unit_of_measurement: "kWh"
+    accuracy_decimals: 3
+    update_interval: 60s
+    lambda: |-
+      static float today = 0;
+      static int last_doy = -1;
+      auto now = id(sntp_time).now();
+      if (last_doy != now.day_of_year) {
+        today = 0;
+        last_doy = now.day_of_year;
+      }
+      return today;
+
   # Panel tilt from IMU (atan2 of accel)
   - platform: template
     name: "Panel Tilt"
@@ -268,13 +419,28 @@ binary_sensor:
       - delayed_on: 10ms
       - delayed_off: 10ms
 
-# ===== Grow light + H-bridge as switches =====
+# ===== Grow light + H-bridge + watering solenoid as switches =====
 switch:
   - platform: gpio
     id: grow_light_relay
     name: "Grow Light"
     pin: GPIO19
     icon: "mdi:lightbulb"
+
+  - platform: gpio
+    id: watering_solenoid
+    name: "Watering Solenoid"
+    pin: GPIO5
+    icon: "mdi:water"
+    # Auto-off after 30s safety watchdog (set by automation, not here)
+
+  - platform: template
+    id: watering_automation
+    name: "Watering Automation"
+    icon: "mdi:auto-fix"
+    restore_mode: RESTORE_DEFAULT_ON
+    lambda: |-
+      return id(watering_auto_enabled);
 
   - platform: output
     id: hb_in1_sw
@@ -288,6 +454,9 @@ switch:
     id: hb_en_sw
     name: "H-bridge EN"
     output: hb_en_out
+
+# ===== Globals (persistent state) =====
+# (Merged into the main globals: section below)
 
 # ===== Configurable parameters =====
 number:
@@ -445,6 +614,27 @@ globals:
   - id: g_dli_target_mol
     type: float
     initial_value: "20.0"
+    restore_value: true
+  # ===== v2.4: Watering + energy monitoring state =====
+  - id: watering_auto_enabled
+    type: bool
+    initial_value: "true"
+    restore_value: true
+  - id: watering_events_today
+    type: int
+    initial_value: "0"
+    restore_value: false
+  - id: water_ml_today
+    type: float
+    initial_value: "0.0"
+    restore_value: false
+  - id: is_night_flag
+    type: bool
+    initial_value: "false"
+    restore_value: false
+  - id: g_energy_total_kwh
+    type: float
+    initial_value: "0.0"
     restore_value: true
 
 # ===== Scripts (actuator + state transitions + side-effects) =====
@@ -760,6 +950,82 @@ interval:
     then:
       - script.execute: update_dli_estimate
 
+  - interval: 1s
+    id: energy_integration
+    then:
+      - lambda: |-
+          // === v2.4: Energy integration (1-Hz) ===
+          // Integrate panel V×I every 1s into today + total counters.
+          float p = id(panel_power_w).state;
+          if (isnan(p)) return;
+          // 1 second = 1/3600/1000 kWh of integration
+          float delta_kwh = p / 3600.0 / 1000.0;
+          // Update today (reset at midnight)
+          static float today = 0;
+          static int last_doy = -1;
+          auto now = id(sntp_time).now();
+          if (now.is_valid() && now.day_of_year != last_doy) {
+            today = 0;
+            last_doy = now.day_of_year;
+            id(water_ml_today) = 0;
+            id(watering_events_today) = 0;
+          }
+          today += delta_kwh;
+          id(energy_today).publish_state(today);
+          // Update total (capped at 10 MWh to prevent float drift)
+          float total = id(g_energy_total_kwh) + delta_kwh;
+          if (total > 10000.0) total = 10000.0;
+          id(g_energy_total_kwh) = total;  // restore_value: true persists across reboots
+          id(energy_total).publish_state(total);
+          // Update is_night flag for watering decisions
+          id(is_night_flag) = (p < 0.5);
+
+  - interval: 60s
+    id: watering_check
+    then:
+      - lambda: |-
+          // === v2.4: Watering automation (60s polling) ===
+          if (!id(watering_auto_enabled)) return;
+          if (id(controller_state).state == "Folding") return;
+          if (id(watering_solenoid).state) return;
+          float moisture = id(soil_moisture_pct).state;
+          float panel_t = id(panel_temperature).state;
+          float bat_v = id(battery_voltage).state;
+          float bat_soc = id(battery_soc).state;
+          if (isnan(moisture) || isnan(panel_t) || isnan(bat_v)) return;
+          if (panel_t > 45.0) return;
+          if (bat_v < 11.5) return;
+          if (bat_soc < 20.0) return;
+          if (id(is_night_flag)) return;
+          if (id(watering_events_today) >= 3) return;
+          if (moisture < 30.0) {
+            // Trigger 50 sec solenoid = ~100 mL at 2 mL/sec
+            id(watering_solenoid).turn_on();
+            id(watering_events_today) += 1;
+            id(water_ml_today) += 100;
+            ESP_LOGI("watering", "Watered: moisture=%.0f%%, events_today=%d",
+                     moisture, id(watering_events_today));
+            // Schedule auto-off after 30 sec (safety watchdog)
+            // (handled by separate interval below)
+          }
+
+  - interval: 30s
+    id: solenoid_safety_watchdog
+    then:
+      - lambda: |-
+          // Hard kill: if solenoid has been on for >=30s, turn it off
+          static unsigned long on_since = 0;
+          if (id(watering_solenoid).state) {
+            if (on_since == 0) on_since = millis();
+            if (millis() - on_since >= 30000) {
+              id(watering_solenoid).turn_off();
+              on_since = 0;
+              ESP_LOGW("watering", "Safety watchdog killed solenoid after 30s");
+            }
+          } else {
+            on_since = 0;
+          }
+
   - interval: 60s
     id: grow_light_tick
     then:
@@ -791,3 +1057,5 @@ interval:
                     id(controller_state).state.c_str(),
                     id(motor_current).state,
                     id(panel_tilt).state);'
+
+

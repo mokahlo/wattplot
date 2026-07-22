@@ -1,27 +1,33 @@
 """
-Mini v2.3 watering system - pump, reservoir, drip line.
+Mini v2.4 watering system - solenoid valve on tap water.
 
-Smart planter features:
-- 12V peristaltic pump (moves water from reservoir to bed soil)
-- 5-gallon bucket reservoir (18.9 L)
-- Vinyl drip line with pressure-compensating emitter
-- 1-channel relay module (ESP32 GPIO 5 controls pump on/off)
+Smart planter watering (v2.4: simplified, no pump/reservoir):
+- 12V DC normally-closed solenoid valve (1/4" NPT or barb)
+- Tap water provides pressure (40-80 PSI typical)
+- Pressure regulator on the inlet side (optional but recommended)
+- 1/4" vinyl tubing from solenoid to drip emitter
+- 1-channel relay on ESP32 GPIO 5 controls solenoid
 - Soil moisture sensor (V1.2 capacitive) in bed
 - 3 DS18B20 temp sensors (panel, soil, battery) on 1-Wire bus
 
-The pump sits on the workbench next to the bed. A vinyl tube runs from
-the pump outlet to a drip emitter stuck in the bed's soil. ESPHome
-firmware reads soil moisture and auto-waters when below threshold.
+The solenoid sits near the bed (workbench or wall). A tee fitting taps
+into the cold water supply line, feeds the solenoid inlet via 1/4"
+tubing, and the solenoid outlet feeds the drip emitter in the bed soil.
+
+When the soil moisture drops below threshold, ESP32 fires the relay,
+energizing the solenoid for ~50 sec to deliver ~100 mL. The solenoid
+is in compression when energized (water flows), and naturally closed
+when de-energized (fail-safe - no flooding if power dies).
+
+Coordinates (relative to bed center at origin):
+  - Solenoid: hangs off bed's east short wall, at 1/4" tubing height
+  - Tee fitting: on cold water supply pipe, typically under sink
+  - Tubing: runs from tee (under sink) -> up to workbench -> to solenoid -> to bed
 
 Design rules (enforced):
   1. NO MITER CUTS - all shapes are stock cylinders/boxes
-  2. ALL HARDWARE OFF THE SHELF - 12V pump, 1-ch relay, vinyl tubing
-  3. SIMPLE COMMON DIMENSIONS - 5-gallon bucket is standard
-
-Coordinates (relative to bed center at origin):
-  - Pump: sits to the right of the bed (positive X), on the workbench
-  - Reservoir: sits behind the pump (positive X, lower Z than bed)
-  - Drip line: runs from pump outlet to bed soil surface
+  2. ALL HARDWARE OFF THE SHELF - solenoid, 1-ch relay, vinyl tubing
+  3. SIMPLE COMMON DIMENSIONS - 1/4" tubing is standard
 """
 import sys, os, math
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -41,62 +47,82 @@ BED_L = MINI["bed_outer_L_in"]   # 18
 BED_W = MINI["bed_outer_W_in"]   # 14
 
 
-def make_pump(doc, name="Mini_Pump"):
-    """12V peristaltic pump - small block representing the pump body.
+def make_solenoid(doc, name="Mini_Solenoid"):
+    """12V DC normally-closed solenoid valve (small block).
 
-    Typical peristaltic pump: ~3" x 3" x 2" with 1/4" tubing inlet/outlet.
-    Positioned next to the bed on the workbench.
+    Typical 1/4" solenoid: ~2.5" x 1.5" x 1.5" with 1/4" barbs on
+    each end. Mounted on the bed's east short wall, at 1/4" tubing
+    height (~6" off the ground).
     """
-    # Pump body: 3" x 2" x 3" block
-    pump = box(3.0, 2.0, 3.0, x=12.0, y=2.0, z=-8.0)
-    # Inlet/outlet nozzles: 0.25" diameter cylinders sticking out
-    inlet = cylinder(0.125, 0.5, x=10.5, y=2.5, z=-8.0, axis="X")
-    outlet = cylinder(0.125, 0.5, x=13.5, y=2.5, z=-8.0, axis="X")
-    # Wire pigtail: small black box on top
-    wires = box(0.5, 0.3, 1.0, x=12.0, y=3.1, z=-7.0)
-    compound = Part.makeCompound([pump, inlet, outlet, wires])
+    # Solenoid body: 2.5" x 1.5" x 1.5"
+    body = box(2.5, 1.5, 1.5, x=11.0, y=6.0, z=8.0)
+    # Inlet barb (1/4" OD cylinder on south side)
+    inlet = cylinder(0.125, 0.5, x=10.25, y=6.5, z=8.0, axis="X")
+    # Outlet barb (1/4" OD cylinder on north side)
+    outlet = cylinder(0.125, 0.5, x=11.75, y=6.5, z=8.0, axis="X")
+    # Wire pigtail (small black box on top)
+    wires = box(0.5, 0.3, 1.0, x=11.0, y=7.0, z=8.0)
+    compound = Part.makeCompound([body, inlet, outlet, wires])
     return add_feature(doc, name, compound)
 
 
-def make_reservoir(doc, name="Mini_Reservoir"):
-    """5-gallon bucket reservoir (18.9 L) - cylinder with lid.
+def make_pressure_regulator(doc, name="Mini_PressureRegulator"):
+    """Optional pressure regulator (1/4" NPT, 5-30 PSI adjustable).
 
-    Positioned behind the pump (further +X, lower Z than bed).
+    Reduces tap pressure (40-80 PSI) to a safe level for the drip
+    emitter. Optional - can skip if emitter can handle full tap pressure.
     """
-    # Bucket: 12" diameter x 14" tall cylinder
-    bucket = cylinder(6.0, 14.0, x=18.0, y=7.0, z=-10.0, axis="Y")
-    # Lid: slightly larger disc on top
-    lid = cylinder(6.2, 0.3, x=18.0, y=14.1, z=-10.0, axis="Y")
-    # Water level indicator (a line on the side, represented as a small box)
-    water_line = box(0.1, 8.0, 12.0, x=11.9, y=4.0, z=-10.0)
-    compound = Part.makeCompound([bucket, lid, water_line])
+    # Regulator body: 2" x 1.5" x 1.5" cylinder
+    body = cylinder(0.75, 2.0, x=14.0, y=6.0, z=8.0, axis="X")
+    # Adjustment knob on top
+    knob = cylinder(0.4, 0.3, x=14.0, y=7.0, z=8.0, axis="Y")
+    # Inlet/outlet barbs
+    inlet = cylinder(0.125, 0.5, x=12.75, y=6.0, z=8.0, axis="X")
+    outlet = cylinder(0.125, 0.5, x=15.25, y=6.0, z=8.0, axis="X")
+    compound = Part.makeCompound([body, knob, inlet, outlet])
     return add_feature(doc, name, compound)
 
 
 def make_drip_line(doc, name="Mini_DripLine"):
-    """1/4" vinyl drip line from pump to bed soil surface.
+    """1/4" vinyl drip line from solenoid to bed soil surface.
 
-    Runs from pump outlet (x=13.5, y=2.5, z=-8) to soil surface at
+    Runs from solenoid outlet (x=11.75, y=6.5, z=8) to soil surface at
     bed center (x=0, y=4.75, z=0). 1/4" OD vinyl tubing.
     """
-    # Tube: 1/4" diameter cylinder from pump to bed
     tube_radius = 0.125
-    # Path: pump outlet -> curve over bed wall -> drip into soil
+    # Path: solenoid outlet -> horizontal across bed -> vertical down -> drip
     # Use a series of short cylinders to approximate a curved path
     segments = []
-    # Segment 1: pump outlet to bed edge (horizontal)
-    seg1 = cylinder(tube_radius, 6.0, x=10.5, y=2.5, z=-7.0, axis="X")
+    # Segment 1: solenoid outlet to bed east wall (horizontal, going west)
+    seg1 = cylinder(tube_radius, 1.5, x=11.0, y=6.5, z=8.0, axis="X")
     segments.append(seg1)
-    # Segment 2: vertical drop down to soil
-    seg2 = cylinder(tube_radius, 2.0, x=4.5, y=3.5, z=-7.0, axis="Y")
+    # Segment 2: down to bed soil surface
+    seg2 = cylinder(tube_radius, 1.75, x=10.0, y=5.5, z=8.0, axis="Y")
     segments.append(seg2)
-    # Segment 3: horizontal into bed center
-    seg3 = cylinder(tube_radius, 4.5, x=4.5, y=2.5, z=-5.0, axis="X")
+    # Segment 3: horizontal across to bed center
+    seg3 = cylinder(tube_radius, 6.0, x=8.0, y=4.75, z=8.0, axis="X")
     segments.append(seg3)
+    # Segment 4: down to drip emitter
+    seg4 = cylinder(tube_radius, 0.5, x=2.0, y=4.5, z=8.0, axis="Y")
+    segments.append(seg4)
     # Drip emitter at the end (small cylinder on the soil surface)
-    emitter = cylinder(0.15, 0.4, x=2.0, y=2.3, z=-5.0, axis="Y")
+    emitter = cylinder(0.15, 0.3, x=2.0, y=4.3, z=8.0, axis="Y")
     segments.append(emitter)
     compound = Part.makeCompound(segments)
+    return add_feature(doc, name, compound)
+
+
+def make_supply_line(doc, name="Mini_SupplyLine"):
+    """Tap water supply line (1/4" tubing from house plumbing to solenoid).
+
+    Represents the long run from under the sink (or wherever the cold
+    water supply is) up to the workbench level. In reality this is
+    just standard 1/4" vinyl tubing, no special components.
+    """
+    tube_radius = 0.125
+    # 6 ft long tube going up from the supply (under sink) to the workbench
+    tube = cylinder(tube_radius, 72.0, x=14.0, y=-30.0, z=8.0, axis="Y")
+    compound = Part.makeCompound([tube])
     return add_feature(doc, name, compound)
 
 
@@ -105,7 +131,7 @@ def make_relay(doc, name="Mini_Relay"):
 
     The relay is mounted on the bed's east short wall, near the
     breadboard. ESP32 GPIO 5 controls the relay coil, which switches
-    12V power to the pump.
+    12V power to the solenoid.
     """
     # Relay module: 1.5" x 0.7" x 0.5" PCB
     relay = box(1.5, 0.7, 0.5, x=9.5, y=3.0, z=7.25)
@@ -119,10 +145,11 @@ def make_relay(doc, name="Mini_Relay"):
 
 def make_watering_assembly(doc, name="Mini_WateringAssembly"):
     """All watering parts combined."""
-    pump = make_pump(doc, "Mini_Pump")
-    reservoir = make_reservoir(doc, "Mini_Reservoir")
+    solenoid = make_solenoid(doc, "Mini_Solenoid")
+    regulator = make_pressure_regulator(doc, "Mini_PressureRegulator")
     drip = make_drip_line(doc, "Mini_DripLine")
+    supply = make_supply_line(doc, "Mini_SupplyLine")
     relay = make_relay(doc, "Mini_Relay")
-    compound = Part.makeCompound([pump.Shape, reservoir.Shape,
-                                  drip.Shape, relay.Shape])
-    return add_feature(doc, name, compound), [pump, reservoir, drip, relay]
+    compound = Part.makeCompound([solenoid.Shape, regulator.Shape,
+                                  drip.Shape, supply.Shape, relay.Shape])
+    return add_feature(doc, name, compound), [solenoid, regulator, drip, supply, relay]

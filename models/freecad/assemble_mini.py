@@ -81,17 +81,16 @@ def build_mini_assembly(doc=None, name="Wattplot_Mini"):
         set_color(h, COL_HINGE)
     set_color(act, COL_ACT)
 
-    # Smart planter: watering system (v2.3)
+    # Smart planter: watering system (v2.4)
     try:
         from models.freecad.parts.mini.watering import (
-            make_watering_assembly, make_pump, make_reservoir,
-            make_drip_line, make_relay
+            make_watering_assembly
         )
         watering, watering_parts = make_watering_assembly(doc)
         set_color(watering, COL_ACT)  # reuse actuator color
         for part in watering_parts:
             set_color(part, COL_ACT)
-        print(f"  [watering] pump + reservoir + drip line + relay")
+        print(f"  [watering] solenoid + regulator + drip line + relay")
     except ImportError:
         print(f"  [watering] skipped (module not found)")
 

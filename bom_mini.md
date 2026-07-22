@@ -1,4 +1,4 @@
-# Wattplot Mini v2.2 — Bill of Materials
+# Wattplot Mini v2.4 — Bill of Materials
 
 Benchtop design-validation prototype. **18"×14" bed, ECO-WORTHY 10W
 panel, 100mm kickstand linear actuator** — sized to match the parts
@@ -9,6 +9,7 @@ Build before committing to the full-size build to validate:
 - 100mm kickstand actuator geometry (compression, low-side mount, 0-35°)
 - 1x2 frame structural behavior
 - Same firmware / sensors / MPPT / wiring as the full-size
+- Smart planter: soil moisture, 3× DS18B20 temps, tap-water solenoid, energy + SOC + POA monitoring
 
 **Total cost: ~$130-170. Total build time: ~3-4 hours.**
 
@@ -133,19 +134,20 @@ mini doesn't need that.
 
 **Total electronics: ~$61 new + $50 already ordered = $111**
 
-### Watering system (v2.3 — smart planter)
+### Watering system (v2.4 — solenoid on tap water)
 
 | Qty | Item | Source | Cost |
 |---|---|---|---|
-| 1 | 12V peristaltic pump (food-safe, ~0.5 L/min) | Amazon | **$15-20** |
+| 1 | 12V DC normally-closed solenoid valve, 1/4" barb, ~2 GPM | Amazon | **$10-12** |
 | 1 | 1-channel 5V relay module (low-level trigger, for ESP32) | Amazon | **$3-5** |
-| 1 | 5-gallon bucket with lid (reservoir, 18.9 L) | Home Depot | **$5** |
+| 1 | 1/4" cold-water tee fitting (brass, for tap line) | Home Depot | **$3** |
+| 1 | Pressure regulator 5-30 PSI, 1/4" NPT (optional, recommended) | Amazon | **$10** |
 | 10 ft | 1/4" vinyl tubing (food-safe, for drip line) | Amazon | **$8** |
 | 1 | Pressure-compensating drip emitter (2 GPH) | Amazon | **$5** (5-pack) |
-| 2 | 1/4" tubing barb fittings (for pump inlet/outlet) | Amazon | **$3** |
+| 2 | 1/4" tubing barb fittings (for solenoid inlet/outlet) | Amazon | **$3** |
 | 4 | Zip ties (for securing tubing) | Home Depot | **$2** |
 
-**Total watering system: ~$41-48**
+**Total watering system: ~$44-48** (similar cost, no reservoir, no pump priming)
 
 ---
 
@@ -159,12 +161,15 @@ mini doesn't need that.
 | Kickstand actuator + pins | $17 | already ordered | $17 |
 | Fasteners | $8 | — | $8 |
 | Electronics (DPS5005, sensors, breadboard) | $61 | $50 (battery + ESP32) | $111 |
-| Watering system (pump + reservoir + drip) | $45 | — | $45 |
-| **Total** | **$192** | **$50** | **~$242** |
+| Watering system (solenoid + tee + drip) | $46 | — | $46 |
+| **Total** | **$193** | **$50** | **~$243** |
 
-**v2.3 adds ~$45 (watering system) on top of v2.2 — full smart planter.**
+**v2.4 adds ~$46 (solenoid watering) on top of v2.2 — full smart planter.**
+v2.4 swaps the v2.3 pump + 5-gal bucket for a 12V solenoid on tap water:
+cheaper to run, no reservoir to refill, no pump priming, fail-safe closed
+when de-energized.
 
-(The full-size build is ~$1,400; the mini v2.3 is ~17% of that.)
+(The full-size build is ~$1,400; the mini v2.4 is ~17% of that.)
 
 ---
 

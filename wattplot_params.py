@@ -327,8 +327,7 @@ MINI = dict(
     panel_clamp_count=4,
 
     # ----- battery: 12V 7Ah LiFePO4 (ordered) -----
-    battery_ah=7,
-
+    # (battery_ah=7 is defined in the energy monitoring section below)
     # ----- smart planter: sensors + watering system (v2.3) -----
     # Sensors (all on the same 1-Wire bus except soil moisture which is analog)
     panel_temp_sensor="DS18B20",    # back of panel, for MPPT temp derating
@@ -338,24 +337,37 @@ MINI = dict(
     soil_moisture_dry_pct=30,        # below this, trigger watering (herbs)
     soil_moisture_wet_pct=60,        # above this, skip watering
 
-    # Watering system (peristaltic pump + relay)
-    pump_model="peristaltic_12V",    # 12V DC peristaltic pump, ~$20
-    pump_flow_rate_ml_per_sec=8,    # ~0.5 L/min = 8 mL/sec typical
-    pump_max_runtime_sec=30,        # safety: never run more than 30s
-    pump_water_volume_ml_default=100,  # ~12 sec at 8 mL/sec = 100 mL per event
-    pump_max_events_per_day=3,       # safety: max 3 watering events per 24h
+    # Watering system (v2.4: solenoid on tap water, no pump/reservoir)
+    water_source="tap_pressurized",  # tap water, 40-80 PSI, no pump needed
+    solenoid_model="12V_NC_1/4in",   # 12V DC normally-closed solenoid valve
+    solenoid_voltage_v=12,           # matches battery voltage
+    solenoid_holding_power_w=4,      # typical 12V solenoid holding current
+    solenoid_flow_rate_ml_per_sec=2,  # at 30 PSI tap, with drip emitter
+    solenoid_max_runtime_sec=30,     # safety: never run more than 30s
+    solenoid_water_volume_ml_default=100,  # ~50 sec at 2 mL/sec = 100 mL per event
+    solenoid_max_events_per_day=3,    # safety: max 3 watering events per 24h
     watering_block_panel_temp_c=45,  # don't water if panel > 45C (heat stress)
     watering_block_battery_v=11.5,   # don't water if battery < 11.5V
     watering_block_night=True,       # don't water at night (no solar charging)
 
-    # Reservoir (5-gallon bucket, 18.9 L)
-    reservoir_volume_l=18.9,
-    reservoir_days_autonomy=14,      # 18.9L / ~1.3L/day = ~14 days
+    # Energy monitoring + battery SOC (v2.4)
+    # Battery: 12V 7Ah LiFePO4 (ordered)
+    battery_ah=7,
+    # LiFePO4 voltage-to-SOC lookup (12V = 4S, approximate)
+    # 13.6V = 100% (full), 12.0V = 10% (cutoff), 10.5V = 0% (BMS cutoff)
+    battery_soc_lut=[(13.6, 100), (13.4, 95), (13.3, 90), (13.2, 80),
+                       (13.0, 60), (12.8, 40), (12.5, 20), (12.0, 10),
+                       (10.5, 0)],  # [(voltage, soc_pct)]
+    # Panel specs for POA irradiance calculation
+    panel_rated_efficiency_pct=18,    # typical 10W panel ~15-18% efficient
+    # Energy integration
+    energy_integration_interval_s=1,  # sample panel V/I every 1s
+    energy_total_max_kwh=10000,       # safety: cap total counter at 10 MWh
 
     # ESP32 pin assignments (ESP32-C3 PRO Mini)
     pin_onewire=10,                  # DS18B20 data (with 4.7k pullup to 3.3V)
     pin_soil_moisture=4,              # capacitive V1.2 analog out
-    pin_pump_relay=5,                # relay control (low-side switch)
+    pin_solenoid_relay=5,             # relay control (low-side switch, solenoid)
     pin_dps5005_tx=20,               # DPS5005 UART RX (ESP32 TX -> DPS RX)
     pin_dps5005_rx=21,               # DPS5005 UART TX (ESP32 RX <- DPS TX)
     pin_imu_sda=8,                   # I2C SDA (BMI160 + INA219)
