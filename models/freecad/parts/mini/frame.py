@@ -1,17 +1,19 @@
 """
-Mini v2 frame — 2x2 PT perimeter around the panel + 2x4 diagonal brace.
+Mini v2.2 frame - 1x2 PT perimeter around the panel + 2x4 diagonal brace.
+
+Sized to fit the ECO-WORTHY 10W panel (13.3" x 8.1") on an 18" x 14" bed.
 
 Geometry convention (matches bed_wall.py):
   - X is the bed's long axis
   - Z is the bed's short axis
-  - Long rails: along X, at z = ±(BED_W/2 - RAIL_T), length = BED_L
-  - Cross rails: along Z, at x = ±(BED_L/2 - RAIL_T), length = BED_W - 2*RAIL_T
+  - Long rails: along X, at z = +/-(BED_W/2 - RAIL_T), length = BED_L
+  - Cross rails: along Z, at x = +/-(BED_L/2 - RAIL_T), length = BED_W - 2*RAIL_T
   - Panel sits inside the frame, gripped by mid-clamps (clamps not modeled here)
 
 Design rules (enforced):
-  1. NO MITER CUTS — every cut is 90° square. Brace square-ends into rails.
-  2. ALL HARDWARE OFF THE SHELF — 2x2 PT DF (1.5 x 1.5 actual), 2x4 for brace.
-  3. SIMPLE COMMON DIMENSIONS — 40" / 19" / 42" from 8ft stock.
+  1. NO MITER CUTS - every cut is 90 deg square. Brace square-ends into rails.
+  2. ALL HARDWARE OFF THE SHELF - 1x2 PT DF (0.75" x 1.5"), 2x4 for brace.
+  3. SIMPLE COMMON DIMENSIONS - 18" / 12.5" / 21" cuts from 8ft stock.
 """
 import sys, os, math
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -26,40 +28,36 @@ import FreeCAD as App
 import Part
 
 
-# Frame dimensions from MINI v2
-LONG_RAIL_L = MINI["long_rail_length_in"]        # 40
-CROSS_RAIL_L = MINI["cross_rail_length_in"]      # 19
-RAIL_T = MINI["long_rail_thk_in"]                # 1.5 (2x2)
-RAIL_H = MINI["long_rail_h_in"]                  # 1.5 (2x2)
-BRACE_L = MINI["diagonal_brace_length_in"]       # 42
+# Frame dimensions from MINI v2.2
+LONG_RAIL_L = MINI["long_rail_length_in"]        # 18
+CROSS_RAIL_L = MINI["cross_rail_length_in"]      # 12.5
+RAIL_T = MINI["long_rail_thk_in"]                # 0.75 (1x2)
+RAIL_H = MINI["long_rail_h_in"]                  # 1.5
+BRACE_L = MINI["diagonal_brace_length_in"]       # 21
 
-PANEL_L = MINI["panel_L_in"]                     # 38.58
-PANEL_W = MINI["panel_W_in"]                     # 20.87
-PANEL_T = MINI["panel_t_in"]                     # 1.18
+PANEL_L = MINI["panel_L_in"]                     # 13.3
+PANEL_W = MINI["panel_W_in"]                     # 8.1
+PANEL_T = MINI["panel_t_in"]                     # 0.7
 
 # Bed dims
-BED_L = MINI["bed_outer_L_in"]                   # 40
-BED_W = MINI["bed_outer_W_in"]                   # 22
+BED_L = MINI["bed_outer_L_in"]                   # 18
+BED_W = MINI["bed_outer_W_in"]                   # 14
 WALL_T = MINI["bed_wall_thk_in"]                 # 0.75
 WALL_H = MINI["bed_wall_h_in"]                   # 3.5
-SKID_H = MINI["skid_h_in"]                       # 1.5
+SKID_H = MINI["skid_h_in"]                       # 0.75
 
 # Y positions: skid (0..SKID_H) + wall (SKID_H..SKID_H+WALL_H) + rail
-FRAME_Y_BOTTOM = SKID_H + WALL_H                 # 5.0
-FRAME_Y_TOP = FRAME_Y_BOTTOM + RAIL_H            # 6.5
+FRAME_Y_BOTTOM = SKID_H + WALL_H                 # 4.25
+FRAME_Y_TOP = FRAME_Y_BOTTOM + RAIL_H            # 5.75
 
 # Frame interior dimensions (between inside faces of the long rails)
-INTERIOR_L = BED_L - 2 * RAIL_T                  # 37
-INTERIOR_W = BED_W - 2 * RAIL_T                  # 19
-ANGLE_RAD = math.atan2(INTERIOR_W, INTERIOR_L)   # ~27.2°
+INTERIOR_L = BED_L - 2 * RAIL_T                  # 16.5
+INTERIOR_W = BED_W - 2 * RAIL_T                  # 12.5
+ANGLE_RAD = math.atan2(INTERIOR_W, INTERIOR_L)   # ~37 deg
 
 
 def make_frame_long_rail(doc, side="south", name=None):
-    """Long rail at the bed's long-side (z = ±(BED_W/2 - RAIL_T)).
-
-    The rail sits on top of the wall, with its inner face flush with the
-    wall's inner face (so the panel can sit on the rail's inner face).
-    """
+    """Long rail at the bed's long-side (z = +/-(BED_W/2 - RAIL_T))."""
     if name is None:
         name = f"Mini_FrameLongRail_{side}"
     if side == "south":
@@ -75,11 +73,7 @@ def make_frame_long_rail(doc, side="south", name=None):
 
 
 def make_frame_cross_rail(doc, side="east", name=None):
-    """Cross rail at the bed's short end (x = ±(BED_L/2 - RAIL_T)).
-
-    Length = BED_W - 2*RAIL_T = 19", so it fits between the long rails.
-    Square butt joint at each end (no miter).
-    """
+    """Cross rail at the bed's short end (x = +/-(BED_L/2 - RAIL_T))."""
     if name is None:
         name = f"Mini_FrameCrossRail_{side}"
     if side == "east":
@@ -97,17 +91,14 @@ def make_frame_cross_rail(doc, side="east", name=None):
 def make_diagonal_brace(doc, name="Mini_DiagonalBrace"):
     """2x4 PT diagonal brace, square ends butt into the long rails.
 
-    Spans the FRAME interior (corner to corner). For v2:
-      interior = 37 x 19, brace length = sqrt(37^2 + 19^2) ~ 41.6"
-      Use 42" from 2x4x8ft stock (12" waste per board).
-    Cross-section: 1.5 x 1.5 (use RAIL_T and RAIL_H for visual match with frame).
+    Spans the FRAME interior (corner to corner). For v2.2:
+      interior = 16.5 x 12.5, brace length = sqrt(16.5^2 + 12.5^2) ~ 20.7"
+      Use 21" from 2x4x8ft stock (75" waste).
     """
-    # Build the brace along X, then rotate by INTERIOR angle about Y axis
     brace = box(BRACE_L, RAIL_T, RAIL_H,
                 x=-BRACE_L / 2.0, y=0, z=-RAIL_H / 2.0)
     brace = brace.rotate(App.Vector(0, 0, 0), App.Vector(0, 1, 0),
                          math.degrees(ANGLE_RAD))
-    # Translate up to sit just above the rail bottom (inside the frame)
     brace_y = FRAME_Y_BOTTOM + 0.25
     brace = brace.translate(App.Vector(0, brace_y, 0))
     return add_feature(doc, name, brace)

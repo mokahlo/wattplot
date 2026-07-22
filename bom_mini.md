@@ -1,36 +1,35 @@
-# Wattplot Mini v2.1 — Bill of Materials
+# Wattplot Mini v2.2 — Bill of Materials
 
-Benchtop design-validation prototype. **40"×22" bed, 100W bifacial
-panel, 4" kickstand linear actuator** — large enough to fit a real
-off-the-shelf bifacial panel, small enough to sit on a workbench.
+Benchtop design-validation prototype. **18"×14" bed, ECO-WORTHY 10W
+panel, 100mm kickstand linear actuator** — sized to match the parts
+already ordered for this build.
 
 Build before committing to the full-size build to validate:
-- Real 100W bifacial gain (rear-side albedo)
-- 4" kickstand actuator geometry (compression, low-side mount, 0-35° tilt)
-- 2x2 frame structural behavior
+- Real solar charging (10W panel → MPPT → battery)
+- 100mm kickstand actuator geometry (compression, low-side mount, 0-35°)
+- 1x2 frame structural behavior
 - Same firmware / sensors / MPPT / wiring as the full-size
 
-**Total cost: ~$220-280. Total build time: ~4-5 hours.**
+**Total cost: ~$130-170. Total build time: ~3-4 hours.**
 
 Same design rules as the full-size build (`bom.md`):
 1. **No miter cuts** — every cut is a 90° square cut.
 2. **All hardware off the shelf** — Home Depot, Amazon, McMaster.
-3. **Simple, common dimensions** — all from 8ft stock, 1x4 / 2x2 / 2x4 PT DF.
+3. **Simple, common dimensions** — all from 8ft stock, 1x2 / 1x4 / 2x4 PT DF.
 
 ---
 
 ## Tilt range: 0-35° (kickstand-limited)
 
 The kickstand actuator geometry limits the panel to **0-35° tilt** (not
-the full 0-90°). This is by design — the Phoenix sun sim shows 35° is
-the **power-optimal static tilt** (1,539 kWh/yr at 35° on the full-size;
-on the mini, 35° gives 159.36 kWh/yr vs 170.95 at 0° and 106.84 at 90°).
-A 35° tilt captures ~93% of the maximum summer yield, which is good
-enough for the mini's purpose (validating the system, not maximizing
-production).
+the full 0-90°). For a 10W trickle-charger panel, this is fine — the
+panel produces 17 kWh/yr at 0° flat or 15.9 kWh/yr at 35° (the
+power-optimal tilt for Phoenix in summer). 0-35° covers the full useful
+range for a small panel.
 
 The full-size Wattplot keeps its 24" stroke linear actuator for full
-0-90° range. The mini doesn't need that.
+0-90° range (snow shedding, high-wind survival, max winter DLI). The
+mini doesn't need that.
 
 ---
 
@@ -39,49 +38,49 @@ The full-size Wattplot keeps its 24" stroke linear actuator for full
 ### Bed walls (1x4 PT DF, actual 0.75" × 3.5")
 | Qty | Size | Length | Use | Source / waste |
 |---|---|---|---|---|
-| 2 | 1x4 | 40" | Long walls (N and S), half-lap corners | 1x4x8ft, 56" waste per board |
-| 2 | 1x4 | 20.5" | Short walls (E and W), half-lap corners | 1x4x8ft, 4 short walls from 1 board (82" used, 14" waste) |
+| 2 | 1x4 | 18" | Long walls (N and S), half-lap corners | 1x4x8ft, 60" waste per board |
+| 2 | 1x4 | 12.5" | Short walls (E and W), half-lap corners | 1x4x8ft, 4 short walls from 1 board (25" used, 71" waste) |
 
-**Lumber for bed walls: 3 boards, ~6 bf**
+**Lumber for bed walls: 1 board, ~3 bf** (both long walls + 2 short walls from 1x4x8ft)
 
-### Frame rails (2x2 PT DF, actual 1.5" × 1.5")
+### Frame rails (1x2 PT DF, actual 0.75" × 1.5")
 | Qty | Size | Length | Use | Source / waste |
 |---|---|---|---|---|
-| 2 | 2x2 | 40" | Long rails (E and W sides of panel) | 2x2x8ft, 56" waste per board |
-| 2 | 2x2 | 19" | Cross rails (N and S ends of panel) | 2x2x8ft, 4 cross rails from 1 board (76" used, 20" waste) |
+| 2 | 1x2 | 18" | Long rails (E and W sides of panel) | 1x2x8ft, 60" waste per board |
+| 2 | 1x2 | 12.5" | Cross rails (N and S ends of panel) | 1x2x8ft, 4 cross rails from 1 board (25" used, 71" waste) |
 
-**Lumber for frame rails: 3 boards, ~6 bf**
+**Lumber for frame rails: 1 board, ~2 bf** (4 rails from 1x2x8ft, fits all on one board)
 
 ### Diagonal brace (2x4 PT DF, actual 1.5" × 3.5")
 | Qty | Size | Length | Use | Source / waste |
 |---|---|---|---|---|
-| 1 | 2x4 | 42" | Diagonal brace, square ends butt into long rails | 2x4x8ft, 54" waste |
+| 1 | 2x4 | 21" | Diagonal brace, square ends butt into long rails | 2x4x8ft, 75" waste |
 
-**Lumber for brace: 1 board offcut, ~2 bf**
+**Lumber for brace: 1 board offcut, ~2 bf** (or 2x4 scrap from another project)
 
-### Bed skids (2x2 PT DF, actual 1.5" × 1.5")
+### Bed skids (1x2 PT DF, actual 0.75" × 0.75")
 | Qty | Size | Length | Use | Source / waste |
 |---|---|---|---|---|
-| 2 | 2x2 | 40" | Long skids, under the long walls | 2x2x8ft, 56" waste per board |
+| 2 | 1x2 | 18" | Long skids, under the long walls | 1x2x8ft, 60" waste per board (cut 2 from 1 board) |
 
-**Lumber for skids: 1 board, 2 bf** (2 skids from 1 board, 80" used, 16" waste)
+**Lumber for skids: 1 board, 1 bf** (2 skids from 1x2x8ft)
 
-### Kickstand actuator mount (2x2 PT DF, actual 1.5" × 1.5")
+### Kickstand actuator mount (1x2 PT DF, scraps)
 | Qty | Size | Length | Use | Source / waste |
 |---|---|---|---|---|
-| 1 | 2x2 | 4" | Bottom mount block, on bed's south wall | 2x2 offcut (any 2x2 scrap) |
-| 1 | 2x2 | 4" | Top mount bracket, hanging below panel | 2x2 offcut (any 2x2 scrap) |
+| 1 | 1x2 | 3" | Bottom mount block, on bed's south wall | 1x2 offcut |
+| 1 | 1x2 | 3" | Top mount bracket, hanging below panel | 1x2 offcut |
 
-**Lumber for kickstand mount: offcuts, ~0 bf** (use scraps from the rails/skids)
+**Lumber for kickstand mount: offcuts, ~0 bf** (use scraps from the rails/skids boards)
 
 ### Total lumber
 
 | Material | Boards | Cost |
 |---|---|---|
-| 1x4x8ft (3 boards) | 3 | ~$15 |
-| 2x2x8ft (4 boards) | 4 | ~$20 |
-| 2x4x8ft (1 board for brace) | 1 | ~$7 |
-| **Total lumber** | **8 boards** | **~$42** |
+| 1x4x8ft (1 board) | 1 | ~$5 |
+| 1x2x8ft (2 boards: 1 for frame, 1 for skids) | 2 | ~$7 |
+| 2x4x8ft (1 board offcut for brace) | 1 | ~$7 |
+| **Total lumber** | **4 boards** | **~$19** |
 
 ---
 
@@ -90,73 +89,79 @@ The full-size Wattplot keeps its 24" stroke linear actuator for full
 ### Hinges + continuous hinge pin
 | Qty | Item | Source | Cost |
 |---|---|---|---|
-| 2 | 4" butt hinge, ½" pin (galvanized) | Home Depot | ~$5 ea = **$10** |
-| 1 | ½" × 44" steel rod (continuous hinge pin) | Home Depot | **$6** |
+| 2 | 1.5" butt hinge, ⅜" pin (galvanized) | Home Depot | ~$3 ea = **$6** |
+| 1 | ⅜" × 22" steel rod (continuous hinge pin) | Home Depot | **$3** |
 
 ### Panel + mounting
 | Qty | Item | Source | Cost |
 |---|---|---|---|
-| 1 | Newpowa 100W 12V Bifacial solar panel, 38.58" × 20.87" × 1.18" | Amazon | **$90** |
-| 6 | 2" aluminum mid-clamps, 35mm channel, M8 bolt | Amazon | ~$3 ea = **$18** |
+| 1 | ECO-WORTHY 10W 12V solar panel, 13.3" × 8.1" × 0.7" (1.88 lb) | Amazon | **$25** (already ordered) |
+| 4 | 1" aluminum mid-clamps, 18mm channel, M8 bolt | Amazon | ~$2 ea = **$8** |
 
 ### Kickstand actuator + clevis pins
 | Qty | Item | Source | Cost |
 |---|---|---|---|
-| 1 | 4" stroke 12V linear actuator, 75 lbf (ECO-WORTHY or similar) | Amazon | **$18** |
-| 2 | ½" × 3" clevis pins + cotter pins | Hardware store | **$3** |
+| 1 | 100mm (3.94") stroke 12V linear actuator, 70N (15.7 lbf) | Amazon | **$15** (already ordered) |
+| 2 | ⅜" clevis pins + cotter pins | Hardware store | **$2** |
 
 ### Fasteners
 | Qty | Item | Use |
 |---|---|---|
-| 24 | #8 × 2" deck screws (HDG) | Bed half-lap corners, frame corners |
-| 8 | #6 × 1.5" wood screws | Diagonal brace to frame |
-| 6 | M8 × 1.5" stainless bolts + EPDM washers | Mid-clamps to rails |
-| 8 | 5/16" × 3" lag bolts (HDG) | Hinges to bed wall and frame rail |
-| 8 | #8 × 2" deck screws | Kickstand mount blocks (4 per block) |
-| 2 | ½" × 3" clevis pins + cotter pins | Actuator clevis to mount blocks |
+| 16 | #6 × 1.5" wood screws (HDG) | Bed half-lap corners, frame corners |
+| 8 | #6 × 1" wood screws | Diagonal brace to frame |
+| 4 | M8 × 1.5" stainless bolts + EPDM washers | Mid-clamps to rails |
+| 8 | 5/64" × 1" wood screws | Hinge leaves to bed wall and frame rail |
+| 4 | #6 × 1.5" wood screws | Kickstand mount blocks |
+| 2 | ⅜" × 3" clevis pins + cotter pins | Actuator clevis to mount blocks |
 
-**Total fasteners: ~$15**
+**Total fasteners: ~$8**
 
 ### Electronics (same as full-size, minus PCB)
 
 | Qty | Item | Source | Cost |
 |---|---|---|---|
-| 1 | ESP32-WROOM-32E dev board | Mouser | **$5** |
-| 1 | DPS5005 MPPT controller | Amazon | **$25** |
+| 1 | DPS5005 MPPT controller (NOTE: CN3791 you ordered is INCOMPATIBLE with 12V LiFePO4) | Amazon | **$25** (need to order) |
+| 1 | ESP32-C3 PRO Mini dev board (or any ESP32) | Mouser | **$5** (already ordered) |
 | 1 | BMI160 IMU breakout | Mouser | **$2** |
 | 1 | INA219 current sensor breakout | Mouser | **$2** |
 | 1 | DS18B20 temperature sensor (waterproof) | Amazon | **$3** |
 | 1 | Capacitive soil moisture sensor | Amazon | **$3** |
-| 1 | 12V 20Ah LiFePO4 battery (with BMS) | Amazon | **$80** |
+| 1 | 12V 7Ah LiFePO4 battery (with BMS) | Amazon | **$25** (already ordered) |
 | 1 | Breadboard or perfboard (for prototyping) | Amazon | **$5** |
 | ~30 | Jumper wires (M-F, M-M, F-F) | Amazon | **$3** |
 | 1 | USB-C cable (for ESP32 programming) | Amazon | **$3** |
 
-**Total electronics: ~$130**
-
-(Optional: use the full-size PCB from `docs/pcb_design.md` for $5 + $15
-shipping from JLCPCB. Replaces the breadboard + jumper wires above.)
+**Total electronics: ~$51 new + $50 already ordered = $101**
 
 ---
 
 ## Cost summary
 
-| Category | Cost |
-|---|---|
-| Lumber (8 boards + scraps) | $42 |
-| Hinges + pin | $16 |
-| Panel + clamps | $108 |
-| Kickstand actuator + pins | $21 |
-| Fasteners | $15 |
-| Electronics (ESP32 + DPS5005 + sensors + battery) | $130 |
-| **Total** | **~$330** |
+| Category | New | Already have | Total |
+|---|---|---|---|
+| Lumber (4 boards) | $19 | — | $19 |
+| Hinges + pin | $9 | — | $9 |
+| Panel + clamps | $33 | — | $33 |
+| Kickstand actuator + pins | $17 | already ordered | $17 |
+| Fasteners | $8 | — | $8 |
+| Electronics (DPS5005, sensors, breadboard) | $51 | $50 (battery + ESP32) | $101 |
+| **Total** | **$137** | **$50** | **~$187** |
 
-(The full-size build is ~$1,400; the mini is ~24% of that, with most of
-the cost in the panel + battery which are sized for the mini but use
-the same form factor as the full-size.)
+(The full-size build is ~$1,400; the mini is ~13% of that.)
 
-**Mini v2.0 (24" actuator) was ~$400; Mini v2.1 (4" kickstand) saves ~$70
-on the actuator.**
+**Compared to v2.1 (100W bifacial, 24" actuator): saves $250**
+**Compared to v1 (19"×10", 1" actuator): same cost, bigger bed, real panel**
+
+---
+
+## Critical note: CN3791 swap
+
+The **HiLetgo CN3791 MPPT** in the parts list is **not compatible** with
+the 12V LiFePO4 battery. The CN3791 is a 12V solar → **1S LiPo (3.7V)**
+charger, not a 12V → 12V charger.
+
+**Replace with a DPS5005** ($25, Amazon, "DPS5005 programmable buck
+converter"). Same UART control, same MPPT loop in the firmware.
 
 ---
 
@@ -176,25 +181,9 @@ on the actuator.**
 - Circular saw (or have the lumber yard pre-cut)
 - Drill / impact driver
 - ⅛" drill bit (for wood screws)
-- 5/16" drill bit (for lag bolts)
+- 5/64" drill bit (for hinge screws)
 - M8 hex driver (for mid-clamp bolts)
 - Tape measure, square, level
 - Wire stripper
 - Multimeter
 - Soldering iron (for the perfboard, if not using a breadboard)
-
----
-
-## Sizing note (read this!)
-
-The 100W panel (38.58" × 20.87") is **larger than the frame's interior**
-(40 − 2×1.5 = 37" × 22 − 2×1.5 = 19"). The panel sits on top of the
-frame rails and overhangs the frame interior by ~0.79" on the long sides
-and ~0.94" on the short sides. This is the same overhang pattern as the
-full-size build (the full-size 97" × 44.6" panel also overhangs the
-93" × 41.6" frame interior).
-
-The mid-clamps grip the panel frame at the rail positions, so the panel
-is held firmly even though it extends past the rails. **Do not** try to
-make the panel fit inside the frame interior — it won't, and the
-mid-clamps need the panel to be on top of the rails, not tucked inside.

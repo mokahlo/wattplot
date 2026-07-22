@@ -252,91 +252,80 @@ P = {
 }
 
 # =============================================================================
-# MINI v2 (40" × 22" bed, 100W bifacial, 24" stroke actuator for true 90°)
+# MINI v2.2 (18" × 14" bed, ECO-WORTHY 10W panel, 100mm kickstand actuator)
 # =============================================================================
-# A benchtop validation prototype. Larger than the original 1/5 mini (which
-# couldn't fit a real bifacial off-shelf and had too short a stroke for 90°),
-# but still small enough to fit on a workbench. Validates:
-#   - 100W bifacial panel (real power generation, real rear-side gain)
-#   - 24" stroke actuator (true 0-90° tilt range)
-#   - Same firmware, same sensors, same MPPT controller
+# A small benchtop/desk-side planter with a real 10W trickle-charger panel.
+# Sized to fit the ECO-WORTHY 10W (13.3" × 8.1" × 0.7", 1.88 lb) and the
+# 100mm / 70N linear actuator that was ordered for this build.
 #
-# This is roughly 1/2.4 of the full-size (96" × 44.6" → 40" × 22"),
-# bigger than the 1/5 windowsill mini, more "real" as a system.
+# Validates:
+#   - Real 10W solar panel (real power generation, real charging)
+#   - 100mm kickstand actuator geometry (compression, low-side mount, 0-35°)
+#   - 1x2 frame on a small bed
+#   - Same firmware, same sensors, same DPS5005 MPPT as the full-size
+#
+# Compact enough for a kitchen window, workbench, or small patio. Good for
+# 1-2 small herbs or a flower planter. Soil volume ~0.5 cu ft.
 #
 # Design rules (enforced):
 #   1. NO MITER CUTS — every cut is a 90° square cut.
 #   2. ALL HARDWARE OFF THE SHELF — Home Depot, Amazon, McMaster.
-#   3. SIMPLE COMMON DIMENSIONS — 2x2 / 1x4 / 2x4 from 8ft stock.
+#   3. SIMPLE COMMON DIMENSIONS — 1x2 / 1x4 / 2x4 from 8ft stock.
 #
-# If the mini works on the bench for a week, the full-size will work too.
+# NOTE: This is the build that matches the parts already ordered. The earlier
+# 100W bifacial + 24" actuator design is parked in git history (v2.1).
 MINI = dict(
-    # ----- bed dimensions -----
-    bed_outer_L_in=40.0,            # sized to fit panel (38.58") + 2x 2x2 rails (3")
-                                   # interior = 40 - 3 = 37" (panel fits with 0.58" margin)
-    bed_outer_W_in=22.0,            # sized to fit panel (20.87") + 2x 2x2 rails (3")
-                                   # interior = 22 - 3 = 19" (panel fits with 1.87" margin)
+    # ----- bed dimensions (sized to ECO-WORTHY 10W panel: 13.3"x8.1") -----
+    bed_outer_L_in=18.0,            # bed long axis (panel's 13.3" direction)
+    bed_outer_W_in=14.0,            # bed short axis (panel's 8.1" direction)
     bed_wall_thk_in=0.75,           # 1x4 actual
-    bed_wall_h_in=3.5,              # 1x4 actual (real soil depth for small plant)
-    skid_h_in=1.5,                  # 2x2 actual
-    skid_side_in=1.5,               # 2x2 actual
+    bed_wall_h_in=4.0,              # 4" deep walls (small herb planter)
+    skid_h_in=0.75,                 # 1x2 actual (low COG for small bed)
+    skid_side_in=0.75,              # 1x2 actual
 
-    # ----- frame: 40" × 22" rectangle, 2x2 PT rails -----
-    long_rail_length_in=40.0,       # 2x2x40" (cut from 2x2x8ft, 56" waste per board)
-    cross_rail_length_in=19.0,      # 22 - 2*1.5 (frame thickness)
-    long_rail_thk_in=1.5,          # 2x2 actual (1.5 × 1.5)
+    # ----- frame: 18" × 14" rectangle, 1x2 PT rails -----
+    long_rail_length_in=18.0,       # 1x2x18" (cut from 1x2x8ft, 60" waste)
+    cross_rail_length_in=12.5,      # 14 - 2*0.75 (frame thickness)
+    long_rail_thk_in=0.75,          # 1x2 actual (0.75 × 1.5)
     long_rail_h_in=1.5,
-    cross_rail_thk_in=1.5,
+    cross_rail_thk_in=0.75,
     cross_rail_h_in=1.5,
-    diagonal_brace_length_in=42.0,  # sqrt(37^2 + 19^2) = 41.6"; 42" from 2x4x8ft (12" waste)
+    diagonal_brace_length_in=21.0,  # sqrt(16.5^2 + 12.5^2) = 20.7", 21" from 2x4x8ft (75" waste)
 
-    # ----- hinge: 4" butt hinge with ⅜" pin (full-size hinge for bigger load) -----
-    hinge_leaf_in=4.0,
-    hinge_pin_d_in=0.5,             # ½" pin (vs ⅜" in v1 mini) for the heavier panel
-    hinge_count=2,                  # 2 hinges (smaller load than full-size 4)
-    hinge_rod_length_in=44.0,       # ½" x 44" steel rod (Home Depot)
+    # ----- hinge: 1.5" butt hinge with ⅜" pin (v1 spec) -----
+    hinge_leaf_in=1.5,
+    hinge_pin_d_in=0.375,
+    hinge_count=2,
+    hinge_rod_length_in=22.0,       # ⅜" x 22" steel rod (Home Depot)
 
-    # ----- panel: Newpowa 100W 12V Bifacial, 38.58" × 20.87" × 1.18" -----
-    # (smallest off-the-shelf bifacial panel that gives meaningful power)
-    panel_L_in=38.58,
-    panel_W_in=20.87,
-    panel_t_in=1.18,
-    panel_wattage=100,
-    panel_voc_V=22.0,               # typical 100W 12V mono bifacial: Voc=22V, Vmp=18V
-    panel_vmp_V=18.0,
-    panel_imp_A=5.56,               # 100W / 18V = 5.56A
+    # ----- panel: ECO-WORTHY 10W 12V Mono (or poly) -----
+    # Source: https://www.amazon.com/dp/B00OZC3X1C
+    # Product Dimensions: 13.3" L x 8.1" W x 0.7" H
+    # Item Weight: 1.98 Pounds
+    # Voc: 20.6V, Vmp: 17.3V, Imp: 0.58A, Isc: 0.69A
+    panel_L_in=13.3,
+    panel_W_in=8.1,
+    panel_t_in=0.7,
+    panel_wattage=10,
+    panel_voc_V=20.6,
+    panel_vmp_V=17.3,
+    panel_imp_A=0.58,
 
-    # ----- actuator: 4" stroke 12V 75 lbf KICKSTAND (low side, 0-35° tilt) -----
-    # Kickstand geometry: actuator mounted on the bed's south wall (low side)
-    # with one end on the wall and the other end on the panel's underside.
-    # Limited to 0-35° tilt (the power-optimal range per the Phoenix sun sim:
-    # 159 kWh/yr at 35° vs 170 kWh/yr at 0° but 0° is just a flat panel).
-    # Benefits: $18 small actuator vs $90 24" stroke, in compression (safer
-    # in wind, fails to flat if power dies), much more compact.
-    actuator_stroke_in=4.0,         # ECO-WORTHY 4" stroke 12V 75 lbf, ~$18
-    actuator_rated_force_lb=75,
-    # Kickstand geometry (relative to bed corner at south wall outer face):
-    #   Bottom mount (fixed): on bed's south wall, y=0.75 (skid mid-height)
-    #   Top mount (moving): on panel's underside, ~6" north of south edge
-    #   Lever arm: 6" from hinge axis to top mount
-    #   Geometry chosen for 4" stroke to cover 0-35° tilt comfortably
-    kickstand_lever_arm_in=6.0,    # distance from hinge axis to top mount
-    kickstand_top_mount_offset_in=6.0,  # how far north of hinge on panel
+    # ----- actuator: 100mm (3.94") stroke 12V 70N (15.7 lbf) KICKSTAND -----
+    # Per Amazon listing. Way overkill for the 1.88 lb panel (only needs
+    # ~0.67" stroke for 35 deg and ~5.5 lbf force), so the geometry is
+    # very forgiving. Plenty of margin to scale up later if needed.
+    actuator_stroke_in=3.94,        # 100mm
+    actuator_rated_force_lb=15.7,   # 70N
+    kickstand_lever_arm_in=2.0,     # distance from hinge axis to top mount
+    kickstand_top_mount_offset_in=2.0,  # 2" north of hinge on panel
     max_tilt_deg=35.0,              # firmware should cap tilt at this value
 
-    # ----- clamps: 6 total (2 per long rail + 1 per cross rail) -----
-    # Aluminum mid-clamps for 35mm panel frame channel (same as full-size)
-    panel_clamp_size_in=2.0,        # IronRidge / Unirac standard
-    panel_clamp_count=6,
+    # ----- clamps: 4 total (2 per long rail) -----
+    # 1" mid-clamps for the small panel frame channel (panel frame is 0.7" tall)
+    panel_clamp_size_in=1.0,        # IronRidge / Unirac 1" mid clamp
+    panel_clamp_count=4,
 
-    # ----- electronics: identical to full-size -----
-    # ESP32-WROOM-32 (same)
-    # DPS5005 MPPT (same — 5A, well within 100W panel's 5.56A Imp)
-    # BMI160 IMU (same)
-    # INA219 current sensor (same)
-    # DS18B20 temp (same)
-    # Soil moisture sensor (same)
-
-    # ----- battery: 12V 20Ah LiFePO4 (heavier load than v1 mini's 5Ah) -----
-    battery_ah=20,
+    # ----- battery: 12V 7Ah LiFePO4 (ordered) -----
+    battery_ah=7,
 )

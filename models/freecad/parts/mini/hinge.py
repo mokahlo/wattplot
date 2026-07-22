@@ -1,5 +1,9 @@
 """
-Mini hinge — 2 × 1.5" butt hinges on the south wall, ⅜" pin.
+Mini v2.2 hinge - 2 x 1.5" butt hinges on the south wall, 3/8" pin.
+Matches the v1 spec: small bed, small panel, small hinge.
+
+2 hinges, spacing 13" centered on the 18" bed (2.5" margin each end).
+Continuous 3/8" x 22" steel rod threads through both hinges.
 """
 import sys, os
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -17,14 +21,16 @@ import Part
 LEAF = MINI["hinge_leaf_in"]    # 1.5
 PIN_D = MINI["hinge_pin_d_in"]  # 0.375
 COUNT = MINI["hinge_count"]      # 2
-ROD_LEN = MINI["hinge_rod_length_in"]  # 24
+ROD_LEN = MINI["hinge_rod_length_in"]  # 22
 
-WALL_T = 0.75
-WALL_H = 3.5
-SKID_H = MINI["skid_h_in"]
+WALL_T = MINI["bed_wall_thk_in"]  # 0.75
+WALL_H = MINI["bed_wall_h_in"]    # 3.5
+SKID_H = MINI["skid_h_in"]        # 0.75
+BED_W = MINI["bed_outer_W_in"]    # 14
+BED_L = MINI["bed_outer_L_in"]    # 18
 
-HINGE_Y = SKID_H + WALL_H    # top of south wall
-HINGE_Z = +MINI["bed_outer_W_in"] / 2.0   # outer face of south wall
+HINGE_Y = SKID_H + WALL_H    # 4.25 (top of south wall)
+HINGE_Z = +BED_W / 2.0       # +7 (outer face of south wall)
 
 
 def make_hinge(doc, x_pos, name=None):
@@ -41,8 +47,8 @@ def make_hinge(doc, x_pos, name=None):
 
 
 def make_all_hinges(doc, name="Mini_HingeSet"):
-    # 2 hinges, evenly spaced along the 19" hinge axis
-    # Total span: 13" centered, leaving 3" margin on each end
+    # 2 hinges, evenly spaced along the 18" hinge axis
+    # Span: 13" centered, 2.5" margin on each end
     span = 13.0
     x_positions = [-span / 2, +span / 2]
     hinges = [make_hinge(doc, x) for x in x_positions]
