@@ -8,7 +8,7 @@ parts you already ordered.
 power-optimal range per the Phoenix sun sim).
 
 **Build time:** ~3-4 hours
-**Build cost:** ~$193 (new parts: DPS5005 MPPT, sensors, lumber, hardware,
+**Build cost:** ~$193 (new parts: Sunapex 10A MPPT, sensors, lumber, hardware,
 solenoid watering). Already have: $50 (battery, ESP32, actuator, panel).
 
 ---
@@ -22,7 +22,7 @@ solenoid watering). Already have: $50 (battery, ESP32, actuator, panel).
 - 1 × ECO-WORTHY 10W 12V solar panel (13.3" × 8.1" × 0.7", 1.88 lb)
 
 ### Still need to order (one-stop)
-- **1 × DPS5005 programmable buck converter** (~$25, Amazon) — **REPLACES
+- **1 × Sunapex 10A MPPT charge controller** (~$25, Amazon) — **REPLACES
   the HiLetgo CN3791** you ordered (CN3791 is for 1S LiPo, not 12V
   LiFePO4 — incompatible with the battery you have)
 - 2 × 1.5" butt hinges with ⅜" pin (~$3 ea, Home Depot)
@@ -368,8 +368,11 @@ current is well below this).
 2. Look for ESPHome boot messages. Verify:
    - "Wattplot Controller" branding
    - IMU detected
-   - DPS5005 detected
    - State: FOLDING (safe default)
+
+> Note: the v2.4 firmware does not connect to a charge controller over
+> UART — the Sunapex is a standalone waterproof MPPT. There is no
+> "DPS5005 detected" line anymore.
 
 ### 6.4 Configure max tilt
 
@@ -389,29 +392,54 @@ For each sensor, verify it's reading sensible values (see
 
 ---
 
-## Phase 7: Solar Panel and MPPT (Day 1-2, ~20 min)
+## Phase 7: Solar Panel and Sunapex MPPT (Day 1-2, ~20 min)
 
 ### 7.1 Connect the solar panel
 
-**Tools:** MC4 crimper, wire stripper
+**Tools:** wire stripper, #1 Phillips, heat-shrink (if cutting SAE leads)
 
 **Process:**
-1. The 10W panel has MC4 connectors on the back. Use MC4-to-wire
-   adapters (or crimp your own).
-2. Run the panel wires (positive + negative) from the panel to the
-   breadboard.
-3. Connect the panel input to the DPS5005 input.
-4. Connect the DPS5005 output to the 12V battery (through a 3A fuse).
+1. The 10W panel has MC4 connectors on the back. The **Sunapex 10A MPPT**
+   ships with SAE connectors on both sides and a polarity reversal
+   adapter — connect the panel's MC4 directly to the Sunapex's included
+   SAE adapter. No MC4 crimper or pigtails needed.
+2. Mount the **Sunapex 10A MPPT** on the bed's east wall (next to the
+   PCB enclosure). The Sunapex is IP67 — no separate enclosure needed,
+   but mount it under the panel edge so the grommet for the panel
+   cables can enter the bed wall close by.
+3. The Sunapex's battery lead comes with an SAE connector on the
+   controller end and bare wire on the other. Either cut the SAE end
+   off and crimp ring terminals, or buy a separate SAE-to-bare-wire
+   pigtail. Run 14 AWG from the **Sunapex BAT+** through a 3 A in-line
+   fuse (within 6" of the battery +) to **battery +**.
+4. Run 14 AWG from the **Sunapex BAT−** to **battery −**.
 
-### 7.2 Test the MPPT
+### 7.2 Power up the Sunapex
 
 **Process:**
-1. With the panel in sun, the DPS5005 should output ~14.4V to the
-   battery.
-2. Verify the ESP32 can read and adjust the DPS5005 setpoint via
-   UART.
-3. The battery voltage should rise slowly during the day.
-4. Expected power: 8-9W peak at noon in full sun (after 15% derate).
+1. **Connect the battery first** (BAT+ and BAT−). The Sunapex is
+   powered by the battery, not the panel. Its LCD should light up.
+2. Press the **MODE** button on the Sunapex until the LCD shows the
+   LiFePO4 chemistry mode (usually labelled "Li" or "LiFePO4" — depends
+   on firmware rev). Default out-of-box is sometimes sealed lead-acid.
+3. Connect the panel MC4 to the Sunapex PV input via the included SAE
+   adapter. The Sunapex will detect PV and start charging; the
+   charging LED should come on.
+
+### 7.3 Test the MPPT
+
+**Process:**
+1. With the panel in sun, the Sunapex should be in **bulk charge**
+   (charging LED on, LCD shows ~14.4 V output to the battery).
+2. Watch the battery voltage rise slowly during the day on the ESPHome
+   `sensor.battery_voltage` entity. The Sunapex will hold at ~14.4 V
+   during bulk, drop to absorption, then ~13.4 V float once full.
+3. Expected power: 8-9 W peak at noon in full sun (after 15% derate
+   for the 10 W panel and ~96% MPPT efficiency).
+4. Verify `sensor.panel_power_w` reads roughly the same as the Sunapex
+   is pushing into the battery (within ~0.5 W — the small difference
+   is the INA219 shunt tolerance and the Sunapex's own ~6 mA quiescent
+   draw).
 
 ---
 
@@ -453,7 +481,8 @@ After a week, you'll know:
 - Whether the MPPT loop converges (or oscillates)
 - Whether the state machine behaves as expected
 - Whether the 10W panel produces expected power (~8-9W peak)
-- Whether the DPS5005 charges the 7Ah battery correctly
+- Whether the Sunapex holds the LiFePO4 charge profile correctly
+  (bulk → absorption → float, no BMS intervention)
 - Whether the system runs unattended for a week without issues
 
 If the mini works for a week, the full-size build will work too.
@@ -583,8 +612,10 @@ moisture 30-60%).
 ### 10.6 Verify energy + SOC + POA monitoring
 
 **Process:**
-1. The INA219 (panel V/I), DPS5005 (battery V), and BMI160 (tilt)
-   are already wired from Phase 5. Verify these entities in HA:
+1. The INA219 (panel V/I), Sunapex (charge status, visible on its
+   own LCD), and BMI160 (tilt) are already wired from Phase 5. The
+   Sunapex does not export telemetry to the ESP32, so charge state
+   is read from the Sunapex's own LCD. Verify these entities in HA:
    - `sensor.panel_voltage_v` (should read ~17-21V in sun)
    - `sensor.panel_current_a` (should read 0-0.58A in sun)
    - `sensor.panel_power_w` (V × I, should peak ~8-10W in full sun)
@@ -640,11 +671,14 @@ moisture 30-60%).
 - [ ] Panel reaches 0° when actuator is fully retracted
 - [ ] Panel reaches ~35° when actuator is fully extended
 - [ ] IMU is reading tilt correctly
-- [ ] Battery is connected and charging via MPPT
-- [ ] Solar panel is producing 8-9W peak in full sun
+- [ ] Battery is connected to Sunapex BAT+/BAT− with 3 A fuse
+- [ ] Panel MC4 is connected to Sunapex PV+/PV− (red to +, black to −)
+- [ ] Sunapex LCD is in **Li / LiFePO4** mode (not sealed lead-acid)
+- [ ] Sunapex charging LED is on when the panel is in sun
+- [ ] Solar panel is producing 8-9 W peak in full sun
 - [ ] ESP32 is online in Home Assistant
 - [ ] State machine transitions are working
-- [ ] MPPT is converging
+- [ ] Battery voltage on `sensor.battery_voltage` matches Sunapex LCD reading
 - [ ] Firmware has `max_tilt_deg = 35.0` configured
 - [ ] **Solenoid is mounted, tee is in the cold water line, drip emitter is in soil**
 - [ ] **Solenoid wiring through relay is correct (test in HA, click on/off)**

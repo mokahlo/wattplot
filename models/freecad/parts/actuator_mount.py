@@ -22,8 +22,10 @@ import Part
 PANEL_L = PANEL["L_in"]
 PANEL_W = PANEL["W_in"]
 
-WALL_T = LUMBER["2x12"]["actual_t"]
-WALL_H = LUMBER["2x12"]["actual_h"]
+from wattplot_params import BED_WALL
+WALL_T = BED["wall_thk_in"]                       # 0.75 (1x6 skin)
+_CAP_T = LUMBER[BED_WALL["cap_nominal"]]["actual_t"]  # 1.5 (2x6 flat cap)
+WALL_H = BED["wall_h_in"] + _CAP_T                # 22 + 1.5 = 23.5 (to cap top)
 SKID_H = BED["skid_h_in"]
 RAIL_T = LUMBER["2x6"]["actual_t"]
 RAIL_H = LUMBER["2x6"]["actual_h"]

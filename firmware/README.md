@@ -19,10 +19,12 @@ Five concurrent loops, all driven from a single YAML file:
 | Loop | Period | Purpose |
 |---|---|---|
 | **Control loop** | 1 s | State machine: NORMAL → MONITORING → FOLDING → LOCKED. PI loop on motor current. |
-| **MPPT loop** | 10 s | Step-adjusts DPS5005 setpoint toward the panel's max-power point (analog of P&O). |
 | **NWS poll** | 15 min | Fetches OpenWeather forecast; folds the canopy if sustained winds > 30 mph. |
 | **DLI update** | 5 min | Integrates PAR over the day; tops up with grow light if < target mol m⁻² day⁻¹. |
-| **Watchdog** | 5 s | Refuses to actuate if BMI160 or DPS5005 is offline > 30 s. |
+| **Watchdog** | 5 s | Refuses to actuate if BMI160 is offline > 30 s. |
+| **Energy integration** | 1 s | Sums panel V × I → kWh today / total (panel-side INA219, telemetry only). |
+
+> **Charge control moved out of the firmware.** The Sunapex 10A MPPT runs its own perturb-and-observe, bulk/absorption/float, and LiFePO4 charge profile. The ESP32 only *reads* battery voltage (via the on-PCB 10 kΩ / 10 kΩ divider) — it does not command a charge controller. This is a simplification: ~80 lines of UART/MPPT code removed from this YAML.
 
 State machine and tuning constants are exposed in Home Assistant as `number:` and
 `select:` entities — no re-flash needed for routine tuning.
@@ -38,8 +40,16 @@ See the top of `wattplot.yaml` for the full pin map. Summary:
 - **Current/voltage:** INA219 on I²C (0x40) — motor + battery monitoring
 - **Temp:** DS18B20 on GPIO 4 (1-Wire, 4.7 kΩ pullup to 3.3 V)
 - **Motor driver:** DRV8871 H-bridge on GPIO 16/17/18
-- **MPPT:** DPS5005 buck converter on UART2 (GPIO 26/27) — UART-controlled setpoint
-- **Battery sense:** GPIO 33 via 10 kΩ/10 kΩ divider
+- **MPPT (external):** Sunapex 10A MPPT, 12V, IP67, LiFePO4-aware. Mounted on the bed wall. No host connection — runs standalone. Panel MC4 → Sunapex PV+ / PV− (SAE adapter) → 12 V battery.
+- **Battery sense:** GPIO 33 via 10 kΩ / 10 kΩ divider (telemetry only; the Sunapex has its own battery sense and protections)
+- **Panel telemetry (optional):** Second INA219 at I²C 0x41 in series with the panel + lead, for energy integration and panel efficiency
+- **Free pins:** GPIO 26, GPIO 27 (former DPS5005 UART; reserved for full-size build's RS-485 to a bigger MPPT)
+
+> **Earlier revisions (v2.0-2.3) used a Sunapex HC-SM10A MPPT.** The
+> current build (v2.4) uses a **Sunapex 10A MPPT** instead — same form
+> factor, same chemistry support, $10 cheaper, 1-year warranty (vs
+> Sunapex's 5-year). Both are IP-rated waterproof MPPTs with the same
+> firmware-side interface (none — no host connection).
 - **Soil moisture:** GPIO 32 (capacitive sensor, ADC)
 - **Limit switches:** GPIO 34 (0°) and GPIO 35 (90°) — input-only, EXTERNAL 10 kΩ pullup
 - **Grow light relay:** GPIO 19
@@ -105,7 +115,7 @@ You should see:
 ```
 
 If the state shows `FOLDING` at boot, that's intentional — the safe default
-is to wait for first valid IMU + DPS5005 read before trusting actuator motion.
+is to wait for first valid IMU + battery-voltage read before trusting actuator motion.
 
 ### 5. Adopt in Home Assistant
 
@@ -145,7 +155,7 @@ esphome logs wattplot.yaml       # follow logs
 
 The canopy picks its state using this priority, top wins:
 
-1. **Watchdog failed** (IMU or DPS5005 offline > 30 s) → `FOLDING` (safe)
+1. **Watchdog failed** (IMU or battery-sense offline > 30 s) → `FOLDING` (safe)
 2. **Motor current > `i_safe`** (jammed) → `LOCKED`
 3. **NWS forecast > 30 mph sustained or gust** → `FOLDING` → `LOCKED` 24 h
 4. **NORMAL wind AND battery < 11.0 V** → `FOLDING` (protect battery)
@@ -160,12 +170,13 @@ Full math + edge cases: [`../docs/control_law.md`](../docs/control_law.md).
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| `DPS5005 not detected` on boot | UART wiring, baud mismatch | DPS5005 must be set to 9600 baud, 3.3 V TX |
+| Battery not charging | Sunapex wiring (panel MC4 polarity, battery polarity) or Li mode not selected | Red MC4 → Sunapex PV+ (via SAE), black MC4 → Sunapex PV−; battery + to BAT+, − to BAT−; press MODE button until LCD shows "Li" or "LiFePO4" |
+| Sunapex LCD blank | No battery connected (Sunapex is powered by the battery, not the panel) | Connect battery first, then panel |
 | `BMI160 not detected` | I²C address, wiring | Default 0x68; check SDA/SCL pullups |
-| `Watchdog tripped` in logs | IMU or DPS5005 dropped | Check I²C bus / UART, restart device |
+| `Watchdog tripped` in logs | IMU dropped | Check I²C bus, restart device |
 | Wi-Fi not connecting | Wrong SSID / password | Edit `secrets.yaml`, re-run `esphome run` (USB) |
 | Canopy won't fold under wind | `i_safe` too high OR NWS poll failing | Check `number.i_safe`; HA shows last NWS error |
-| MPPT setpoint stuck at 13.0 V | `mppt_loop` not running OR `target_current` = 0 | Check logs for `mppt_step`; verify DPS5005 responds to UART |
+| Panel Power sensor is 0 W | Panel-side INA219 not installed, or panel in shade | Confirm second INA219 at I²C 0x41; check Sunapex LED shows charging |
 | Grow light always on | `grow_light_mode` set to `Manual` | Switch to `DLI-TopUp` or `Off` |
 
 ---

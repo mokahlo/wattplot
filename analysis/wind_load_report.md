@@ -9,53 +9,53 @@
 ## Geometry
 
 - Panel: 8.083333333333334 ft × 3.716666666666667 ft × 1.4" (30.04 sq ft, ~65.0 lb)
-- Bed: 8.0 ft × 3.716666666666667 ft × 12.0" wall
+- Bed: 8.0 ft × 3.716666666666667 ft × 22.0" wall
 - Wood density assumed: 30.0 pcf (PT pine, conservative)
 - Soil density assumed: 75.0 pcf (wet loam/compost, ×1.0 saturation)
 - Bed-on-grade friction: μ = 0.4
 
-## Dead load (ballast) at 12.0" soil depth
+## Dead load (ballast) at 20.0" soil depth
 
 | Component | Weight |
 |---|---|
-| Soil (26.87 cu ft) | 2015 lb |
-| Lumber (posts + beam + walls) | 258 lb |
+| Soil (47.14 cu ft) | 3536 lb |
+| Lumber (posts + beam + walls) | 251 lb |
 | Panel | 65 lb |
 | Hardware (hinges/bolts) | 25 lb |
-| **Total dead load W** | **2363 lb** |
+| **Total dead load W** | **3876 lb** |
 
 ## Force sweep across tilt angles
 
 | Tilt | qh (psf) | F_vert (uplift, lb) | F_horiz (drag, lb) | SF uplift | SF sliding | SF overturning |
 |---|---|---|---|---|---|---|
 | 0° | 24.5 | 0 | 0 | inf | inf | inf |
-| 15° | 24.5 | 276 | 74 | 8.57 | 12.80 | 44.15 |
-| 25° | 24.5 | 422 | 197 | 5.60 | 4.80 | 7.90 |
-| 35° | 24.5 | 518 | 363 | 4.56 | 2.61 | 3.11 |
-| 45° | 24.5 | 551 | 551 | 4.29 | 1.71 | 1.69 |
-| 50° | 24.5 | 543 | 647 | 4.35 | 1.46 | 1.35 |
-| 75° | 24.5 | 276 | 1028 | 8.57 | 0.92 | 0.76 |
-| 90° | 24.5 | 0 | 1102 | 35009003696222340.00 | 0.86 | 0.79 |
+| 15° | 24.5 | 276 | 74 | 14.07 | 21.00 | 44.74 |
+| 25° | 24.5 | 422 | 197 | 9.18 | 7.88 | 10.01 |
+| 35° | 24.5 | 518 | 363 | 7.48 | 4.28 | 4.20 |
+| 45° | 24.5 | 551 | 551 | 7.03 | 2.81 | 2.35 |
+| 50° | 24.5 | 543 | 647 | 7.14 | 2.40 | 1.90 |
+| 75° | 24.5 | 276 | 1028 | 14.07 | 1.51 | 1.09 |
+| 90° | 24.5 | 0 | 1102 | 57427862164769408.00 | 1.41 | 1.11 |
 
-## Verdict at default 12.0" soil depth
+## Verdict at default 20.0" soil depth
 
 At the v1 design tilt of 35° (and V = 115.0 mph):
 
-- Uplift safety factor: **4.56** (target ≥ 1.5) — PASS
-- Sliding safety factor: **2.61** (target ≥ 1.5) — PASS
-- Overturning safety factor: **3.11** (target ≥ 2.0) — PASS
+- Uplift safety factor: **7.48** (target ≥ 1.5) — PASS
+- Sliding safety factor: **4.28** (target ≥ 1.5) — PASS
+- Overturning safety factor: **4.20** (target ≥ 2.0) — PASS
 
 ## Recommended soil depth
 
 Worst-case uplift tilt is **45°** (sin(2θ) is maximum at 45°).
 To hit the overturning target SF ≥ 2.0 at 45° tilt and V = 115.0 mph, you need approximately:
 
-### **Soil depth ≥ 14.6"** (1.22 ft)
+### **Soil depth ≥ 16.7"** (1.39 ft)
 
 At that depth:
 
-- Total dead load: 2798 lb
-- SF uplift: 5.08, SF sliding: 2.03, SF overturning: 2.00
+- Total dead load: 3292 lb
+- SF uplift: 5.97, SF sliding: 2.39, SF overturning: 2.00
 
 ## Notes & caveats
 

@@ -7,11 +7,23 @@ component on the apparatus. The PCB pin map is in `docs/pcb_design.md`.
 **Wire types:** All low-voltage signal wires are 22-26 AWG stranded
 (silicone-jacketed for outdoor use, e.g., EcoWire). The 12 V battery
 and grow light cables are 16-14 AWG (use silicone wire for flexibility,
-e.g., 14 AWG silicone from a hoverboard battery supply).
+e.g., 14 AWG silicone from a hoverboard battery supply). Solar panel
+leads are MC4 (the panel ships with them); the Sunapex ships with
+**SAE connectors** on both sides plus a polarity reversal adapter, so
+the panel MC4 connects directly to the Sunapex's SAE adapter on the
+PV input. No MC4-to-bare-wire pigtail needed.
 
 **Cable lengths** are the runs from PCB to component, with ~6" of slack
 at each end for service. JST-XH connectors at the PCB side; bare wire or
 ring terminals at the component side.
+
+**Charge controller:** the **Sunapex 10A MPPT** (mini build) is a
+standalone waterproof charge controller — it has no host connection, runs
+its own MPPT, and handles bulk/absorption/float for LiFePO4. The ESP32
+only *reads* battery voltage via the on-PCB 10 kΩ / 10 kΩ divider on
+GPIO 33; the controller's own battery sense is what actually gates
+charging. The full-size v2 build (620 W panel) needs a larger MPPT
+sized to that panel — see `docs/build_guide.md` §7.
 
 ---
 
@@ -45,15 +57,46 @@ the same I2C bus; daisy-chain with 4-wire cable.
 
 ### UART (DPS5005 MPPT controller)
 
-| PCB header | Wire | Goes to | Notes |
-|---|---|---|---|
-| J4 pin 1 | 26 AWG red, ~30" | DPS5005 VCC (3.3 V logic) | |
-| J4 pin 2 | 26 AWG black, ~30" | DPS5005 GND | |
-| J4 pin 3 | 26 AWG white, ~30" | DPS5005 RX (received by ESP32 TX=GPIO26) | |
-| J4 pin 4 | 26 AWG green, ~30" | DPS5005 TX (sent to ESP32 RX=GPIO27) | |
+> **Removed in v2.4** — replaced by the **Sunapex 10A MPPT** standalone
+> MPPT (see "Solar charge controller" below). The Sunapex has no host
+> connection; ESP32 only reads battery voltage through the divider.
+> The PCB's J4 footprint and GPIO 26 / 27 pads remain on the board but
+> are unpopulated (DNP) on the mini build — they are reserved for the
+> full-size v2's larger MPPT (RS-485 or VE.Direct).
+>
+> On the full-size v2 build, this section returns with whatever UART/
+> RS-485 the chosen MPPT uses (e.g., Victron VE.Direct on UART2 for
+> telemetry, or EPEver RS-485 Modbus). The pin map stays the same
+> (GPIO 26/27, J4 footprint).
 
-The DPS5005 is mounted in the same enclosure as the PCB (or in a
-separate small enclosure near the battery). 9600 baud, 3.3 V logic.
+### Solar charge controller (Sunapex 10A MPPT, mini only)
+
+The Sunapex has **no host connection**. It sits on the bed wall, has
+its own internal MPPT, bulk/absorption/float for LiFePO4, and all
+charging protections. The PCB does not talk to it.
+
+| Wire | Goes to | Notes |
+|---|---|---|
+| Panel MC4 + (red) | Sunapex **PV+** (via included SAE adapter) | Polarity reversal adapter included with Sunapex |
+| Panel MC4 − (black) | Sunapex **PV−** (via included SAE adapter) | |
+| Sunapex **BAT+** (SAE) | 12 V battery + (through 3 A fuse) | 14 AWG red, ~18" (cut the SAE end off) |
+| Sunapex **BAT−** (SAE) | 12 V battery − (common GND) | 14 AWG black, ~18" |
+
+The Sunapex is powered by the battery, not the panel — **connect the
+battery first**, then the panel. Reverse-polarity on either side is
+protected (the Sunapex just won't start).
+
+**Mode button:** press until the LCD shows the LiFePO4 chemistry mode
+(usually labelled "Li" or "LiFePO4", depending on firmware rev).
+Default out-of-box is sometimes sealed lead-acid — verify this on
+first power-up.
+
+**No telemetry back to ESPHome.** The Sunapex has no UART / Bluetooth /
+Modbus output (the "Bluetooth" claim on some Amazon listings is for the
+*family* of products; the 10A SKU has only the LCD + LEDs). If you later
+want charge telemetry, swap to a **Victron SmartSolar 75/10** (~$100,
+has VE.Direct UART + Bluetooth) — the wiring doc's "UART (DPS5005 MPPT
+controller)" section above is the re-instantiation point.
 
 ### Grow light relay (12 V switched output)
 
@@ -142,7 +185,7 @@ for documentation, but the actual PCB can have the divider as a small
 | Battery | 2 | 12 | 24" | 4 ft |
 | IMU (on frame) | 4 | 26 | 36" | 12 ft |
 | INA219 (at motor) | 0 (shares IMU cable) | — | — | — |
-| DPS5005 (in enclosure) | 4 | 26 | 30" | 10 ft |
+| DPS5005 (in enclosure) | 4 | 26 | 30" | 10 ft | *(v2.4: removed — Sunapex is standalone)* |
 | Grow light | 2 | 14 | 60" | 10 ft |
 | Linear actuator | 2 | 14 | 50" | 8.3 ft |
 | Limit switch 0° | 3 | 26 | 80" | 20 ft |
@@ -207,9 +250,10 @@ Top-down view of the bed + frame:
 5. **Limit switches:** 26 AWG 3-wire from PCB to the hinge area. The 0°
    switch mounts on the south wall just below the hinge axis. The 90°
    switch mounts on the north rail of the frame.
-6. **DPS5005 + grow light:** Inside the PCB enclosure (or a small
-   adjacent enclosure). 14 AWG from grow light back through the south
-   wall grommet.
+6. **Sunapex MPPT + grow light:** Sunapex mounts on the bed's east wall
+   (next to the PCB enclosure) — IP67, so it can be exposed. 14 AWG
+   from grow light back through the south wall grommet; 14 AWG from
+   Sunapex BAT+ through a 3 A in-line fuse to the battery.
 
 ---
 
@@ -229,13 +273,16 @@ Pin 3: SDA  (white)
 Pin 4: SCL  (green)
 ```
 
-**J4 — DPS5005 UART:**
+**J4 — DPS5005 UART (RESERVED, DNP on v2.4 mini):**
 ```
 Pin 1: 3V3 (red)
 Pin 2: GND  (black)
 Pin 3: TX  (white) → ESP32 sends to DPS5005 RX
 Pin 4: RX  (green) ← ESP32 receives from DPS5005 TX
 ```
+Not populated on the v2.4 mini build. Will be re-instantiated on the
+full-size v2 build for a Victron VE.Direct or EPEver RS-485 connection
+to that build's larger MPPT.
 
 **J5 — Grow light:**
 ```
@@ -287,7 +334,7 @@ OK let me finalize the wiring list. The grow light cable is 2 wires
 | Battery | Battery + | PCB J1 + | 12 AWG red | 24" | XT60 |
 | Battery | Battery − | PCB J1 − | 12 AWG black | 24" | XT60 |
 | I2C | PCB J2 | IMU + INA219 (daisy) | 4× 26 AWG (red, black, white, green) | 36" | JST-XH 4-pin both ends |
-| DPS5005 | PCB J4 | DPS5005 UART | 4× 26 AWG | 30" | JST-XH 4-pin both ends |
+| Sunapex MPPT | (standalone, on bed wall) | n/a | n/a | n/a | Panel MC4 → Sunapex SAE adapter; 14 AWG from Sunapex SAE battery lead to battery |
 | Grow light | PCB J5 | Grow light fixture | 3× 14 AWG | 60" | JST-XH 3-pin at PCB, bare at light |
 | Actuator | PCB J6 | Linear actuator | 2× 14 AWG | 50" | JST-XH 2-pin at PCB, spade at actuator |
 | Limit sw 0° | PCB J7 | South wall switch | 3× 26 AWG | 80" | JST-XH 3-pin at PCB, bare at switch |
@@ -303,6 +350,10 @@ OK let me finalize the wiring list. The grow light cable is 2 wires
 - Wire stripper (22-12 AWG range)
 - JST-XH crimper (PA-09 or equivalent)
 - XT60 connector crimper
+- **MC4 crimper** (iCrimp IWS-2546M, ~$25) — for the panel MC4 pigtails
+  if you're making your own. Skip if you buy pre-made MC4 extension
+  cables with bare leads (Amazon, ~$6/pair).
+- MC4 unlock tool (the little plastic spanner, ~$2)
 - Multimeter (for continuity, voltage checks)
 - Heat-shrink tubing (3 mm and 6 mm)
 - Cable ties + cable carrier (for the actuator/IMU cable to the frame)
@@ -321,10 +372,16 @@ Before connecting the battery, verify:
 - [ ] Battery fuse (F1) is NOT installed yet (install last)
 - [ ] All sensor cables are routed through grommets and sealed
 - [ ] Cable carrier is installed on the frame-to-bed cable run
+- [ ] MC4 polarity: red → Sunapex PV+, black → Sunapex PV−
+- [ ] Sunapex BAT+ / BAT− polarity: red to battery +, black to battery −
+- [ ] Sunapex battery-mode button: pressed to LiFePO4 setting
+  (LCD shows "Li" or "LiFePO4")
 - [ ] Multimeter continuity check: no shorts between 12V and GND
 - [ ] Multimeter continuity check: no shorts between 3V3 and GND
 - [ ] Multimeter continuity check: each limit switch closes when pressed
   (should be 0 Ω or close)
 
-When all checks pass: install the fuse. Power on. Verify the ESPHome
-boot sequence in the serial monitor.
+When all checks pass: install the fuse. **Connect the battery to the
+Sunapex first** (it powers up the Sunapex's MCU). Then connect the
+panel MC4 to the Sunapex PV input. Power on. Verify the ESPHome boot
+sequence in the serial monitor.

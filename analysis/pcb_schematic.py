@@ -43,7 +43,7 @@ def main():
         d += elm.Line().right().length(1.0)
         d += elm.Line().up().length(2.0).at((-7, 3.5))
         d += elm.Dot()
-        d += elm.Label().at((-7.5, 4.5)).label('MPPT\nctrl', loc='left', fontsize=7, color='gray')
+        d += elm.Label().at((-7.5, 4.5)).label('MPPT\n(Sunapex,\nstandalone)', loc='left', fontsize=7, color='gray')
 
         # === 12V → 5V buck ===
         block(d, -4.5, 6, 1.6, 1.4, 'MP1584', '12V→5V buck', 'U2')
@@ -112,7 +112,7 @@ def main():
         # === Bottom annotations ===
         d += elm.Label().at((0, -0.3)).label('Power: 12V (battery) → MP1584 → 5V → AMS1117 → 3V3 → ESP32',
                                             fontsize=8, halign='center', color='gray')
-        d += elm.Label().at((0, -0.8)).label('Battery charged by main 620W panel via DPS5005 MPPT (UART-controlled)',
+        d += elm.Label().at((0, -0.8)).label('Battery charged by panel via Sunapex 10A MPPT (standalone, no host connection)',
                                             fontsize=8, halign='center', color='gray')
         d += elm.Label().at((0, -1.3)).label('Signal: motor current (INA219) + IMU (BMI160) → ESP32 → H-bridge → actuator',
                                             fontsize=8, halign='center', color='gray')

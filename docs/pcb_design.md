@@ -36,12 +36,12 @@ matches it 1:1.
                               │ GPIO16/17/18   GPIO21/22      GPIO26/27│
                               │   │              │              │   │
                               │ ┌─▼──┐    ┌─────▼─────┐  ┌─────▼─────┐│
-                              │ │DRV │    │ I2C bus   │  │ UART2      ││
-                              │ │8871│    │ (3V3)     │  │ (3V3)      ││
-                              │ │    │    │  BMI160   │  │  DPS5005   ││
-                              │ └─┬──┘    │  INA219   │  │  MPPT ctrl ││
-                              │   │       │  ext hdr  │  └───────────┘│
-                              │   │       └───────────┘                │
+                              │ │DRV │    │ I2C bus   │  │  reserved  ││
+                              │ │8871│    │ (3V3)     │  │ (DNP on    ││
+                              │ │    │    │  BMI160   │  │  mini, used││
+                              │ └─┬──┘    │  INA219   │  │  on full-  ││
+                              │   │       │  ext hdr  │  │  size MPPT)││
+                              │   │       └───────────┘  └───────────┘│
                               │   │                                     │
                               │   ▼                                     │
                               │  Linear actuator (4" stroke)          │
@@ -58,6 +58,13 @@ matches it 1:1.
                               └──────────────────────────────────────┘
 ```
 
+> **v2.4 mini build:** GPIO 26/27 and the J4 footprint are **DNP**
+> (do-not-populate). The Sunapex 10A MPPT is standalone with no
+> host connection. The 26/27 pads and J4 footprint are reserved for
+> the full-size v2 build, where a larger MPPT (Victron 100/30 or
+> EPEver 4210AN) talks to the ESP32 over VE.Direct / RS-485 for
+> telemetry.
+
 ---
 
 ## 2. Power tree
@@ -66,9 +73,9 @@ Three rails, derived from a 12 V LiFePO4 battery:
 
 | Rail | Source | Max current | Used by |
 |---|---|---|---|
-| **12 V** | J1 (XT60 from battery) | 5 A (fuse) | Grow light relay, DPS5005 input, DRV8871 motor supply |
+| **12 V** | J1 (XT60 from battery) | 5 A (fuse) | Grow light relay, Sunapex MPPT (BAT input via fuse), DRV8871 motor supply |
 | **5 V** | MP1584EN buck from 12 V | 3 A | (reserved; USB-C 5V also feeds here for programming) |
-| **3.3 V** | AMS1117-3.3 LDO from 5 V | 1 A (peak ~800 mA) | ESP32, BMI160, INA219, DS18B20, DPS5005 logic, WS2812B |
+| **3.3 V** | AMS1117-3.3 LDO from 5 V | 1 A (peak ~800 mA) | ESP32, BMI160, INA219, DS18B20, WS2812B |
 
 **Battery fuse:** 5 A resettable PTC on the 12 V input (DRV8871 is rated 3.6 A
 continuous; 5 A gives headroom for stall currents).
@@ -80,8 +87,11 @@ continuous; 5 A gives headroom for stall currents).
 2. 12 V → 5 V (MP1584)
 3. 5 V → 3.3 V (AMS1117)
 4. ESP32 boots from 3.3 V
-5. ESPHome starts, queries IMU/DPS5005/INA219 over I2C/UART, reads sensors
+5. ESPHome starts, queries IMU/INA219 over I2C, reads battery voltage
+   via the divider, reads panel V/I via the panel-side INA219
 6. State machine boots in `FOLDING` (safe default) per firmware
+7. Sunapex (standalone, on the bed wall) charges the battery from the
+   panel — independent of the ESP32's state
 
 ---
 
@@ -111,7 +121,7 @@ continuous; 5 A gives headroom for stall currents).
 | J1 | XT60 connector (12 V battery) | through-hole | Amass | 1 | 0.80 |
 | J2 | 4-pin JST-XH (I2C breakout: 3V3, GND, SDA, SCL) | through-hole | JST | 1 | 0.20 |
 | J3 | USB-C receptacle (USB 2.0, 16-pin) | SMD | GCT | 1 | 0.50 |
-| J4 | 4-pin JST-XH (DPS5005 UART: 3V3, GND, TX, RX) | through-hole | JST | 1 | 0.20 |
+| J4 | 4-pin JST-XH (RESERVED, DNP on v2.4 mini: full-size MPPT UART — 3V3, GND, TX, RX) | through-hole | JST | 1 | 0.20 |
 | J5 | 3-pin JST-XH (grow light: 12V, GND, switched) | through-hole | JST | 1 | 0.15 |
 | J6 | 2-pin JST-XH (actuator: motor A, motor B) | through-hole | JST | 1 | 0.15 |
 | J7 | 3-pin JST-XH (limit switches 0° + 90° + GND) | through-hole | JST | 1 | 0.15 |
@@ -137,8 +147,8 @@ continuous; 5 A gives headroom for stall currents).
 | 21 | I2C SDA | I2C bus (J2, U5, U6) | 4.7 kΩ pullup to 3V3 on PCB |
 | 22 | I2C SCL | I2C bus (J2, U5, U6) | 4.7 kΩ pullup to 3V3 on PCB |
 | 25 | WS2812B data | LED1 | 100 Ω series resistor |
-| 26 | UART2 TX → DPS5005 RX | J4 | 3.3 V logic, level already matched |
-| 27 | UART2 RX ← DPS5005 TX | J4 | |
+| 26 | (reserved) RESERVED for full-size MPPT UART TX | J4 (DNP) | DNP on v2.4 mini; re-populated on full-size v2 build |
+| 27 | (reserved) RESERVED for full-size MPPT UART RX | J4 (DNP) | DNP on v2.4 mini; re-populated on full-size v2 build |
 | 32 | Soil moisture ADC1_CH4 | J9 | 0–3.3 V input |
 | 33 | Battery voltage ADC1_CH5 | J10 | Divided 10k/10k from 12V |
 | 34 | Limit switch 0° | J7 | Input only; external 10k pullup |
@@ -176,8 +186,8 @@ NET_DQ       = U1.GPIO4,  J8.pin1
 NET_DQ_PU    = R_pullup_DQ.bot   (4.7 kΩ to 3V3)
 NET_DQ_PD    = none (1-Wire is open-drain)
 
-NET_UART_TX  = U1.GPIO26, J4.pin3    # ESP32 TX → DPS5005 RX
-NET_UART_RX  = U1.GPIO27, J4.pin4    # DPS5005 TX → ESP32 RX
+NET_UART_TX  = U1.GPIO26, J4.pin3    # RESERVED (DNP on v2.4 mini; full-size MPPT UART)
+NET_UART_RX  = U1.GPIO27, J4.pin4    # RESERVED (DNP on v2.4 mini; full-size MPPT UART)
 
 NET_SOIL     = U1.GPIO32, J9.pin1
 NET_BAT_DIV  = U1.GPIO33, J10.pin1
@@ -229,12 +239,12 @@ complexity).
   │   ├── GPIO19 → Q1 → K1 → J5 (light)         │
   │   ├── GPIO32 → J9 (soil)                    │
   │   ├── GPIO33 → J10 (battery sense)          │
-  │   ├── GPIO26/27 → J4 (DPS5005 UART)         │
+  │   ├── GPIO26/27 → J4 (RESERVED, DNP on mini) │
   │   ├── GPIO16/17/18 → U4 DRV8871 → J6        │
   │   └── GPIO34/35 → J7 (limits)               │
   │                                             │
   │  Connectors along right edge:               │
-  │  [J2 I2C]  [J4 DPS]  [J5 light]  [J6 motor]│
+  │  [J2 I2C]  [J4 — ]  [J5 light]  [J6 motor]│
   │  [J7 lim]  [J8 temp] [J9 soil]  [J10 bat]  │
   └─────────────────────────────────────────────┘
 ```
@@ -267,8 +277,11 @@ complexity).
    USB, flash a blink sketch, verify the ESP32 boots and WiFi connects.
 3. **I2C devices:** U5 (BMI160), U6 (INA219), J2. Test: run an I2C scanner,
    verify both devices respond.
-4. **UART (DPS5005):** J4. Test: connect DPS5005, send `*IDN?` over UART,
-   verify response.
+4. **(DNP on v2.4 mini) UART (full-size MPPT):** J4. Test on the
+   full-size v2 build only — connect the chosen MPPT (Victron
+   SmartSolar or EPEver Tracer), send a status query, expect an
+   IDN response. The v2.4 mini build does not populate J4 or have
+   any UART active.
 5. **Motor driver:** U4 (DRV8871), J6. Test: bench-test with a spare
    actuator or a small DC motor. Verify IN1/IN2/EN control direction and
    speed.
@@ -302,12 +315,14 @@ Each test point is a 1 mm pad for easy probing.
 
 ## 9. What this PCB is NOT
 
-- ❌ **Not a high-power MPPT.** The DPS5005 is the MPPT path; it handles
-  up to 50 V / 5 A. The PCB only carries the UART control lines.
+- ❌ **Not an MPPT.** The PCB does no power conversion. Charge control
+  is the Sunapex 10A (mini) or a larger MPPT (full-size v2). The
+  PCB only reads battery voltage through the divider and panel V/I
+  through the panel-side INA219.
 - ❌ **Not a microinverter interface.** The microinverter (Enphase IQ7+ or
   APsystems DS3) is its own certified box; the PCB doesn't touch it.
-- ❌ **Not a solar charger.** The PCB monitors and controls; the actual
-  battery charging is the DPS5005's job.
+- ❌ **Not a solar charger.** The PCB monitors and controls the canopy /
+  actuator / sensors; the actual battery charging is the Sunapex's job.
 - ❌ **Not a power supply.** 12 V comes from the battery; 5 V and 3.3 V are
   derived for the ESP32 and sensors. The PCB does NOT generate 12 V.
 

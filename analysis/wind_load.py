@@ -50,7 +50,9 @@ PANEL_WIND = dict(
 BED_WIND = dict(
     outer_L_ft       = BED['outer_L_in'] / 12.0,
     outer_W_ft       = BED['outer_W_in'] / 12.0,
-    soil_depth_in    = BED['wall_h_in'],
+    # Ballast soil = actual fill depth (freeboard below rim doesn't count),
+    # falling back to wall height for configs without an explicit fill.
+    soil_depth_in    = BED.get('soil_fill_in', BED['wall_h_in']),
     wall_thk_in      = BED['wall_thk_in'],
     floor_thk_in     = 0.0,
     wall_height_in   = BED['wall_h_in'],

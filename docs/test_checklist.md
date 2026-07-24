@@ -104,18 +104,32 @@ Test with a small DC motor (e.g., 12V gearmotor) or the actual
 actuator. Verify the motor direction matches the firmware's expectation
 (forward = extend, reverse = retract).
 
-### A.8 UART (DPS5005)
+### A.8 Sunapex 10A MPPT (charge controller)
+
+> **v2.4 mini:** the Sunapex has no host connection (no UART). The
+> ESP32 does not query or command it. Verify physical install and
+> charge behavior instead.
 
 | Test | Expected | Pass? |
 |---|---|---|
-| DPS5005 detected (TX echo) | Yes | ☐ |
-| Send `*IDN?` → response | `Ruideng DPS5005` | ☐ |
-| Set voltage to 14.4V → DPS5005 outputs 14.4V (measured) | Yes | ☐ |
-| Set current limit to 5A → DPS5005 limits at 5A | Yes | ☐ |
+| Sunapex BAT+ / BAT− wired to battery (through 3 A fuse) | Polarity correct, fuse within 6" of battery + | ☐ |
+| Sunapex PV+ / PV− wired to panel MC4 pigtails | Red MC4 → PV+, black MC4 → PV− | ☐ |
+| Sunapex LCD lights up when battery is connected | Yes (the Sunapex is powered by the battery, not the panel) | ☐ |
+| Sunapex MODE button set to LiFePO4 chemistry | LCD shows "Li" or "LiFePO4" | ☐ |
+| Panel in sun → Sunapex charging LED on | Yes | ☐ |
+| Sunapex output voltage (LCD) when charging | ~14.4 V during bulk | ☐ |
+| Sunapex output voltage (LCD) when battery full | ~13.4 V float | ☐ |
+| ESPHome `sensor.battery_voltage` matches Sunapex LCD (±0.1 V) | Yes | ☐ |
 
-If no response, check the TX/RX wiring (ESP32 TX goes to DPS5005 RX, and
-vice versa). Also check that the DPS5005 is configured for 9600 baud
-(default).
+If charging LED does not come on in sun: check panel polarity
+(reversed polarity is protected, but the Sunapex won't start), check
+the panel's Voc is > 6 V (the Sunapex's PV startup threshold), and
+verify the battery is at > 9 V (the Sunapex's low-voltage cutoff).
+
+For the full-size v2 build with a larger MPPT (Victron SmartSolar
+100/30 or EPEver Tracer 4210AN), an additional UART/RS-485 test
+section will be added — the comms use the J4 footprint that is DNP on
+the v2.4 mini.
 
 ### A.9 Soil moisture (analog input)
 
@@ -246,14 +260,21 @@ software state machine end-to-end.
 | Watchdog (IMU disconnect) → FOLDING after 30s | Yes | ☐ |
 | After storm passes → state returns to commanded | Yes | ☐ |
 
-### C.4 MPPT (DPS5005)
+### C.4 Sunapex MPPT (charge controller)
 
 | Test | Expected | Pass? |
 |---|---|---|
-| DPS5005 outputs 14.4V (LiFePO4 charge V) | 14.4 ± 0.2 V | ☐ |
-| MPPT loop adjusts setpoint (every 10s) | Setpoint changes | ☐ |
-| Battery voltage rises during sun exposure | Yes | ☐ |
-| DPS5005 current limit (5A) holds | Yes | ☐ |
+| Sunapex holds bulk charge voltage at 14.4 V (LiFePO4) | 14.4 ± 0.2 V | ☐ |
+| Sunapex transitions bulk → absorption → float as battery fills | Yes (visible on Sunapex LCD) | ☐ |
+| Battery voltage rises during sun exposure | Yes (visible on ESPHome `sensor.battery_voltage`) | ☐ |
+| Sunapex charge current peaks 0.4-0.5 A at solar noon | Yes (0.58A panel Imp × ~85% derate) | ☐ |
+| Sunapex exits charge at sunset (no phantom drain) | Yes | ☐ |
+| ESPHome panel-power = Sunapex charge-power (within ~0.5 W) | Yes | ☐ |
+
+> The Sunapex's internal MPPT runs its own perturb-and-observe. There
+> is no firmware-side MPPT loop, no UART setpoint commands, and no
+> `mppt_step` script — this is a simplification vs the v2.0-2.3
+> DPS5005-based design.
 
 ### C.5 DLI grow light
 
@@ -287,7 +308,7 @@ metrics over time.
 | Frame at 35° in morning (NORMAL) | Yes | ☐ |
 | Frame at 35° in afternoon (NORMAL) | Yes | ☐ |
 | Frame flat at night (storm watch) | Yes | ☐ |
-| Daily kWh from DPS5005 | 4-6 kWh (Phoenix summer) | ☐ |
+| Daily kWh from Sunapex (mini: 10 W panel) | 0.03-0.05 kWh/day | ☐ |
 | Battery voltage at end of day | 12.5-13.5 V | ☐ |
 | Soil moisture reading | 30-60% | ☐ |
 | No false FOLDING events (wind < 30 mph) | Yes | ☐ |
@@ -301,7 +322,7 @@ metrics over time.
 | Hinge pin (no rust) | Clean | ☐ |
 | Panel frame (no cracks) | Clean | ☐ |
 | Bed walls (no rot) | Clean | ☐ |
-| DPS5005 efficiency (charging amps × 14.4V) / (panel V × panel A) | > 90% | ☐ |
+| Sunapex efficiency (charging amps × 14.4V) / (panel V × panel A) | > 90% | ☐ |
 | Tomato plant height | Growing | ☐ |
 
 ### D.3 Monthly checks

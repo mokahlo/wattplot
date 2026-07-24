@@ -46,6 +46,7 @@ LUMBER = {
     "1x2":  {"actual_t": 0.75, "actual_h": 1.5},
     "1x3":  {"actual_t": 0.75, "actual_h": 2.5},
     "1x4":  {"actual_t": 0.75, "actual_h": 3.5},
+    "1x6":  {"actual_t": 0.75, "actual_h": 5.5},
     "2x4":  {"actual_t": 1.5,  "actual_h": 3.5},
     "2x6":  {"actual_t": 1.5,  "actual_h": 5.5},
     "2x8":  {"actual_t": 1.5,  "actual_h": 7.25},
@@ -61,12 +62,14 @@ LUMBER_WEIGHT_LB_PER_FT = {
     "1x2":  0.59,
     "1x3":  0.97,
     "1x4":  1.28,
+    "1x6":  0.80,   # cedar (skin boards are cedar, ~23 pcf, not PT DF)
     "2x4":  1.28,
     "2x6":  2.00,
     "2x8":  2.64,
     "2x10": 3.36,
     "2x12": 4.10,
     "4x4":  2.98,
+    "4x6":  3.92,
     "6x6":  6.84,
 }
 

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Wattplot v2 — 3D viewer</title>
+<title>Wattplot — 3D viewer</title>
 <style>
   body { margin: 0; padding: 0; background: #1a1a1a; color: #eee; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; overflow: hidden; }
   #info {
@@ -19,7 +19,7 @@
 </head>
 <body>
 <div id="info">
-  <h1>Wattplot v2 — Interactive 3D</h1>
+  <h1 id="app-title">Wattplot — Interactive 3D</h1>
   <b>Drag</b> to orbit · <b>Scroll</b> to zoom · <b>Right-drag</b> to pan<br>
   <b>Bed:</b> 8.0 × 3.72 ft, ~12" soil depth (ballast)<br>
   <b>Panel:</b> 8.08 × 3.72 ft, ~620W bifacial @ 35° tilt<br>
@@ -42,6 +42,79 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+
+// ---- App version (single source of truth — bump on release) ----
+// Semver: MAJOR.MINOR.PATCH. No "v" prefix per project convention.
+// 3.0.0 — same major bump as the booth viewer (kept in sync).
+const VERSION = '3.0.0';
+const APP_NAME = 'Wattplot';
+document.title = `${APP_NAME} ${VERSION} — 3D viewer`;
+document.getElementById('app-title').textContent = `${APP_NAME} ${VERSION} — Interactive 3D`;
+
+// ---- Grass texture (procedural, no external assets) ----
+function createGrassTexture() {
+  const size = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#4a7c2e';
+  ctx.fillRect(0, 0, size, size);
+
+  const grad = ctx.createLinearGradient(0, 0, 0, size);
+  grad.addColorStop(0, 'rgba(40, 70, 30, 0.25)');
+  grad.addColorStop(1, 'rgba(90, 140, 60, 0.18)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, size, size);
+
+  const greens = ['#3d6b1f', '#5a8c34', '#6a9c3e', '#456e26', '#528a30',
+                  '#3a5d1e', '#7ba84a', '#2f5018'];
+  for (let i = 0; i < 6000; i++) {
+    const x = Math.random() * size;
+    const y = Math.random() * size;
+    const r = Math.random() * 1.8 + 0.4;
+    ctx.fillStyle = greens[Math.floor(Math.random() * greens.length)];
+    ctx.globalAlpha = 0.6 + Math.random() * 0.4;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  for (let i = 0; i < 400; i++) {
+    const x = Math.random() * size;
+    const y = Math.random() * size;
+    const len = 1.5 + Math.random() * 3;
+    const angle = (Math.random() - 0.5) * 0.6;
+    ctx.strokeStyle = Math.random() > 0.5 ? '#2d4f17' : '#7ba84a';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + Math.sin(angle) * len, y - Math.cos(angle) * len);
+    ctx.stroke();
+  }
+
+  for (let i = 0; i < 6; i++) {
+    const x = Math.random() * size;
+    const y = Math.random() * size;
+    const r = 5 + Math.random() * 12;
+    const dirt = ctx.createRadialGradient(x, y, 0, x, y, r);
+    dirt.addColorStop(0, 'rgba(80, 60, 35, 0.45)');
+    dirt.addColorStop(1, 'rgba(80, 60, 35, 0)');
+    ctx.fillStyle = dirt;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 4;
+  return texture;
+}
 
 const container = document.getElementById('canvas-container');
 const loadingEl = document.getElementById('loading');
@@ -76,29 +149,104 @@ const dirLight2 = new THREE.DirectionalLight(0x88aaff, 0.3);
 dirLight2.position.set(-100, 80, -80);
 scene.add(dirLight2);
 
-// Grid
-const grid = new THREE.GridHelper(400, 40, 0x444444, 0x2a2a2a);
-grid.position.y = 0;
-scene.add(grid);
-
-// Axes
+// Grid (axes)
 const axes = new THREE.AxesHelper(40);
 axes.position.set(0, 0, 0);
 scene.add(axes);
+
+// Ground (grass)
+const grassTexture = createGrassTexture();
+grassTexture.repeat.set(40, 40);
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(2000, 2000),
+  new THREE.MeshStandardMaterial({ map: grassTexture, roughness: 0.95, metalness: 0 })
+);
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = 0;
+scene.add(ground);
 
 // Load STL
 const loader = new STLLoader();
 loader.load(
   'wattplot_v2.stl',
   (geometry) => {
+    // Plant the model on the ground (just above the grass to avoid z-fighting).
+    const GROUND_OFFSET = 0.5;
+    geometry.computeBoundingBox();
+    geometry.translate(0, -(geometry.boundingBox.min.y) + GROUND_OFFSET, 0);
     geometry.computeVertexNormals();
-    geometry.center();
 
-    // Color by Y position (height): bed = wood, panel = solar blue, posts/beam = darker wood
+    // Heuristic coloring by bounding box + normal direction + position:
+    //   - Bottom 4%: skids (dark wood)
+    //   - Top 1.5% (above hinge): bezel/cells based on normal
+    //   - Bed walls (X or Z edge, not a corner, wall Y range):
+    //     per-course color variation + dark lines at the 1x6 course joints
+    //     so the 4 stacked cedar courses are visible as separate boards.
+    //   - Other wood: uniform
+    geometry.computeBoundingBox();
+    const bb = geometry.boundingBox;
+    const minX = bb.min.x, maxX = bb.max.x;
+    const minY = bb.min.y, maxY = bb.max.y;
+    const minZ = bb.min.z, maxZ = bb.max.z;
+    const range = Math.max(0.001, maxY - minY);
+    const pos = geometry.attributes.position;
+    const nrm = geometry.attributes.normal;
+    const colors = new Float32Array(pos.count * 3);
+    const c = new THREE.Color();
+    const wood      = new THREE.Color(0x8d6e63);
+    const woodDark  = new THREE.Color(0x6d4c41);
+    const skid      = new THREE.Color(0x4a3326);
+    const bezel     = new THREE.Color(0xb8b8b8);
+    const panelCell = new THREE.Color(0x1a3a6e);
+    const panelBtm  = new THREE.Color(0x0a0e1a);
+    const joint     = new THREE.Color(0x3a2418);
+    // Bed wall dimensions (from wattplot_params.py, inches)
+    const SKID_H = 3.0, WALL_H = 22.0, COURSE_H = 5.5, EDGE_TOL = 1.0;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i);
+      const y = pos.getY(i);
+      const z = pos.getZ(i);
+      const ny = nrm.getY(i);
+      const t = (y - minY) / range;
+      if (t > 0.985) {
+        if (Math.abs(ny) < 0.3)      c.copy(bezel);
+        else if (ny > 0)             c.copy(panelCell);
+        else                         c.copy(panelBtm);
+      } else if (t < 0.04) {
+        c.copy(skid);
+      } else {
+        // Wall vs. other wood
+        const xEdge = (x < minX + EDGE_TOL) || (x > maxX - EDGE_TOL);
+        const zEdge = (z < minZ + EDGE_TOL) || (z > maxZ - EDGE_TOL);
+        const atCorner = xEdge && zEdge;
+        const onWall = (xEdge || zEdge) && !atCorner;
+        const inWallY = (y >= SKID_H - 0.5) && (y <= SKID_H + WALL_H + 0.5);
+        if (onWall && inWallY) {
+          const yAboveSkid = y - SKID_H;
+          const cb = yAboveSkid % COURSE_H;
+          const course = Math.floor(yAboveSkid / COURSE_H);
+          if (cb < 0.12 || cb > COURSE_H - 0.12) c.copy(joint);
+          else {
+            const v = ((course % 2) * 2 - 1) * 0.05;
+            c.setRGB(
+              Math.max(0, Math.min(1, 0.55 + v)),
+              Math.max(0, Math.min(1, 0.40 + v)),
+              Math.max(0, Math.min(1, 0.25 + v))
+            );
+          }
+        } else if (t < 0.18) {
+          c.copy(woodDark);
+        } else {
+          c.copy(wood);
+        }
+      }
+      colors[i*3+0] = c.r; colors[i*3+1] = c.g; colors[i*3+2] = c.b;
+    }
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     const mat = new THREE.MeshStandardMaterial({
-      color: 0x8d6e63,
-      metalness: 0.05,
-      roughness: 0.85,
+      vertexColors: true,
+      metalness: 0.15,
+      roughness: 0.8,
       flatShading: true,
     });
     const mesh = new THREE.Mesh(geometry, mat);

@@ -40,18 +40,26 @@ which does wind safety well).
 
 The setpoint `θ_desired` is the highest non-null value from this list:
 
+**Structural cap (applies to every priority level): `θ_desired` is
+clamped to `θ_max = 45°`.** The wind analysis
+(`analysis/wind_load_report.md`) passes SF ≥ 2.0 only up to 45° tilt;
+75–90° fails overturning at the design wind (SF 0.95–0.98). The former
+90° "wring-out" and "bed-sun" modes are retired — for full bed sun or
+bed drying, stow flat (0°): the panel shades nothing and carries ~zero
+wind load. Do not raise `θ_max` without re-running the wind calc.
+
 | Priority | Source | Sets `θ_desired` to |
 |---|---|---|
-| 1 | **User override** (panic button, maintenance lock) | arbitrary 0–90 |
+| 1 | **User override** (panic button, maintenance lock) | arbitrary 0–45 |
 | 2 | **Hard current limit** (I > 2.8 A for 0.5 s) | 0 (safety net) |
 | 3 | **NWS rain forecast + dry soil** | 0 (capture rain) |
 | 4 | **NWS wind forecast > 50 mph in 3 h** | 15 (preemptive shallow) |
 | 5 | **Wind ≥ 50% of I_safe** (motor current high) | current value (pause tracking) |
-| 6 | **Soil wet 72 h+** | 90 (wring out, dry the bed) |
+| 6 | **Soil wet 72 h+** | 0 (stow flat — full sun dries the bed) |
 | 7 | **Soil dry 48 h+ + no rain forecast** | 35 (conserve water) |
-| 8 | **Time-of-day + tracking mode** | 0–90 (azimuth tracks sun) |
+| 8 | **Time-of-day + tracking mode** | 0–45 (azimuth tracks sun, capped) |
 | 9 | **Time-of-day + power mode** | 35 (max power) |
-| 10 | **Time-of-day + bed-sun mode** | 90 (full bed sun) |
+| 10 | **Time-of-day + bed-sun mode** | 0 (stow flat = full bed sun) |
 
 Lights and tilt are decoupled — see "Grow lights" section below.
 
@@ -203,13 +211,23 @@ Both run at 1 Hz. They don't conflict — current limits what the actuator
 ## Safety net (independent of all the above)
 
 If anything goes wrong (sensor failure, controller crash, RF noise), the
-actuator has built-in limit switches at 0° and 90°. The H-bridge driver
-(DRV8871) has hardware overcurrent protection that trips at 3.6 A.
+actuator has built-in limit switches at 0° and 45° (the structural max).
+The H-bridge driver (DRV8871) has hardware overcurrent protection that
+trips at 3.6 A.
 
 The firmware should also:
 - Watchdog timer resets ESP32 if it hangs
 - Brownout detector triggers emergency fold on low battery
-- Default to FOLDING state on boot (better safe than deployed at 90°)
+- Default to FOLDING state on boot (better safe than deployed)
+
+**Known limitation — fail-in-place:** the linear actuator is
+self-locking (lead screw), so on controller failure the panel freezes
+at its current tilt; it does NOT fall safe to flat. Mitigations: the
+deployed structure survives ~125 mph at 45° even with a dead
+controller, and the Basic-tier strut pins double as a mechanical
+backup — pull the actuator pin and lower the frame by hand. A
+gravity-fail-safe mechanism (e.g., normally-released brake) is an open
+design question.
 
 ## Parameters
 

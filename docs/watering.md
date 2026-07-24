@@ -7,7 +7,7 @@ The mini v2.4 turns the planter into a fully-instrumented smart garden:
 - **Watering**: tap-pressurized water → 12V solenoid → drip emitter.
   No pump, no reservoir, no priming. Fail-safe (closed when de-energized).
 - **Sensing**: 3× DS18B20 (panel/soil/battery temp) + 1× capacitive soil
-  moisture + INA219 for panel V/I + DPS5005 readback for battery V.
+  moisture + INA219 for panel V/I + on-PCB 10k/10k divider for battery V.
 - **Energy monitoring**: integrate panel V×I every 1s → `energy_today_kwh`
   + `energy_total_kwh` (cumulative, capped at 10 MWh).
 - **Battery SOC**: voltage → SOC lookup (LiFePO4 4S, 13.6V=100%, 10.5V=0%).
@@ -64,12 +64,12 @@ sink on the cold water line. Total run is typically 5-20 ft of 1/4" tubing.
 
 | Sensor | Type | Pin | Use |
 |---|---|---|---|
-| Panel temp | DS18B20 | GPIO 10 (1-Wire) | MPPT temp derating, fold decision |
+| Panel temp | DS18B20 | GPIO 10 (1-Wire) | Telemetry only (Sunapex does its own temp derating) |
 | Soil temp | DS18B20 | GPIO 10 (1-Wire) | Plant health |
 | Battery temp | DS18B20 | GPIO 10 (1-Wire) | Safety cutoff |
 | Soil moisture | V1.2 capacitive | GPIO 4 (ADC) | Watering trigger |
-| Panel V/I | INA219 (I2C 0x40) | GPIO 8/9 (I2C) | Energy monitoring |
-| Battery V | DPS5005 readback | GPIO 20/21 (UART) | SOC calculation |
+| Panel V/I | INA219 (I2C 0x41) | GPIO 8/9 (I2C) | Energy monitoring |
+| Battery V | 10k/10k divider | GPIO 33 (ADC) | SOC calculation |
 | Panel tilt | BMI160 (I2C 0x68) | GPIO 8/9 (I2C) | Tilt → POA calculation |
 
 ---
@@ -80,10 +80,11 @@ sink on the cold water line. Total run is typically 5-20 ft of 1/4" tubing.
 GPIO 5  →  Solenoid relay (low-side switch)
 GPIO 4  →  Soil moisture sensor (V1.2 analog out, ADC)
 GPIO 10 →  1-Wire data (3× DS18B20 sensors on shared bus, 4.7k pullup)
-GPIO 8  →  I2C SDA (BMI160 + INA219)
+GPIO 8  →  I2C SDA (BMI160 + INA219, motor + panel)
 GPIO 9  →  I2C SCL
-GPIO 20 →  DPS5005 UART TX (ESP32 → DPS)
-GPIO 21 →  DPS5005 UART RX (DPS → ESP32)
+GPIO 20 →  (reserved) full-size MPPT UART TX — DNP on mini
+GPIO 21 →  (reserved) full-size MPPT UART RX — DNP on mini
+GPIO 33 →  Battery voltage ADC (10k/10k divider on PCB)
 GPIO 6  →  Limit switch 0° (digital input, pullup)
 GPIO 7  →  Limit switch 35° (digital input, pullup)
 ```
@@ -100,7 +101,7 @@ GPIO 7  →  Limit switch 35° (digital input, pullup)
 | `sensor.soil_temp_c` | sensor | DS18B20 #2 | Buried 2" in soil |
 | `sensor.battery_temp_c` | sensor | DS18B20 #3 | On battery case |
 | `sensor.soil_moisture_pct` | sensor | V1.2 capacitive (calibrated) | 0-100% |
-| `sensor.battery_v` | sensor | DPS5005 readback (V) | 12V LiFePO4 |
+| `sensor.battery_v` | sensor | 10k/10k divider on GPIO 33 | 12V LiFePO4 |
 | `sensor.battery_soc_pct` | sensor | voltage_to_soc(battery_v) | Lookup table |
 | `sensor.panel_voltage_v` | sensor | INA219 bus voltage | 17.3V Vmp |
 | `sensor.panel_current_a` | sensor | INA219 current | 0.58A Imp |
@@ -365,7 +366,7 @@ User can always:
                           │
                        GPIO 8/9 (I2C) ──  ESP32 (shared bus)
 
-                       DPS5005 (UART, panel V/I feedback + battery V)
+                       Sunapex 10A MPPT (standalone MPPT, no host connection)
                           │
                        GPIO 20/21 (UART) ── ESP32
 ```
@@ -383,7 +384,7 @@ User can always:
 - Soil moisture: VCC to 3.3V, GND to GND, AOUT to GPIO 4 (ADC)
 - I2C sensors: SDA to GPIO 8, SCL to GPIO 9, VCC to 3.3V, GND to GND
   (BMI160 and INA219 on the same bus, different addresses)
-- DPS5005: TX/RX crossed to GPIO 20/21, GND to GND
+- Sunapex: no host connection needed (panel MC4 → Sunapex PV+/PV−, 14 AWG from Sunapex BAT+ through 3A fuse to battery +)
 
 **Plumbing (solenoid on tap water):**
 - Cold water supply (hose bib or under-sink pipe) → 1/4" tee
@@ -413,7 +414,7 @@ User can always:
    - Test: toggle `switch.watering_solenoid` from HA for 10 sec,
      verify water flows and stops
 3. **Phase 11: Energy + SOC + POA monitoring**
-   - Already wired (INA219 on I2C, DPS5005 on UART)
+   - Already wired (INA219 on I2C, 10k/10k divider for battery V on GPIO 33)
    - Verify in Home Assistant: `sensor.battery_v`, `sensor.battery_soc_pct`,
      `sensor.energy_today_kwh`, `sensor.poa_irradiance_w_m2`,
      `sensor.panel_efficiency_pct`

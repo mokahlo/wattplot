@@ -21,7 +21,8 @@ PANEL_L = PANEL["L_in"]            # 97
 PANEL_W = PANEL["W_in"]            # 44.6
 PANEL_T = PANEL["thickness_in"]    # 1.4
 
-WALL_H = LUMBER["2x12"]["actual_h"]
+from wattplot_params import BED_WALL
+WALL_H = BED["wall_h_in"] + LUMBER[BED_WALL["cap_nominal"]]["actual_t"]  # 23.5
 SKID_H = BED["skid_h_in"]
 RAIL_H = LUMBER["2x6"]["actual_h"]
 

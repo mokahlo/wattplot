@@ -14,10 +14,15 @@
 #   - 2x NO roller limit switches (external 10k pullup)
 #   - WS2812B status LED
 #   - 12V grow light relay
-#   - DPS5005 programmable buck via UART2 (9600 baud)
+#   - Sunapex 10A MPPT charge controller (standalone, no host control)
+#     Panel MC4 → Sunapex PV+ / PV- (via SAE) → 12V battery
+#     Battery voltage read back via the on-PCB 10k/10k divider (GPIO 33).
+#     No UART: the Sunapex runs its own MPPT, bulk/absorption/float/LiFePO4
+#     charge profile, and protections. ESP32 only sees battery voltage.
 #
 # Pin map (chosen to avoid strapping pins and ADC2 conflicts):
 #   GPIO  4: DS18B20 1-Wire data
+#   GPIO  5: Watering solenoid
 #   GPIO 16: H-bridge IN1
 #   GPIO 17: H-bridge IN2
 #   GPIO 18: H-bridge EN
@@ -25,12 +30,15 @@
 #   GPIO 21: I2C SDA
 #   GPIO 22: I2C SCL
 #   GPIO 25: WS2812B data
-#   GPIO 26: UART2 TX -> DPS5005 RX
-#   GPIO 27: UART2 RX <- DPS5005 TX
 #   GPIO 32: Soil moisture ADC (ADC1_CH4)
 #   GPIO 33: Battery voltage ADC (ADC1_CH5)
 #   GPIO 34: Limit switch 0° (input only, external pullup)
-#   GPIO 35: Limit switch 90° (input only, external pullup)
+#   GPIO 35: Limit switch 45° / max tilt (input only, external pullup)
+#            (switch physically mounted at the 45° structural max, not 90°)
+#
+#   GPIO 26 / 27 are now free (former UART2 to DPS5005). Reserved for
+#   future use (e.g., RS-485 to a larger MPPT on the full-size build, or
+#   a second UART for a Victron VE.Direct adapter).
 # =============================================================================
 
 substitutions:
@@ -40,7 +48,7 @@ substitutions:
 esphome:
   name: ${device_name}
   friendly_name: ${friendly_name}
-  comment: "Wattplot v2 — PI on motor current, IMU feedback, MPPT, soil-aware tilt"
+  comment: "Wattplot v2 — PI on motor current, IMU feedback, panel-side energy monitoring, soil-aware tilt. Charge control: external Sunapex 10A MPPT."
   min_version: 2024.6.0
   on_boot:
     priority: -100
@@ -120,13 +128,10 @@ bmi160:
       id: imu_accel_z
 
 # ===== INA219 — motor current + panel bus V =====
-# (Single INA219 in the motor line gives current. For panel V/I, add a
-# second INA219 at address 0x41 on the panel side. For v1 we use the
-# motor INA219's bus_voltage as a proxy; second INA219 is a v2 add.)
-
-# v2.4: panel-side INA219 for energy monitoring. Solder the A0 address
-# pad on the second INA219 to set it to 0x41. Place it in series with
-# the panel + lead (between panel and DPS5005 input).
+# (Single INA219 in the motor line gives current. The panel-side
+# INA219 below at 0x41 reads panel V/I for energy monitoring — used
+# for kWh counters, panel efficiency, and the is_night flag. It does
+# NOT control the charge controller; the Sunapex runs MPPT itself.)
 ina219:
   - id: ina_motor
     i2c_id: i2c_main
@@ -177,12 +182,10 @@ dallas:
       unit_of_measurement: "°C"
       accuracy_decimals: 1
 
-# ===== UART for DPS5005 MPPT =====
-uart:
-  - id: dps_uart
-    tx_pin: GPIO26
-    rx_pin: GPIO27
-    baud_rate: 9600
+# ===== UART =====
+# No UART active on the mini. GPIO 26/27 are reserved (former DPS5005
+# UART pins). On the full-size build, these will likely be reused for
+# RS-485 to a Victron/EPEver MPPT, or VE.Direct to a Victron SmartSolar.
 
 # ===== H-bridge outputs (DRV8871) =====
 output:
@@ -408,8 +411,10 @@ binary_sensor:
       - delayed_off: 10ms
 
   - platform: gpio
+    # id kept as limit_90 for compatibility; the switch is physically
+    # mounted at the 45° STRUCTURAL max (see analysis/wind_load_report.md).
     id: limit_90
-    name: "Limit 90°"
+    name: "Limit 45° (max tilt)"
     pin:
       number: GPIO35
       mode:
@@ -494,7 +499,10 @@ number:
     id: commanded_tilt
     name: "Commanded Tilt (°)"
     min_value: 0
-    max_value: 90
+    # STRUCTURAL CAP: 45° max. The wind analysis (analysis/wind_load_report.md)
+    # passes SF >= 2.0 only up to 45° tilt; 75-90° fails overturning at the
+    # design wind. Do not raise this without re-running the wind calc.
+    max_value: 45
     step: 5
     initial_value: "35"
     optimistic: true
@@ -549,7 +557,9 @@ select:
     name: "Controller Mode"
     options:
       - "Power"   # 35° tilt, max kWh
-      - "BedSun"  # 90° vertical, full bed sun
+      # "BedSun" (90° vertical) RETIRED: fails the wind calc at design wind
+      # (SF_overturning 0.95-0.98 at 75-90°). Structural max is 45°.
+      # For full bed sun, stow flat (0°) instead - panel shades nothing.
     initial_option: "Power"
     optimistic: true
     restore_value: true
@@ -568,18 +578,6 @@ select:
 # ===== Globals (control state) =====
 globals:
   - id: g_integral
-    type: float
-    initial_value: "0.0"
-    restore_value: false
-  - id: g_dps_v_set
-    type: float
-    initial_value: "13.8"
-    restore_value: true
-  - id: g_dps_step
-    type: float
-    initial_value: "0.05"
-    restore_value: false
-  - id: g_p_prev
     type: float
     initial_value: "0.0"
     restore_value: false
@@ -729,37 +727,6 @@ script:
           red: 50%
           blue: 50%
           brightness: 60%
-
-  # MPPT perturb-and-observe (P&O)
-  - id: mppt_step
-    mode: single
-    then:
-      - lambda: |-
-          float v = id(panel_voltage).state;
-          float i_a = id(motor_current).state;  // proxy; swap with panel-side INA219
-          if (isnan(v) || isnan(i_a)) return;
-          float p = v * i_a;
-          if (id(g_p_prev) > 0.0) {
-            if (p > id(g_p_prev)) {
-              // Power increased, keep stepping same direction
-            } else {
-              // Power decreased, reverse
-              id(g_dps_step) = -id(g_dps_step);
-            }
-          }
-          id(g_p_prev) = p;
-          id(g_dps_v_set) = id(g_dps_v_set) + id(g_dps_step);
-          // Clamp to safe LiFePO4 charge range
-          if (id(g_dps_v_set) > 14.4) id(g_dps_v_set) = 14.4;
-          if (id(g_dps_v_set) < 12.0) id(g_dps_v_set) = 12.0;
-          // Send to DPS5005
-          char buf[32];
-          snprintf(buf, sizeof(buf), "VSET1:%.2f\n", (double)id(g_dps_v_set));
-          id(dps_uart).write_str(buf);
-          id(dps_uart).write_str("ISET1:5.00\n");
-          id(dps_uart).write_str("OUT1:1\n");
-          ESP_LOGI("mppt", "V=%.2f I=%.3f P=%.2f -> Vset=%.2f",
-                    v, i_a, p, id(g_dps_v_set));
 
   # NWS forecast poll
   - id: nws_poll
@@ -940,10 +907,10 @@ interval:
     then:
       - script.execute: nws_poll
 
-  - interval: 10s
-    id: mppt_loop
-    then:
-      - script.execute: mppt_step
+  # Note: MPPT loop removed. The Sunapex 10A MPPT runs its own
+  # perturb-and-observe internally; the ESP32 no longer commands a
+  # charge controller. Battery voltage (read via the 10k/10k divider
+  # on GPIO 33) is the only charge-state telemetry on the mini.
 
   - interval: 300s
     id: dli_update

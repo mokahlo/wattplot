@@ -25,7 +25,9 @@ import Mesh
 import MeshPart
 
 from wattplot_params import PANEL
-from models.freecad.parts.bed_wall import make_bed_long_wall, make_bed_short_wall
+from models.freecad.parts.bed_wall import (
+    make_bed_long_wall, make_bed_short_wall, make_bottom_slats,
+)
 from models.freecad.parts.skid import make_skids
 from models.freecad.parts.frame import make_frame_assembly
 from models.freecad.parts.panel import make_panel
@@ -81,10 +83,14 @@ def build_assembly(tilt_deg=0.0, doc=None, name="Wattplot_v2"):
     w_wall = make_bed_short_wall(doc, "west")
     e_wall = make_bed_short_wall(doc, "east")
     skids  = make_skids(doc)
+    # Bottom slats — span the bed width, support the mesh + soil ballast
+    slats = make_bottom_slats(doc)
     for o in (n_wall, s_wall, w_wall, e_wall):
         set_color(o, COLORS["wood"])
     set_color(skids, COLORS["skid"])
-    print(f"  [bed] 4 walls + skids")
+    for s in slats:
+        set_color(s, COLORS["skid"])
+    print(f"  [bed] 4 walls + skids + {len(slats)} bottom slats")
 
     # ---- frame (tilted as a unit) ----
     # Build at 0° (flat over the bed), then rotate around the hinge axis

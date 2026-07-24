@@ -29,14 +29,16 @@ PIN_D = H["pin_d_in"]      # 0.5
 HINGE_COUNT = H["count"]   # 4
 HINGE_SPACING = FRAME["hinge"]["spacing_in"]   # 22.0
 
-# Hinge axis runs along X at the top of the south wall.
-# Wall top is at y = SKID_H + WALL_H = 14.25
+# Hinge axis runs along X at the top of the south wall's 2x6 cap.
+# Wall = 22" skin/cleats + 1.5" flat cap; hinge leaves screw into the cap.
 # Hinge center is at the OUTER face of the south wall, z = +22.3
-WALL_T = LUMBER["2x12"]["actual_t"]
-WALL_H = LUMBER["2x12"]["actual_h"]
+from wattplot_params import BED_WALL
+WALL_T = BED["wall_thk_in"]                       # 0.75 (1x6 skin)
+CAP_T = LUMBER[BED_WALL["cap_nominal"]]["actual_t"]   # 1.5 (2x6 flat)
+WALL_H = BED["wall_h_in"] + CAP_T                 # 22 + 1.5 = 23.5
 SKID_H = BED["skid_h_in"]
 
-HINGE_Y_CENTER = SKID_H + WALL_H   # 14.25 (top of south wall)
+HINGE_Y_CENTER = SKID_H + WALL_H   # 26.5 (top of south wall cap)
 HINGE_Z_CENTER = +BED["outer_W_in"] / 2.0  # +22.3 (outer face of south wall)
 
 

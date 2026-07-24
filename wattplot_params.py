@@ -1,5 +1,5 @@
 """
-Wattplot v2 — Single source of truth for all parameters.
+Wattplot v2 - Single source of truth for all parameters.
 
 Both the 3D model (models/wattplot_v2_model.py) and the simulation
 (analysis/sun_simulator.py) read from this file. Change a value here
@@ -25,16 +25,74 @@ LOCATION = dict(
 )
 
 # =============================================================================
+# PLANTER LIMITS - single-planter max is set by lumber stocking length
+# =============================================================================
+# A single Wattplot planter is bounded by what you can build from 8-ft
+# lumber stock with reasonable waste:
+#
+#   - 8 ft long direction: long rails = 8 ft, zero waste. Anything longer
+#     jumps to 10-ft or 12-ft stock, which costs more and is harder to
+#     transport.
+#   - 5 ft cross direction: two cross-rails cut from one 8-ft board with
+#     6-12" waste. Comfortable single-person build width. Two adult
+#     gardeners can work side by side.
+#
+# Chain multiple planters in a row for larger arrays. A single planter
+# is the spec.
+MAX_PLANTER_L_IN = 96.0   # 8 ft (8-ft lumber, no waste on long rails)
+MAX_PLANTER_W_IN = 60.0   # 5 ft (8-ft cross-cut, 2 cross-rails per board)
+MIN_PLANTER_W_IN = 24.0   # 2 ft (below this, build gets tippy)
+
+# =============================================================================
 # BED (planter, ballasted)
 # =============================================================================
+# Bed is sized to fit the panel plus the frame's margin. Defaults below
+# match the LONGi Hi-MO X10 620W bifacial (8.08 × 3.72 ft) - for a
+# different panel, see PANEL_PRESETS below and `docs/upcycling.md`.
+# Bed is constrained to MAX_PLANTER_L_IN × MAX_PLANTER_W_IN.
 BED = dict(
-    outer_L_in=96.0,                # 8 ft
+    outer_L_in=96.0,                # 8 ft (capped at MAX_PLANTER_L_IN)
     outer_W_in=44.6,                # matches panel width
-    wall_thk_in=1.5,                # 2x nominal
-    wall_h_in=12.0,                 # 12" soil depth
-    skid_h_in=3.0,                  # 3" off grade
+    wall_thk_in=0.75,               # 1x trade lumber (3/4" actual) skin
+    wall_h_in=22.0,                 # 4 courses of 1x6 (5.5" actual each).
+                                    # Rim = wall + skid = 25" — wheelchair-
+                                    # accessible seated-gardening height
+                                    # (24-30" range). Wind-sized too: soil
+                                    # fill of 20" passes SF >= 2.0 at the
+                                    # 45° max tilt (see wall note below).
+    soil_fill_in=20.0,              # soil depth actually counted as ballast
+                                    # (2" freeboard below the rim)
+    skid_h_in=1.5,                  # walls rest directly on the 2x4 footers laid on wide side
+                                    # (footers are 1.5" tall × 3.5" wide — gives slats 2.75" of
+                                    # bearing per end). Slats also sit on the footers at y=1.5 to
+                                    # y=3.0, inside the walls (walls are 0.75" thick, so slats are
+                                    # tucked between the wall inner faces)
     skid_side_in=3.5,               # 4x nominal
     bottomless=True,                # no floor, soil on native ground
+)
+
+# Wall construction: 1x6 cedar SKIN over vertical 2x4 CLEATS, with a 2x6
+# top CAP on the hinge (south) and strut (north) walls. Rationale:
+#   - 3/4" skin alone would bow under ~130 psf lateral soil pressure at
+#     the base of a 22" wall; cleats every <= 24" carry the span.
+#   - Hinges see up to ~550 lb of panel uplift; screws must bite into
+#     the 2x6 cap (1.5" thick), never the 3/4" skin.
+# All square cuts. Cedar for ground contact (1x PT is rare and thin
+# boards rot fast).
+BED_WALL = dict(
+    skin_nominal="1x6",
+    skin_thk_in=0.75,
+    course_h_in=5.5,
+    courses=4,                      # 4 × 5.5" = 22" wall
+    cleat_nominal="2x4",
+    cleat_spacing_max_in=24.0,      # 5 cleats per long wall, 3 per short wall
+    cleats_long_wall=5,
+    cleats_short_wall=3,
+    # Wall header: 2x4 cedar laid on its wide face (1.5" tall × 3.5" wide)
+    # on top of every planter wall. Length = space between the 4x4 uprights.
+    # Replaces the old 2x6 cap (which was only on the long walls).
+    header_nominal="2x4",
+    header_walls=("south_hinge", "north_strut", "east", "west"),
 )
 
 # =============================================================================
@@ -53,16 +111,125 @@ STRUCTURE = dict(
 # =============================================================================
 # PANEL
 # =============================================================================
+# Defaults to a LONGi Hi-MO X10 620 W bifacial (8.08 × 3.72 ft).
+# For other panels, swap PANEL_PRESETS and see `docs/upcycling.md`.
+#
+# Wattplot's primary use case is **upcycling old panels that would
+# otherwise be landfilled**. A typical 15-20 year-old residential panel
+# has lost 8-15% of its nameplate output and is no longer cost-effective
+# for grid-tie, but is still perfectly good for shade + some power.
+# Set `panel_age_years` and `panel_efficiency_pct` to match your salvage.
 PANEL = dict(
     L_in=97.0,                       # 8.08 ft
     W_in=44.6,                       # 3.72 ft
     thickness_in=1.4,
     mass_lb=65.0,
-    wattage=620,                     # nameplate
+    wattage=620,                     # nameplate (new); derate for old panels
     system_derate=0.85,              # inverter, wiring, mismatch
-    bifacial_bonus=0.10,             # 10% extra for bifacial gain
+    bifacial_bonus=0.10,             # 10% extra for bifacial gain (0 for mono)
     panel_tilt_deg=35.0,             # current commanded angle (for static sims)
+
+    # Second-life panel modeling (for upcycling use case)
+    panel_age_years=0,               # 0 = new; typical salvage = 10-20
+    panel_bifacial=False,            # most pre-2018 residential panels are mono
+    panel_efficiency_pct=21.0,       # new ~21%; old ~16-18%
 )
+
+# =============================================================================
+# PANEL PRESETS - named configurations for common residential panels
+# =============================================================================
+# Use these with `apply_panel_preset(name)` (see below) to swap the
+# PANEL dict for a different size without editing the file by hand.
+# All dimensions in inches.
+#
+# Each preset is the panel's actual frame dimensions (with the aluminum
+# frame, which is what the mid-clamps grip). The bed is then sized to
+# fit the panel plus a 0.5"-1" margin, capped at MAX_PLANTER_*_IN.
+PANEL_PRESETS = {
+    "longi_620W": {                  # default: LONGi Hi-MO X10 (new)
+        "label": "LONGi Hi-MO X10 620W bifacial",
+        "L_in": 97.0, "W_in": 44.6, "thickness_in": 1.4,
+        "mass_lb": 65.0, "wattage": 620,             # new nameplate
+        "panel_age_years": 0, "panel_bifacial": True, "panel_efficiency_pct": 21.5,
+    },
+    "residential_60cell": {          # common 2007-2015 residential salvage
+        "label": "Residential 60-cell (e.g., Kyocera KD215, Sanyo HIT)",
+        "L_in": 65.0, "W_in": 39.0, "thickness_in": 1.6,
+        "mass_lb": 38.0, "wattage": 250,             # new nameplate
+        "panel_age_years": 12, "panel_bifacial": False, "panel_efficiency_pct": 16.5,
+    },
+    "residential_72cell": {          # common 2012-2018 residential salvage
+        "label": "Residential 72-cell (e.g., Canadian Solar CS6K-300)",
+        "L_in": 77.0, "W_in": 39.0, "thickness_in": 1.6,
+        "mass_lb": 45.0, "wattage": 300,             # new nameplate
+        "panel_age_years": 8, "panel_bifacial": False, "panel_efficiency_pct": 17.5,
+    },
+    "commercial_96cell": {           # common 2014-2020 commercial salvage
+        "label": "Commercial 96-cell (e.g., SunPower SPR-400)",
+        "L_in": 65.0, "W_in": 41.0, "thickness_in": 1.6,
+        "mass_lb": 42.0, "wattage": 400,             # new nameplate
+        "panel_age_years": 6, "panel_bifacial": False, "panel_efficiency_pct": 19.5,
+    },
+    "large_format_1m65": {           # 1.65m panels, common in EU/Asia salvage
+        "label": "Large-format 1.65m (e.g., REC Alpha 400)",
+        "L_in": 65.0, "W_in": 41.0, "thickness_in": 1.4,
+        "mass_lb": 41.0, "wattage": 400,             # new nameplate
+        "panel_age_years": 4, "panel_bifacial": True, "panel_efficiency_pct": 20.5,
+    },
+    # Note: for two 60-cell panels side by side (80" wide combined), build
+    # TWO separate planters in a row. The single-planter cap is 8x5 ft.
+}
+
+
+def apply_panel_preset(name):
+    """Swap PANEL dict to a named preset. Returns the previous PANEL for undo.
+
+    The bed is automatically resized to fit the panel (capped at the
+    MAX_PLANTER_*_IN limits). The BED['outer_L_in'] is set to the
+    panel L + 0.5" margin; BED['outer_W_in'] to panel W + 0.5" margin.
+    For widths > 60" the bed is over the cap and the function warns.
+    """
+    if name not in PANEL_PRESETS:
+        raise ValueError(f"Unknown preset: {name}. Known: {list(PANEL_PRESETS)}")
+    prev = dict(PANEL)
+    preset = PANEL_PRESETS[name]
+    PANEL.update(preset)
+    # Recompute bed from panel dims, clamped to MAX_PLANTER_*_IN.
+    # The panel can overhang the bed by up to 0.5" per side (panel
+    # mid-clamps grip the aluminum frame, which sits on the rails).
+    # So a 96" bed accepts a panel up to 97" (1" total overhang).
+    overhang_per_side = 0.5
+    max_panel_L = MAX_PLANTER_L_IN + 2 * overhang_per_side  # 97" for 8-ft cap
+    max_panel_W = MAX_PLANTER_W_IN + 2 * overhang_per_side
+    if PANEL['L_in'] > max_panel_L:
+        raise ValueError(f"Panel L {PANEL['L_in']}\" exceeds max {max_panel_L}\" "
+                         f"(MAX_PLANTER_L_IN {MAX_PLANTER_L_IN} + 1\" overhang). "
+                         f"Use a chain (multiple planters).")
+    if PANEL['W_in'] > max_panel_W:
+        raise ValueError(f"Panel W {PANEL['W_in']}\" exceeds max {max_panel_W}\" "
+                         f"(MAX_PLANTER_W_IN {MAX_PLANTER_W_IN} + 1\" overhang). "
+                         f"Use a chain (multiple planters).")
+    # Bed is min(panel, MAX) so the bed never exceeds the lumber cap.
+    BED['outer_L_in'] = min(PANEL['L_in'], MAX_PLANTER_L_IN)
+    BED['outer_W_in'] = min(PANEL['W_in'], MAX_PLANTER_W_IN)
+    # Monofacial panels don't have the bifacial bonus; bifacial gets 10%.
+    if PANEL.get('panel_bifacial', False):
+        PANEL['bifacial_bonus'] = 0.10
+    else:
+        PANEL['bifacial_bonus'] = 0.0
+    # Auto-derate wattage by panel age (linear: 0.5% per year, typical).
+    # Store the original nameplate as 'wattage_nameplate' so we can show
+    # both the nameplate and the derated value (e.g., "250 W → 235 W after 12 yr").
+    age = PANEL.get('panel_age_years', 0)
+    PANEL['wattage_nameplate'] = PANEL['wattage']  # save before derate
+    if age > 0:
+        derate = max(0.70, 1.0 - 0.005 * age)  # floor at 70% (very old panel)
+        PANEL['wattage'] = round(PANEL['wattage'] * derate, 0)
+    return prev
+
+
+def panel_area_sqft():
+    return (PANEL['L_in'] / 12.0) * (PANEL['W_in'] / 12.0)
 
 # =============================================================================
 # SOIL
@@ -74,7 +241,72 @@ SOIL = dict(
 )
 
 # =============================================================================
-# ACTUATOR
+# TIER - two builds, one frame
+# =============================================================================
+# Every Wattplot shares the same bed, frame, hinges, and clamps. The tilt
+# mechanism is the only difference:
+#
+#   'basic' - fixed tilt via a pinned prop strut (no electronics, no
+#             actuator, no controller). Tilt is set by hand: lift the
+#             frame, drop a 1/2" pin through the strut hole for the angle
+#             you want. Storm stow = pull the pin, lay the frame flat.
+#             The weekend / salvage-panel build.
+#
+#   'smart' - motorized tilt via linear actuator + ESP32 controller
+#             (auto-fold on wind, sun scheduling, telemetry). The
+#             flagship build. Superset of 'basic': the strut holes are
+#             still drilled, so a smart build degrades gracefully to a
+#             pinned basic build if the electronics are removed.
+TIER = 'smart'                        # 'basic' or 'smart'
+
+TIERS = dict(
+    basic=dict(
+        tilt_mechanism='pinned_strut',
+        electronics=False,
+        stow='manual',                # pull pin, lay flat before storms
+    ),
+    smart=dict(
+        tilt_mechanism='actuator',
+        electronics=True,
+        stow='auto_fold',             # controller folds flat on wind trigger
+    ),
+)
+
+
+def apply_tier(name):
+    """Set the active tier ('basic' or 'smart'). Returns previous tier."""
+    global TIER
+    if name not in TIERS:
+        raise ValueError(f"unknown tier {name!r}; use one of {list(TIERS)}")
+    prev, TIER = TIER, name
+    return prev
+
+
+def tier_uses_actuator():
+    return TIERS[TIER]['tilt_mechanism'] == 'actuator'
+
+
+# =============================================================================
+# FIXED STRUT (basic tier) - pinned prop strut, square cuts only
+# =============================================================================
+# A 2x4 strut props the frame's north rail. Square ends (no miter): the
+# top end butts under the north rail against a 2x4 stop block; the bottom
+# end sits in a 2x4 shoe screwed to the bed's north wall. A 1/2" steel
+# pin through the shoe + strut locks the angle. One hole per tilt angle.
+# Pulling the pin and lowering the frame = storm stow (see wind report:
+# a stowed/flat panel carries ~zero uplift).
+FIXED_STRUT = dict(
+    nominal="2x4",
+    thickness_in=1.5,
+    height_in=3.5,
+    source="2x4x8ft, one board makes both struts",
+    count=2,                          # one per cross rail end
+    pin_d_in=0.5,                     # same 1/2" pin stock as the hinges
+    tilt_stops_deg=[0, 15, 25, 35, 45],  # 0 = stowed flat; 45 = max (wind-limited)
+)
+
+# =============================================================================
+# ACTUATOR (smart tier only)
 # =============================================================================
 ACTUATOR = dict(
     rated_force_lb=330,
@@ -84,14 +316,14 @@ ACTUATOR = dict(
 )
 
 # =============================================================================
-# FRAME (lumber perimeter around the panel — replaces the post+beam design)
+# FRAME (lumber perimeter around the panel - replaces the post+beam design)
 # =============================================================================
 # Design rules (enforced):
-#   1. NO MITER CUTS — every cut is a 90° square cut. Joints are butt, half-lap,
+#   1. NO MITER CUTS - every cut is a 90° square cut. Joints are butt, half-lap,
 #      or lap. The diagonal brace has square ends that butt into the long rails.
-#   2. ALL HARDWARE OFF THE SHELF — hinges, clamps, bolts, screws, rod, pins.
+#   2. ALL HARDWARE OFF THE SHELF - hinges, clamps, bolts, screws, rod, pins.
 #      Standard sizes from Home Depot, McMaster, or solar mounting suppliers.
-#   3. SIMPLE COMMON DIMENSIONS — long members from 8ft stock (96"), cross
+#   3. SIMPLE COMMON DIMENSIONS - long members from 8ft stock (96"), cross
 #      rails from 2x6x8ft cut to 42", diagonal brace from 2x4x10ft (102").
 #
 # All dimensions in inches. Nominal → actual: 2x4 = 1.5×3.5, 2x6 = 1.5×5.5,
@@ -121,7 +353,7 @@ FRAME = dict(
     ),
     # Diagonal brace. 2x4 PT DF, only loaded at 90° tilt.
     # length_in = 102" (from 2x4x10ft, 18" waste). Square ends butt into the
-    # inside faces of the long rails — no miter cut at the corners.
+    # inside faces of the long rails - no miter cut at the corners.
     diagonal_brace=dict(
         nominal="2x4",
         thickness_in=1.5,
@@ -165,24 +397,53 @@ FRAME = dict(
 )
 
 # =============================================================================
-# MPPT SUBSYSTEM (charges the 12V battery from the main 620W panel)
+# MPPT SUBSYSTEM (charges the 12V battery from the solar panel)
 # =============================================================================
-# The 620W main panel feeds the microinverter (for AC out) AND a DPS5005
-# programmable buck converter (for 12V battery charging). No separate trickle
-# panel — the main panel is way more than enough to keep the controller
-# battery topped off (~50 Wh/day controller load vs ~2000+ Wh/day panel yield).
+# Mini build (v2.4+): a standalone Sunapex 10A MPPT (IP67,
+# LiFePO4-aware) sits on the bed wall, no host connection. The ESP32
+# only reads the resulting battery voltage via the on-PCB 10k/10k
+# divider (GPIO 33 on the C3, GPIO 33 on the WROOM-32). There is no
+# UART, no firmware-side MPPT loop, no DPS5005 setpoint commands.
+#
+# Full-size v2 build (620W panel): the Sunapex is undersized (10 A,
+# 30 V max PV vs the 620W panel's 40 V Voc, 19 A Imp). The full-size
+# build needs a real 30-40 A MPPT. Recommended: Victron SmartSolar
+# 100/30 (30 A, 100 V max Voc, VE.Direct UART for telemetry +
+# Bluetooth for phone monitoring) or EPEver Tracer 4210AN (40 A,
+# 100 V max Voc, RS-485 Modbus). Both have explicit LiFePO4 charge
+# profiles and re-use the PCB's J4 footprint (GPIO 26/27) for comms.
+#
+# The DPS5005 + UART-MPPT pattern was the original design (v2.0-2.3)
+# but was retired: the DPS5005 was a hack (using a bench PSU as a
+# charge controller) and was also undersized even for the 620W panel
+# (only 5 A output vs the panel's 19 A Imp - would have thrown away
+# ~90% of the panel's potential). See `docs/build_guide.md` §7 for
+# the full-size v2 MPPT spec.
 MPPT = dict(
-    # DPS5005 programmable buck converter (Ruideng), UART-controlled
-    converter_model="DPS5005",
-    converter_input_v_max=60.0,        # 620W panel Vmp ~33V, Voc ~40V
-    converter_output_v_nom=14.4,      # 12V LiFePO4 charge voltage
-    converter_output_i_max=5.0,       # amps to battery
-    converter_efficiency=0.92,        # typical for DPS5005
-    uart_baud=9600,                   # DPS5005 serial protocol
+    # Mini build
+    mini_model="Sunapex 10A MPPT",
+    mini_charge_current_max_A=10.0,    # 17x headroom over the 10W panel
+    mini_pv_input_v_max=45.0,          # panel Voc 20.6V, plenty of margin
+    mini_waterproof="IP67",
+    mini_charge_chemistry="LiFePO4",   # MUST be set on first power-up (MODE button)
+    mini_host_connection="none",       # standalone, no UART
+    mini_connector_style="SAE",        # ships with SAE on both sides + polarity reversal adapter
+
+    # Full-size v2 build (placeholder - choose before full-size build)
+    fullsize_model="TBD",
+    fullsize_charge_current_max_A=30.0,  # 620W / 14.4V ≈ 43A, size up
+    fullsize_pv_input_v_max=100.0,       # 620W panel Voc 40V, headroom
+    fullsize_waterproof="IP43 (in enclosure)",
+    fullsize_charge_chemistry="LiFePO4",
+    fullsize_host_connection="VE.Direct or RS-485",
+
+    # Battery-side telemetry (both builds)
+    converter_output_v_nom=14.4,        # 12V LiFePO4 charge voltage (informational)
+    converter_efficiency=0.965,         # Sunapex spec (vs 0.92 for DPS5005 hack, 0.96 for typical MPPT)
 )
 
 # =============================================================================
-# IMU (panel tilt feedback — closed-loop position, not just step counting)
+# IMU (panel tilt feedback - closed-loop position, not just step counting)
 # =============================================================================
 # A BMI160 IMU on the panel reports actual tilt via accelerometer fusion.
 # Without it, the actuator's open-loop position drifts; with it, we have
@@ -199,6 +460,11 @@ IMU = dict(
 # CONTROL TARGETS
 # =============================================================================
 CONTROL = dict(
+    max_tilt_deg=45.0,               # STRUCTURAL cap: wind calc passes
+                                     # SF >= 2.0 only up to 45°. The old
+                                     # 90° bed-sun / wring-out modes fail
+                                     # overturning at design wind (SF
+                                     # 0.95-0.98 at 75-90°) and are retired.
     target_current_A=0.5,            # PI setpoint (motor current)
     deadband_A=0.15,
     max_step_deg_per_sec=3.0,
@@ -227,10 +493,6 @@ def bed_area_sqft():
     return (BED['outer_L_in'] / 12.0) * (BED['outer_W_in'] / 12.0)
 
 
-def panel_area_sqft():
-    return (PANEL['L_in'] / 12.0) * (PANEL['W_in'] / 12.0)
-
-
 def bed_dims_for_geom():
     """Returns (length, width) in feet for geometry calculations."""
     return (BED['outer_L_in'] / 12.0, BED['outer_W_in'] / 12.0)
@@ -240,10 +502,13 @@ def bed_dims_for_geom():
 P = {
     "location": LOCATION,
     "bed": BED,
+    "bed_wall": BED_WALL,
     "structure": STRUCTURE,
     "frame": FRAME,
     "panel": PANEL,
     "soil": SOIL,
+    "tier": TIERS,
+    "fixed_strut": FIXED_STRUT,
     "actuator": ACTUATOR,
     "mppt": MPPT,
     "imu": IMU,
@@ -262,15 +527,17 @@ P = {
 #   - Real 10W solar panel (real power generation, real charging)
 #   - 100mm kickstand actuator geometry (compression, low-side mount, 0-35°)
 #   - 1x2 frame on a small bed
-#   - Same firmware, same sensors, same DPS5005 MPPT as the full-size
+#   - Same firmware, same sensors, same Sunapex-class MPPT as the full-size
+#     (full-size v2 swaps the Sunapex for a Victron 100/30 or similar
+#     when the 620W panel comes in - same firmware-side architecture)
 #
 # Compact enough for a kitchen window, workbench, or small patio. Good for
 # 1-2 small herbs or a flower planter. Soil volume ~0.5 cu ft.
 #
 # Design rules (enforced):
-#   1. NO MITER CUTS — every cut is a 90° square cut.
-#   2. ALL HARDWARE OFF THE SHELF — Home Depot, Amazon, McMaster.
-#   3. SIMPLE COMMON DIMENSIONS — 1x2 / 1x4 / 2x4 from 8ft stock.
+#   1. NO MITER CUTS - every cut is a 90° square cut.
+#   2. ALL HARDWARE OFF THE SHELF - Home Depot, Amazon, McMaster.
+#   3. SIMPLE COMMON DIMENSIONS - 1x2 / 1x4 / 2x4 from 8ft stock.
 #
 # NOTE: This is the build that matches the parts already ordered. The earlier
 # 100W bifacial + 24" actuator design is parked in git history (v2.1).
@@ -330,7 +597,7 @@ MINI = dict(
     # (battery_ah=7 is defined in the energy monitoring section below)
     # ----- smart planter: sensors + watering system (v2.3) -----
     # Sensors (all on the same 1-Wire bus except soil moisture which is analog)
-    panel_temp_sensor="DS18B20",    # back of panel, for MPPT temp derating
+    panel_temp_sensor="DS18B20",    # back of panel, telemetry only (Sunapex does its own temp derating)
     soil_temp_sensor="DS18B20",      # buried in soil, for plant health
     battery_temp_sensor="DS18B20",   # on battery, for safety cutoff
     soil_moisture_sensor="V1.2_capacitive",  # Stemedu V1.2, analog output
@@ -368,8 +635,13 @@ MINI = dict(
     pin_onewire=10,                  # DS18B20 data (with 4.7k pullup to 3.3V)
     pin_soil_moisture=4,              # capacitive V1.2 analog out
     pin_solenoid_relay=5,             # relay control (low-side switch, solenoid)
-    pin_dps5005_tx=20,               # DPS5005 UART RX (ESP32 TX -> DPS RX)
-    pin_dps5005_rx=21,               # DPS5005 UART TX (ESP32 RX <- DPS TX)
+    # v2.4+: No DPS5005 UART on the mini. The previous pin_dps5005_tx/rx
+    # assignments (20/21) are now RESERVED for the full-size v2 build's
+    # MPPT comms (Victron VE.Direct or EPEver RS-485). The mini firmware
+    # declares no UART; GPIO 26/27 on the WROOM-32 variant are also
+    # reserved for the same future use.
+    pin_mppt_reserved_tx=20,         # reserved for full-size MPPT UART/RS-485
+    pin_mppt_reserved_rx=21,         # reserved for full-size MPPT UART/RS-485
     pin_imu_sda=8,                   # I2C SDA (BMI160 + INA219)
     pin_imu_scl=9,                   # I2C SCL
     pin_limit_0=6,                   # 0-deg limit switch

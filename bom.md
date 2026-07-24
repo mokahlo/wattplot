@@ -28,19 +28,29 @@ For the most sustainable build:
   **linseed-oil-based** exterior finish (e.g. Tried & True). Avoid film-forming
   stains on PT lumber — they peel in 2 years.
 - **Local sourcing:** most home improvement stores stock PT DF in standard
-  sizes (2x12x8, 2x6x8, 2x4x8, 4x4x8). For FSC, check a local lumber yard.
+  sizes (2x6x8, 2x4x8, 4x4x8) and 1x6x8 cedar fence/deck boards. For FSC,
+  check a local lumber yard.
 
 ---
 
-## Lumber (all pressure-treated Douglas Fir, dressed "S4S")
+## Lumber (PT Douglas Fir structure, 1x6 cedar wall skin, dressed "S4S")
 
-### Bed walls (2x12 PT DF, actual 1.5" × 11.25")
+### Bed walls (1x6 cedar skin + 2x4 PT cleats + 2x6 PT caps, 22" tall)
+
+Wheelchair-accessible height: 4 courses of 1x6 (5.5" actual) = 22" wall,
+25" rim on the 3" skids. The ¾" skin carries no structural load — vertical
+2x4 cleats (≤24" o.c.) resist soil pressure, and a flat 2x6 cap on the
+hinge (S) and strut (N) walls takes the hinge/strut screws. Never screw
+hinges into the ¾" skin.
+
 | Qty | Size | Length | Use | Source / waste |
 |---|---|---|---|---|
-| 4 | 2x12 | 8 ft | Long walls (N and S sides), half-lap corners | 2x12x8ft, no waste |
-| 2 | 2x12 | 8 ft | Short walls (E and W ends) — 2 per board, 44.6" each | 2x12x8ft, 10.8" waste per board |
+| 8 | 1x6 cedar | 8 ft | Long wall skin (N/S), 4 courses × 2 walls | 1x6x8ft, no waste |
+| 8 | 1x6 cedar | 43.1" | Short wall skin (W/E), 4 courses × 2 walls | 2 per 1x6x8ft (4 boards), 9.8" waste |
+| 16 | 2x4 PT | 22" | Vertical cleats: 5 per long wall, 3 per short | 4 per 2x4x8ft (4 boards), 8" waste |
+| 2 | 2x6 PT | 8 ft | Wall caps, hinge + strut walls (laid flat) | 2x6x8ft, no waste |
 
-**Lumber for bed walls: 6 boards, 48 linear feet, ~80 bf nominal**
+**Lumber for bed walls: 12× 1x6 cedar + 4× 2x4 + 2× 2x6 = 18 boards**
 
 ### Bed skids (4x4 PT DF, actual 3.5" × 3.5")
 | Qty | Size | Length | Use | Source / waste |
@@ -70,10 +80,14 @@ For the most sustainable build:
 
 **Lumber for brace: 1 board, 10 linear feet, ~7 bf**
 
-**Total lumber: 13 boards, 106 linear feet, ~120 bf nominal**
+**Total lumber: 25 boards** (12× 1x6x8 cedar, 5× 2x4x8 + 1× 2x4x10 PT,
+5× 2x6x8 PT, 2× 4x4x8 PT)
 
-At PT DF prices in Phoenix (~$1.50–$2.00/bf for 2x12, ~$1.00–$1.50 for 2x6/2x4,
-$2.50–$3.00 for 4x4): **~$170–$230 in lumber**, FSC premium ~+15%.
+At Phoenix prices (1x6x8 cedar ~$8–12/board, PT 2x6/2x4 ~$1.00–$1.50/bf,
+4x4 ~$2.50–$3.00/bf): **~$220–$290 in lumber**, FSC premium ~+15%.
+The cedar skin costs more per board than PT 2x12 but the wall is 2×
+taller for roughly the same money — the accessibility height is nearly
+free in lumber terms.
 
 ---
 

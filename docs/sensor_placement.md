@@ -254,42 +254,63 @@ carrier, to the light. ~60" total.
 
 ---
 
-## 9. DPS5005 MPPT controller
+## 9. Sunapex 10A MPPT charge controller (mini) / larger MPPT (full-size)
 
-**Mount location:** **Inside the PCB enclosure** (or a small adjacent
-enclosure). The DPS5005 is a 5A buck converter, so it generates some
-heat. Mount with a small heatsink if needed.
+> **v2.4 (mini build):** the standalone **Sunapex 10A MPPT** is
+> the charge controller. It is **IP67**, has its own internal MPPT,
+> bulk/absorption/float for LiFePO4, and all charging protections. It
+> has **no host connection** — the ESP32 only reads the resulting
+> battery voltage via the on-PCB 10 kΩ / 10 kΩ divider. ~80 lines of
+> UART/MPPT code were removed from the firmware when this swap landed.
 
-**Wiring:** 4-wire UART to PCB J4. Power: 12V from the main battery
-(jumper from J1 +) and 12V output to the battery (the DPS5005
-regulates 12V battery charging). The DPS5005 is configured to output
-14.4V (LiFePO4 charge voltage) — but wait, the battery is 12V (already
-charged), so the DPS5005 is acting as a **trickle charger / MPPT**,
-not a primary charger. The main charging comes from the solar panel
-via the DPS5005, but the battery is also charged by the microinverter
-during the day (in grid-tie mode).
+> **Full-size v2 (620 W panel):** the Sunapex is undersized (10 A max,
+> 30 V max PV — the 620 W panel is Voc 40 V, Imp 19 A). The full-size
+> build needs a 30 A+ MPPT sized for the 620 W panel — recommended:
+> **Victron SmartSolar 100/30** (30 A, 100 V max Voc, has VE.Direct
+> UART for telemetry and Bluetooth for phone monitoring) or
+> **EPEver Tracer 4210AN** (40 A, 100 V max Voc, RS-485 Modbus). Both
+> are 12/24 V auto-detect and have explicit LiFePO4 charge profiles.
+> The full-size build re-instantiates the UART/RS-485 connection on
+> the PCB's J4 footprint (GPIO 26 / 27) for telemetry and host-side
+> MPPT verification.
 
-**Updated DPS5005 role:** The DPS5005 is the **MPPT charge controller**.
-The solar panel's MPPT output goes through the DPS5005, which regulates
-the voltage to 14.4V for LiFePO4 charging. The DPS5005's input comes
-from the solar panel (a tap from the panel's output), and its output
-goes to the 12V battery.
+**Mount location (mini):** **On the bed's east wall, under the panel
+edge** — the Sunapex is IP67, so no separate enclosure is needed.
+Mount with two #6 × 1" screws through the Sunapex's mounting tabs
+into the bed's east wall. Orient the SAE connectors facing down so
+water can't pool on them.
 
-**Wiring update:**
-- DPS5005 input (high voltage side) = solar panel MPPT tap (panel's
-  Voc ~40V max, well within DPS5005's 50V limit)
-- DPS5005 output = 12V battery
-- DPS5005 UART = PCB J4 (for monitoring/control)
+**Wiring (mini):**
+- **Panel PV+ (MC4 red)** → **Sunapex PV+** (via the included SAE
+  polarity-reversal adapter). The Sunapex ships with SAE connectors
+  on both sides, so no MC4 crimping is needed.
+- **Panel PV− (MC4 black)** → **Sunapex PV−** (via the SAE adapter).
+- **Sunapex BAT+** (SAE) → 3 A in-line fuse → **battery +** (within
+  6" of the battery). The Sunapex's battery lead is bare wire on the
+  far end; cut the SAE end off if you prefer, or buy a separate
+  SAE-to-bare-wire pigtail. 14 AWG silicone, ~18" run.
+- **Sunapex BAT−** (SAE) → **battery −** (common GND). 14 AWG, ~18".
 
-This means the DPS5005 has 4 high-current wires (input +, input −,
-output +, output −) and 4 signal wires (VCC, GND, TX, RX). Total 8
-wires to the DPS5005.
+The Sunapex has no host connection. Its LCD shows charging state,
+battery voltage, PV voltage, and charge current. There is no
+telemetry path back to the ESPHome controller.
 
-**Where is the solar panel MPPT tap?** From the main panel's MC4
-connectors, a Y-splitter or junction box routes one leg to the
-microinverter (240 VAC) and the other leg to the DPS5005 (12 VDC). The
-DPS5005 input is high voltage (up to 40V), so use 14 AWG wire for
-this run.
+**Mode button:** on first power-up, press the Sunapex's MODE button
+to cycle to the LiFePO4 charge profile. The LCD should show "Li" or
+"LiFePO4" — out-of-box default is sometimes sealed lead-acid. The
+charge profile is the most important setting; verify it before
+leaving the build unattended.
+
+**Wiring (full-size v2, with the larger MPPT):**
+- **Panel PV+ (MC4 red)** → MPPT PV+ (10 AWG, ~30" — much higher
+  current than the mini)
+- **Panel PV− (MC4 black)** → MPPT PV− (10 AWG)
+- **MPPT BAT+** → fuse → battery +
+- **MPPT BAT−** → battery −
+- **MPPT comms (VE.Direct or RS-485)** → PCB J4 → ESP32 GPIO 26/27
+  (re-uses the J4 footprint reserved on the mini)
+- For grid-tie: panel MC4 also branches to the microinverter via a
+  Y-splitter (one panel leg → microinverter, other leg → MPPT).
 
 ---
 
@@ -329,4 +350,4 @@ this run.
 | Limit switch 90° | North wall, near actuator | 60" |
 | Status LED | On PCB (or enclosure wall) | 0" |
 | Grow light | On top of frame, pointing down | 60" |
-| DPS5005 | Inside PCB enclosure (or adjacent) | 4" internal + 30" to panel MC4 |
+| Sunapex 10A MPPT (mini) / larger MPPT (full-size) | On bed's east wall (mini) or in PCB enclosure (full-size) | 18" to battery, ~30" to panel MC4 |

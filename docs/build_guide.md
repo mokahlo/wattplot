@@ -14,10 +14,13 @@ Each step lists the **time**, **tools**, **parts**, and **verification**.
 ### 0.1 Order lumber
 
 From the BOM at `bom.md`:
-- 6 × 2x12x8ft PT DF (bed walls, 4 long + 2 short)
+- 12 × 1x6x8ft cedar (bed wall skin, 4 courses per wall)
+- 4 × 2x4x8ft PT DF (wall cleats, 16 × 22" cuts)
+- 2 × 2x6x8ft PT DF (wall caps, hinge + strut walls)
 - 2 × 2x6x8ft PT DF (long rails)
 - 2 × 2x6x8ft PT DF (cross rails)
 - 1 × 2x4x10ft PT DF (diagonal brace)
+- 1 × 2x4x8ft PT DF (fixed-tilt struts, Basic tier)
 - 2 × 4x4x8ft PT DF (skids)
 
 If your lumber yard offers FSC-certified DF, request it (small premium).
@@ -25,8 +28,10 @@ FSC chain-of-custody: ask for the certificate.
 
 **Tip:** many yards will cut to length for free or a small fee. Have
 them cut:
-- 4 × 2x12 @ 96" (long walls, no cut needed from 8ft)
-- 4 × 2x12 @ 44.6" (short walls, 2 per board from 8ft)
+- 8 × 1x6 @ 96" (long wall skin, no cut needed from 8ft)
+- 8 × 1x6 @ 43.1" (short wall skin, 2 per board from 8ft)
+- 16 × 2x4 @ 22" (wall cleats, 4 per board)
+- 2 × 2x6 @ 96" (wall caps, no cut)
 - 2 × 2x6 @ 96" (long rails, no cut)
 - 4 × 2x6 @ 42" (cross rails, 2 per board)
 - 1 × 2x4 @ 102" (diagonal brace, cut from 10ft)
@@ -51,7 +56,11 @@ of the cuts are mitered (90° only). A standard circular saw is enough.
 
 - 1 × 620 W bifacial panel (LONGi Hi-MO X10 or similar)
 - 1 × 12V 100Ah LiFePO4 battery (LiTime or similar)
-- 1 × DPS5005 programmable buck converter (Amazon, $25)
+- 1 × 30-40 A MPPT charge controller (Victron SmartSolar 100/30 ~$200,
+  or EPEver Tracer 4210AN ~$140). See §7 below. The DPS5005 used in
+  earlier revisions is retired — it was both a UART-controlled hack
+  and undersized for the 620 W panel (5 A output, would have thrown
+  away ~90% of the panel's potential).
 - 1 × 12V LED grow light (20-30W, full spectrum)
 - 1 × ESP32-WROOM-32E dev board (or use the PCB from `docs/pcb_design.md`)
 
@@ -64,40 +73,43 @@ While you wait (1-2 weeks), continue with the mechanical build.
 
 ## Phase 1: Bed (Day 1, ~3 hours)
 
-### 1.1 Cut the wall half-lap notches
+### 1.1 Build the wall cleat frames
 
-Each bed wall has a 3" wide × 0.75" deep notch at each end (the
-half-lap joint). Cut the notches with a circular saw + chisel, or with
-a router + straight bit.
+The walls are 1x6 cedar skin (¾", non-structural) screwed to vertical
+2x4 cleats that carry the soil pressure. All square cuts, no notches.
 
-**Tools:** circular saw, chisel, mallet, square
+**Tools:** circular saw, drill, impact driver, square
 
 **Process:**
-1. Mark the notch location on the wall (3" from each end, 0.75" deep).
-2. Make multiple passes with the circular saw at the notch depth
-   (don't try to cut 0.75" deep in one pass).
-3. Clean out the waste with a chisel.
-4. Test-fit two walls at a corner. They should sit flush with no gap.
+1. Cut 16 cleats: 2x4 @ 22" (4 per 8-ft board).
+2. Long walls get 5 cleats each: one at each end, three between at
+   ≤24" on center. Short walls get 3 each (ends + middle).
+3. Stand a wall's cleats on a flat surface and screw the bottom skin
+   course (1x6 @ 96" long walls / 43.1" short walls) across them with
+   2 × #8 × 1¼" exterior screws per cleat. Square as you go.
+4. Add the remaining 3 courses. Top of the 4th course = 22".
 
-**Verification:** the two walls meet at a 90° corner with the outer
-faces flush. No daylight between them.
+**Verification:** each wall panel is flat, square, and 22" tall with
+cleats flush at top and bottom.
 
 ### 1.2 Assemble the bed box
 
-**Tools:** drill, ⅜" bit, 9/16" wrench, square, level
+**Tools:** drill, impact driver, square, level
 
 **Process:**
-1. Lay out the 4 walls on a flat surface (a driveway or garage floor).
-2. Bring the corners together. The half-lap notches interlock.
-3. Drill two ⅜" holes through each corner joint (one near the top,
-   one near the bottom).
-4. Drive 3/8" × 4" carriage bolts through the holes. Add washer + nut
-   on the inside. Tighten with a 9/16" wrench.
-5. Check the bed for square: measure diagonally both ways. Should be
+1. Stand the 4 wall panels up. Short-wall skin ends butt into the
+   long walls' end cleats — corners join cleat-to-cleat, not
+   skin-to-skin.
+2. Screw each corner: 4 × #10 × 3" exterior screws through the long
+   wall's end cleat into the short wall's end cleat.
+3. Lay the 2x6 caps flat on the south (hinge) and north (strut)
+   walls, screwed down into every cleat top with #10 × 3" screws.
+   The caps are what the hinges and strut shoes bite into.
+4. Check the bed for square: measure diagonally both ways. Should be
    equal (~105" each).
 
-**Verification:** bed box is 96" × 44.6" outside, walls are
-plumb (vertical), corners are square.
+**Verification:** bed box is 96" × 44.6" outside, walls plumb,
+corners square, caps flush with the outer skin faces.
 
 ### 1.3 Attach the skids
 
@@ -383,8 +395,14 @@ Before applying power, verify:
    - "BMI160" detected
    - "INA219" detected
    - "DS18B20" detected
-   - "DPS5005" detected (if connected)
    - State: FOLDING (safe default)
+
+> The full-size v2 build re-instantiates the MPPT UART/RS-485 link
+> that was removed from the mini firmware (see `firmware/README.md`).
+> The PCB's J4 footprint is now populated, GPIO 26/27 are now bound
+> to the new MPPT's comms port, and the firmware's MPPT loop and
+> charge-controller readback return. The mini build (v2.4) does not
+> have any of this — the Sunapex is standalone.
 
 ### 5.4 Test each sensor
 
@@ -397,7 +415,7 @@ For each sensor, verify it's reading sensible values:
 - [ ] Soil moisture: ~30-60% depending on soil wetness
 - [ ] Battery voltage: ~12.0-13.5 V (LiFePO4 range)
 - [ ] Limit switches: HIGH when open, LOW when pressed
-- [ ] DPS5005: responds to UART commands
+- [ ] MPPT: responds to UART/RS-485 commands (Victron VE.Direct or EPEver Modbus)
 
 ---
 
@@ -449,7 +467,10 @@ For each sensor, verify it's reading sensible values:
 2. Run the MC4 cables from the panel's junction box down through the
    cable carrier to the PCB enclosure.
 3. Splice the panel leads: one leg to the microinverter (240 VAC), one
-   leg to the DPS5005 input (for MPPT battery charging).
+   leg to the **30-40 A MPPT** (Victron SmartSolar 100/30 or EPEver
+   Tracer 4210AN) input for MPPT battery charging. The MPPT's
+   VE.Direct / RS-485 port connects to the PCB's J4 (GPIO 26/27) for
+   telemetry.
 4. The microinverter is its own certified box — install per its
    instructions.
 
@@ -476,12 +497,13 @@ For each sensor, verify it's reading sensible values:
 **Tools:** multimeter
 
 **Process:**
-1. With the panel exposed to sun, the DPS5005 should be outputting
-   ~14.4V to the battery.
+1. With the panel exposed to sun, the MPPT should be outputting
+   ~14.4 V to the battery (bulk charge for LiFePO4).
 2. The battery voltage should rise slowly during the day.
-3. Verify the ESP32 can read and adjust the DPS5005 setpoint via
-   UART (use the web UI to change the setpoint, see the change on
-   the multimeter).
+3. Verify the ESP32 can read MPPT telemetry (panel V, panel I, charge
+   state, battery V) over VE.Direct / RS-485 — the new `mppt_step`
+   loop and `sensor.mppt_*` entities should populate. Use the
+   ESPHome web UI to verify values.
 
 ### 7.4 Test the DLI grow light
 
@@ -526,7 +548,7 @@ In the main README, add the build photos to the "Build photos" section.
 - [ ] Limit switches trigger at 0° and 90°
 - [ ] Soil sensors are reading
 - [ ] Battery is connected and charging
-- [ ] Solar panel is producing power (DPS5005 output is 14.4V)
+- [ ] Solar panel is producing power (MPPT output is 14.4V)
 - [ ] Microinverter is grid-tied (240 VAC out)
 - [ ] ESP32 is online in Home Assistant
 - [ ] State machine transitions are working

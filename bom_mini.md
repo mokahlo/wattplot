@@ -121,7 +121,7 @@ mini doesn't need that.
 
 | Qty | Item | Source | Cost |
 |---|---|---|---|
-| 1 | DPS5005 MPPT controller (NOTE: CN3791 you ordered is INCOMPATIBLE with 12V LiFePO4) | Amazon | **$25** (need to order) |
+| 1 | **Sunapex 10A MPPT charge controller** (10 A, 12 V, MPPT, IP67, LiFePO4-aware, SAE connectors) | Amazon | **$25** (need to order) |
 | 1 | ESP32-C3 PRO Mini dev board (or any ESP32) | Mouser | **$5** (already ordered) |
 | 1 | BMI160 IMU breakout | Mouser | **$2** |
 | 1 | INA219 current sensor breakout | Mouser | **$2** |
@@ -160,7 +160,7 @@ mini doesn't need that.
 | Panel + clamps | $33 | — | $33 |
 | Kickstand actuator + pins | $17 | already ordered | $17 |
 | Fasteners | $8 | — | $8 |
-| Electronics (DPS5005, sensors, breadboard) | $61 | $50 (battery + ESP32) | $111 |
+| Electronics (Sunapex MPPT, sensors, breadboard) | $61 | $50 (battery + ESP32) | $111 |
 | Watering system (solenoid + tee + drip) | $46 | — | $46 |
 | **Total** | **$193** | **$50** | **~$243** |
 
@@ -173,14 +173,27 @@ when de-energized.
 
 ---
 
-## Critical note: CN3791 swap
+## Critical note: CN3791 → Sunapex swap
 
-The **HiLetgo CN3791 MPPT** in the parts list is **not compatible** with
-the 12V LiFePO4 battery. The CN3791 is a 12V solar → **1S LiPo (3.7V)**
+The **HiLetgo CN3791 MPPT** in the original parts list is **not compatible**
+with the 12V LiFePO4 battery. The CN3791 is a 12V solar → **1S LiPo (3.7V)**
 charger, not a 12V → 12V charger.
 
-**Replace with a DPS5005** ($25, Amazon, "DPS5005 programmable buck
-converter"). Same UART control, same MPPT loop in the firmware.
+**Replace with a Sunapex 10A MPPT** ($25, Amazon, search "Sunapex 10A
+MPPT solar charge controller"). True MPPT (not PWM), 10 A, 12 V only,
+IP67 waterproof, has an explicit LiFePO4 charge mode, SAE connectors
+(with polarity reversal adapter), 1-year warranty. **No host connection
+needed** — the Sunapex runs its own MPPT and charge profile, the ESP32
+only reads the battery voltage. This deletes ~80 lines of UART/MPPT code
+from the firmware. The DPS5005 was previously the MPPT path (ESP32
+commanded its output voltage over UART), but a real hardware MPPT does
+the job better and is weatherproof out of the box.
+
+> Earlier revisions of this BOM (v2.4 first cut) specified a **Solperk
+> HC-SM10A** ($35, IP68, 5-yr warranty) instead. The Sunapex is the same
+> form factor and spec for $10 less — 1-year warranty vs 5-year, IP67
+> vs IP68 (both adequate for outdoor mounting), and SAE connectors
+> instead of screw terminals. Both work for the 10 W panel.
 
 ---
 
