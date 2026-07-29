@@ -29,7 +29,7 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "models"))
 sys.path.insert(0, os.path.join(HERE, "analysis"))
 
-import wattplot_params as P  # noqa: E402
+import wattplot_params as P
 
 
 def banner(text):
@@ -105,7 +105,7 @@ def build_and_export_3d_model(tilt_override=None, output_prefix="wattplot_v2"):
     cmd = [freecadcmd, runner]
     print(f"  Running: {' '.join(cmd)}")
     import subprocess
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=300, env=env)
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=300, env=env, check=False)
     # Print only the lines after the FreeCAD banner so we see our [freecad] log
     for line in result.stdout.splitlines():
         if line.startswith("[freecad]"):
@@ -135,8 +135,8 @@ def _find_freecadcmd():
       3. freecadcmd on PATH
     Returns the full path, or None if not found.
     """
-    import shutil
     import glob
+    import shutil
 
     env = os.environ.get("FREECADCMD")
     if env and os.path.isfile(env):
@@ -162,7 +162,7 @@ def _find_freecadcmd():
 def run_simulation():
     """Run the sun simulator and produce plots + comparison table."""
     banner("STEP 2/3 — Sun + tilt simulation")
-    from sun_simulator import run_simulation, print_comparison, plot_results
+    from sun_simulator import plot_results, print_comparison, run_simulation
     results, df = run_simulation()
     print_comparison(results)
     renders_dir = os.path.join(HERE, "renders")
@@ -188,7 +188,7 @@ def apply_panel(panel_name):
     """
     if panel_name not in P.PANEL_PRESETS:
         print(f"  [panel] Unknown preset: {panel_name!r}")
-        print(f"           Use --list-panels to see available presets.")
+        print("           Use --list-panels to see available presets.")
         return None
     preset = P.PANEL_PRESETS[panel_name]
     P.apply_panel_preset(panel_name)

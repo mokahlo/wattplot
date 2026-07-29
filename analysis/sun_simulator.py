@@ -6,13 +6,15 @@ Run: python analysis/sun_simulator.py
 Outputs: renders/sun_simulator_*.png + a comparison table in stdout.
 """
 
+import math
 import os
 import sys
-import math
+
+import matplotlib
 import numpy as np
 import pandas as pd
 import pvlib
-import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
@@ -23,8 +25,9 @@ sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.join(ROOT, "models"))
 
 # Single source of truth for parameters
-from wattplot_params import LOCATION, BED, PANEL, CROP  # noqa: E402
-from shadow_raycaster import compute_bed_sunlit_fraction  # noqa: E402
+from shadow_raycaster import compute_bed_sunlit_fraction
+
+from wattplot_params import BED, CROP, LOCATION, PANEL
 
 # ============================================================================
 # INPUTS (loaded from wattplot_params.py — single source of truth)
@@ -350,7 +353,7 @@ def plot_results(results, df, outdir):
     dli_by_doy_hour = dli_by_doy_hour.reindex(full_year).fillna(0)
 
     # Average DLI by month for each schedule
-    fig, ax = plt.subplots(figsize=(13, 6))
+    _fig, ax = plt.subplots(figsize=(13, 6))
     months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
               'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     month_centers = [15, 45, 75, 105, 135, 165, 196, 227, 258, 288, 319, 349]
@@ -389,7 +392,7 @@ def plot_results(results, df, outdir):
     print(f"[sim] wrote {out1}")
 
     # --- Plot 2: Comparison scatter (kWh vs DLI) ---
-    fig, ax = plt.subplots(figsize=(10, 8))
+    _fig, ax = plt.subplots(figsize=(10, 8))
     for name, r in results.items():
         ax.scatter(r['annual_kwh'], r['dli_mean'],
                    s=200, color=colors.get(name, 'gray'),
@@ -415,7 +418,7 @@ def plot_results(results, df, outdir):
     print(f"[sim] wrote {out2}")
 
     # --- Plot 3: Daily DLI through the year (3 schedules) ---
-    fig, ax = plt.subplots(figsize=(13, 6))
+    _fig, ax = plt.subplots(figsize=(13, 6))
     days = np.arange(1, 366)
     for name in ['Static 90° (bed sun)', 'Static 35° (max power)', 'Azimuth tracking 35°']:
         r = results[name]

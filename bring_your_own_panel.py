@@ -14,7 +14,6 @@ The default --L 97 --W 44.6 --wattage 620 matches the LONGi 620W preset.
 Use this as a "drop in your real panel" command before you go to Home Depot.
 """
 import argparse
-import math
 import os
 import sys
 
@@ -191,10 +190,10 @@ def main():
                f"max {max_panel_L}\"×{max_panel_W}\" (8×5 ft + 1\" overhang) ***")
         print(f"  Panel:  {panel_L:.1f}\" × {panel_W:.1f}\"")
         print(f"  Max:    {max_panel_L:.1f}\" × {max_panel_W:.1f}\"")
-        print(f"  Options:")
-        print(f"    1. Build TWO planters in a row (each takes half the panel)")
-        print(f"    2. Scale up the lumber (10-ft or 12-ft stock, $) and rebuild")
-        print(f"    3. Use a smaller panel")
+        print("  Options:")
+        print("    1. Build TWO planters in a row (each takes half the panel)")
+        print("    2. Scale up the lumber (10-ft or 12-ft stock, $) and rebuild")
+        print("    3. Use a smaller panel")
         print()
         return
 
@@ -292,7 +291,7 @@ def main():
     if panel_cost > 0:
         print(f"  Panel (new, est ${panel_wattage * 0.40:.0f}):          ${panel_cost:.0f}")
     else:
-        print(f"  Panel (salvage):                  $0 (you bring your own)")
+        print("  Panel (salvage):                  $0 (you bring your own)")
     print(f"  MPPT ({mppt['model'][:30]}): ${mppt_cost}")
     print(f"  Battery (12V 100Ah LiFePO4):    ${battery_cost}")
     print(f"  Microinverter (Enphase IQ7+):    ${microinverter_cost}")
@@ -309,9 +308,9 @@ def main():
     print("=" * 80)
     print(f"  1. Take the cut list to Home Depot: {n_boards_8 + n_boards_10} boards, "
           f"~{lumber_cost * 0.7:.0f} min")
-    print(f"  2. Have them pre-cut (or use a circular saw + chisel for the half-laps)")
-    print(f"  3. Order the hardware on the list above (Amazon / McMaster / IronRidge)")
-    print(f"  4. Generate the build guide: see below")
+    print("  2. Have them pre-cut (or use a circular saw + chisel for the half-laps)")
+    print("  3. Order the hardware on the list above (Amazon / McMaster / IronRidge)")
+    print("  4. Generate the build guide: see below")
     print(f"  5. Regenerate the 3D model: python wattplot.py --name wattplot_{name} --skip-sim --skip-wind")
     print()
 
@@ -322,7 +321,7 @@ def main():
         guide_path = f"docs/build_{name}.md"
         write_build_guide(guide, guide_path)
         print(f"Build guide written: {guide_path} ({len(guide)} bytes)")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"Build guide generation failed: {e}")
     print()
 
