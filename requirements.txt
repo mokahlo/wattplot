@@ -9,6 +9,12 @@ pvlib>=0.10
 shapely>=2.0
 scipy>=1.10
 
+# v2.5: MQTT log subscriber (tools/log_subscriber.py)
+paho-mqtt>=2.0
+
 # Optional: 3D model + exports + visualizations
 # cadquery>=2.4
 # cairosvg>=2.5
+
+# Test/dev dependencies live in requirements-dev.txt.
+# `pip install -r requirements-dev.txt` to run `pytest firmware/tests/`.

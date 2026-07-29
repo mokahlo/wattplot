@@ -149,6 +149,21 @@ mini doesn't need that.
 
 **Total watering system: ~$44-48** (similar cost, no reservoir, no pump priming)
 
+### Logging (v2.5 — MQTT log streaming to file)
+
+**Optional but recommended** — see `docs/logging.md` for setup.
+
+| Qty | Item | Source | Cost |
+|---|---|---|---|
+| 1 | Mosquitto MQTT broker (runs on your PC) | mosquitto.org (free) | **$0** |
+
+No new hardware on the Wattplot itself — the ESP32 publishes log lines
+over WiFi to the Mosquitto broker on your PC, and
+`tools/log_subscriber.py` writes them to a rotating `logs/wattplot.log`
+file (daily rotation, 30-day retention by default, ~30 MB total).
+
+**Total logging: $0** (just your time to install Mosquitto + pip install paho-mqtt)
+
 ---
 
 ## Cost summary

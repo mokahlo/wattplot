@@ -7,40 +7,40 @@ lists, and firmware all generated from one params file.
 
 > **Status:** pre-prototype. The mechanical / structural / aerodynamic design is validated by 3D model + ASCE 7-22 wind calc + geometric shadow raycaster. The smart controller (ESP32-based) and custom PCB are next steps.
 
-## Two builds, one frame
+## Two builds, one structure
 
-Same bed, same frame, same hinges and clamps — pick your tilt mechanism:
+Same bed, same 72" corner posts, same panel rails — pick your tilt mechanism:
 
 | | **Basic** | **Smart** |
 |---|---|---|
-| Tilt | Fixed, pinned prop strut (0/15/25/35/45°) | Motorized, 0–45°, linear actuator |
+| Tilt | Fixed, pinned prop strut (0/15/25/35°) | Motorized, 0–35°, linear actuator |
 | Electronics | None | ESP32 controller + sensors + PCB |
 | Storm response | Manual stow: pull pin, lay flat (2 min) | Auto-fold on wind, plus manual stow |
 | Panel | Salvaged/upcycled panel ideal | New 620 W bifacial (or any preset) |
-| Cost | **~$250–450** (salvage panel) | ~$1,400 |
+| Cost | **~$400–650** (salvage panel, incl. soil) | ~$1,600 |
 | Time | A weekend | 10–15 hr + electronics |
 | Guide | [`docs/build_basic.md`](docs/build_basic.md) | [`docs/build_guide.md`](docs/build_guide.md) |
 
 **Start with Basic.** It's the whole idea in its cheapest form: a raised
 bed that shades its crop and pays you back in watts, built with a drill
 and a saw. Smart is the flagship upgrade — every Basic build has the
-strut holes and hinge line to accept the actuator later.
+strut holes and pivot line to accept the actuator later.
 
 ## Design rules (enforced)
 
 Three constraints guide every part of the design:
 
-1. **No miter cuts.** Every cut is a 90° square cut. Joints are butt, half-lap, or
-   lap. The diagonal brace has square ends that butt into the long rails - no
-   angled cuts at the corners. (You don't need a miter saw.)
+1. **No miter cuts.** Every cut is a 90° square cut. Joints are butt, half-lap,
+   or lap. (You don't need a miter saw.) *Caveat: post lateral bracing is
+   still unresolved precisely because the conventional answer needs miters -
+   see "Open structural questions" below.*
 2. **All hardware off the shelf.** Hinges, panel clamps, bolts, screws, rod, and
    pins are standard sizes from Home Depot, McMaster, or solar-mounting
    suppliers (IronRidge / Unirac / Quick Mount). No custom metal parts.
 3. **Simple, common dimensions.** All lumber from standard stock lengths (8 ft,
-   10 ft, 12 ft) with reasonable waste (≤ 18" per board). No fractional-inch
-   stock lengths. The frame: 96" long rails (2x6x8ft, no waste), 42" cross
-   rails (cut from 2x6x8ft, 6" waste), 102" diagonal brace (from 2x4x10ft,
-   18" waste).
+   10 ft, 12 ft) with reasonable waste. No fractional-inch stock lengths.
+   96" panel rails (2x6x8ft, no waste), 72" corner posts (4x4x8ft, 24"
+   waste), 89"/37.6" wall skin between the posts (1x6x8ft cedar).
 
 ## Interactive 3D model
 
@@ -112,8 +112,8 @@ per-component and per-system tests, with a final sign-off checklist.
 | # | Subject | Angle | Notes |
 |---|---|---|---|
 | 1 | Overview of completed build | Iso from southeast, 20° elevation | Frame at 35° tilt, full bed |
-| 2 | Bed close-up | Front (south wall) | Show half-lap corners, 4× butt hinges on south wall |
-| 3 | Frame close-up | Iso from north | Show 2x6 PT perimeter + 2x4 diagonal brace |
+| 2 | Bed close-up | Front (south wall) | Show 1x6 skin over 2x4 cleats, 2x4 header |
+| 3 | Post-to-rail joint | Iso from north | Show 4x4 post top + 2x6 rails |
 | 4 | Hinge detail | Side, 12" away | One hinge in close-up, show leaf + knuckle + 1⁄2" pin |
 | 5 | Actuator mount | Side | 2x6 PT clevis on north rail, 2x6 wall block, 1⁄2" pin |
 | 6 | Panel mounting | Above, looking down | 6× aluminum mid-clamps on the rails |
@@ -123,8 +123,8 @@ per-component and per-system tests, with a final sign-off checklist.
 | 10 | Soil sensors | Soil cross-section | DS18B20 + soil moisture in the bed |
 | 11 | Soil filled + planted | Front | 4 tomato seedlings, 11.25" soil depth |
 | 12 | Dashboard on phone | Phone in hand | HA dashboard showing tilt, DLI, current draw |
-| 13 | Frame at 90° (vertical) | Iso from east | BEDSUN mode, full sun on the bed |
-| 14 | Frame flat (storm) | Iso from east | FOLDING mode, canopy down |
+| 13 | Canopy at 35° (max tilt) | Iso from east | POWER mode, structural max |
+| 14 | Canopy flat (storm) | Iso from east | FOLDING mode, stowed |
 
 Add your photos to `renders/build_photos/` and link them in this section.
 
@@ -166,6 +166,8 @@ docs/                                  ← design + build + test docs (see below
   build_basic.md                       ← Basic tier: fixed pinned tilt, no electronics
   build_guide.md                       ← step-by-step build (8 phases, ~10-15 hours)
   test_checklist.md                    ← per-component + integration tests
+  watering.md                          ← smart planter: sensors + solenoid + automation
+  logging.md                           ← v2.5: MQTT log streaming to wattplot.log
 ```
 
 **All design rules, the build, the wiring, and the tests are documented.**
@@ -177,20 +179,23 @@ and the whole pipeline (3D model, shadow, sun sim, wind sim) updates in
 
 ## The design (one paragraph)
 
-An 8 ft × 3.7 ft planter with 22" walls (25" rim height — wheelchair-
-accessible seated-gardening range, with access from both long sides)
-holding 20" of soil, with a solar panel
-**surrounded by an all-wood frame** (2x6 PT Douglas Fir perimeter +
-2x4 PT diagonal brace). The frame is hinged on the south wall by four
-galvanized butt hinges. The bed is the **ballast** - no ground anchors.
-In the **Basic** build the north rail rests on a pinned 2x4 prop strut
-(fixed tilt, set by hand). In the **Smart** build the north rail is
-pushed by a 4" stroke linear actuator (0-45°; storm fold = flat), and
+An 8 ft × 3.7 ft planter with 27.5" walls (29" rim height — top of the
+wheelchair-accessible seated-gardening range, with access from both long
+sides) holding 25.5" of soil, carrying a solar panel on four 72" 4x4
+corner posts (walk-under canopy). The panel sits on 2x6 rails laid
+across the post tops and tilts about its long axis. The bed is the
+**ballast** - no ground anchors. In the **Basic** build the panel rests
+on a pinned 2x4 prop strut (fixed tilt, set by hand). In the **Smart**
+build it's driven by a linear actuator (0-35°; storm fold = flat), and
 the controller uses a PI loop on motor current to reduce tilt under
-wind load, then back to the commanded angle when wind drops. **45° is
-the structural max**: above it the wind calc fails overturning at the
-design wind (SF 0.95-0.98 at 75-90°), so the old 90° "sun-on-bed /
-wring-out" modes are calm-weather-only and off by default.
+wind load, then returns to the commanded angle when wind drops.
+
+**35° is the structural max, and the post height is why.** Raising the
+canopy to 6 ft puts panel drag on a ~6 ft lever arm about the bed edge -
+roughly 3× the moment of a bed-level panel. At 35° the structure holds
+SF 2.55 against overturning; 45° drops to 1.89 and 90° to 1.26, both
+below the 2.0 target. The old 90° "sun-on-bed / wring-out" modes are
+retired - to give the bed full sun, stow the panel flat instead.
 
 **Frame material:** all lumber for sustainability (FSC Douglas Fir where
 available). Hardware (hinges, panel clamps) is metal where the load demands.
@@ -235,12 +240,14 @@ available). Hardware (hinges, panel clamps) is metal where the load demands.
 
 ## Key design numbers (Phoenix, AZ, Cat II 700-yr, Exp C)
 
-- **Wind:** 115 mph 3-sec gust design. At 20" soil fill (~3,900 lb dead load
-  in the 22"-wall accessible bed), the structure passes safety factor ≥ 2.0
-  from 0-45° tilt — 45° is the max operating angle. Stowed flat (0°) the
-  panel carries ~zero wind load; stow is the storm answer for both tiers
-  (manual pin on Basic, auto-fold on Smart). Rated deployed wind: ~125 mph
-  at 45°, ~165 mph at 35°.
+- **Wind:** 115 mph 3-sec gust design. At 25.5" soil fill (~4,800 lb dead
+  load in the 27.5"-wall bed), the structure passes safety factor ≥ 2.0 from
+  0-35° tilt — 35° is the max operating angle, set by the 72" post height.
+  **Rated deployed wind: ~130 mph at 35°.** Stowed flat (0°) the panel
+  carries no drag or uplift and only the posts are loaded (SF 26.8); stow is
+  the storm answer for both tiers (manual pin on Basic, auto-fold on Smart).
+  The bed depth is set by dry-soil risk: at 4 wall courses a bone-dry bed
+  falls to SF 1.53, so the build ships 5 courses.
 - **Power (azimuth tracking 35° tilt, Phoenix 2025):** 2,240 kWh/year.
 - **Tomato yield (35° tilt):** ~124 kg/year from 4 plants. Vertical (90°)
   gives full bed sun but ~50% less power and more heat stress.
@@ -249,6 +256,23 @@ available). Hardware (hinges, panel clamps) is metal where the load demands.
 
 See `analysis/wind_load_report.md` and `analysis/sun_simulator.py` for the
 underlying calculations.
+
+### Open structural questions (not yet resolved)
+
+Raising the canopy onto 72" posts solved the walk-under/reach-under
+problem but opened two checks that have **not** been done:
+
+1. **Post bending.** The wind analysis treats the whole thing as a rigid
+   body tipping about the bed edge. It does not check the 4x4 posts as
+   cantilevers carrying panel drag at their base connection — which is
+   the most likely real failure mode, ahead of tipping.
+2. **Lateral bracing.** A 6-ft post-and-beam frame needs diagonal
+   bracing. The retired panel-frame diagonal doesn't apply here, and the
+   obvious knee brace wants 45° miters, which collides with design rule
+   #1 (no miter cuts). Square-cut gussets are the likely answer; not
+   designed yet.
+
+Both are tracked before any full-size build.
 
 ## The smart controller (target design)
 
@@ -318,7 +342,10 @@ the new 620W panel for a salvaged one — see
 
 | Component | Spec | ~$ |
 |---|---|---|
-| Bed walls | 1x6 cedar skin (4 courses, 22" tall) + 2x4 PT cleats + 2x6 PT caps; 25" accessible rim | 150 |
+| Bed walls | 1x6 cedar skin (5 courses, 27.5" tall) + 2x4 PT cleats + 2x4 headers; 29" accessible rim | 185 |
+| Corner posts | 4 × 4x4 PT, 72" (walk-under canopy support) | 60 |
+| Panel rails | 4 × 2x6 cedar, laid flat across the post tops | 45 |
+| Soil | 25.5" fill ≈ 2.2 cu yd ≈ 4,500 lb (the ballast) | 160 |
 | Frame rails | 2x6 PT DF, 2 × 8 ft long + 2 × 8 ft cross | 60 |
 | Diagonal brace | 2x4 PT DF, 1 × 10 ft | 15 |
 | Skids | 4x4 PT DF, 2 × 8 ft | 30 |

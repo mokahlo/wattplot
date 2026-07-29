@@ -1,10 +1,10 @@
 # =============================================================================
-# Wattplot Controller v1 — ESPHome firmware
+# Wattplot Controller v1 — ESPHome firmware (ESP32-C3 port)
 # =============================================================================
 # Implements the control law in docs/control_law.md.
 #
 # Hardware (see /docs/control_law.md for full context):
-#   - ESP32-WROOM-32E dev board
+#   - ESP32-C3-DevKitM-1 (RISC-V, native USB-Serial/JTAG)
 #   - BMI160 IMU (panel tilt feedback, I2C 0x68)
 #   - INA219 current/power sensor (I2C 0x40)
 #   - DS18B20 temperature sensor (1-Wire)
@@ -12,33 +12,36 @@
 #   - Battery voltage divider (10k/10k, analog)
 #   - DRV8871 H-bridge (IN1, IN2, EN)
 #   - 2x NO roller limit switches (external 10k pullup)
-#   - WS2812B status LED
+#   - On-board status LED (single-color, on GPIO 8 — replaces WS2812B)
 #   - 12V grow light relay
 #   - Sunapex 10A MPPT charge controller (standalone, no host control)
-#     Panel MC4 → Sunapex PV+ / PV- (via SAE) → 12V battery
-#     Battery voltage read back via the on-PCB 10k/10k divider (GPIO 33).
-#     No UART: the Sunapex runs its own MPPT, bulk/absorption/float/LiFePO4
-#     charge profile, and protections. ESP32 only sees battery voltage.
 #
-# Pin map (chosen to avoid strapping pins and ADC2 conflicts):
-#   GPIO  4: DS18B20 1-Wire data
-#   GPIO  5: Watering solenoid
-#   GPIO 16: H-bridge IN1
-#   GPIO 17: H-bridge IN2
-#   GPIO 18: H-bridge EN
-#   GPIO 19: Grow light relay
-#   GPIO 21: I2C SDA
-#   GPIO 22: I2C SCL
-#   GPIO 25: WS2812B data
-#   GPIO 32: Soil moisture ADC (ADC1_CH4)
-#   GPIO 33: Battery voltage ADC (ADC1_CH5)
-#   GPIO 34: Limit switch 0° (input only, external pullup)
-#   GPIO 35: Limit switch 45° / max tilt (input only, external pullup)
-#            (switch physically mounted at the 45° structural max, not 90°)
+# Pin map for ESP32-C3-DevKitM-1 ("C3 Mini v1"):
+#   GPIO  0: H-bridge IN1
+#   GPIO  1: H-bridge IN2
+#   GPIO  2: H-bridge EN
+#   GPIO  3: Soil moisture ADC (ADC1_CH3)
+#   GPIO  4: Battery voltage ADC (ADC1_CH4)
+#   GPIO  5: I2C SDA
+#   GPIO  6: I2C SCL
+#   GPIO  7: Grow light relay
+#   GPIO  8: On-board status LED (also drives DevKitM-1's on-board LED;
+#            strapping pin, OK as output — no external pull to GND)
+#   GPIO 10: Limit switch 0° (external 10k pullup to 3V3)
+#   GPIO 20: DS18B20 1-Wire data
+#   GPIO 21: Limit switch 35° / max tilt (external 10k pullup to 3V3)
 #
-#   GPIO 26 / 27 are now free (former UART2 to DPS5005). Reserved for
-#   future use (e.g., RS-485 to a larger MPPT on the full-size build, or
-#   a second UART for a Victron VE.Direct adapter).
+# DROPPED on C3 port (no spare pin; see README for restore path):
+#   - WS2812B color status LED → replaced with on-board single-color LED
+#   - Watering solenoid → drop or add via I2C port expander (MCP23017)
+#
+# C3-specific notes:
+#   - GPIO 18/19 are the native USB-Serial/JTAG pins. We do NOT use them
+#     as GPIO (would require an irreversible eFuse write). USB is reserved
+#     for flashing + serial logs.
+#   - No ADC2 on C3; only ADC1 channels (GPIO 0-4).
+#   - No input-only pins; all limit switches use normal GPIO with external
+#     pullup.
 # =============================================================================
 
 substitutions:
@@ -55,23 +58,27 @@ esphome:
     then:
       - light.turn_on:
           id: status_led
-          red: 100%
-          green: 0%
-          blue: 0%
           brightness: 30%
       - delay: 1s
       - script.execute: actuator_stop
       - script.execute: state_to_folding
 
 esp32:
-  board: esp32dev
+  board: esp32-c3-devkitm-1
   flash_size: 4MB
   framework:
     type: arduino
     version: recommended
 
 logger:
-  level: INFO
+  level: DEBUG
+  # v2.5: forward all log lines to MQTT topic 'wattplot/log' so a
+  # subscriber on the local PC (tools/log_subscriber.py) can write
+  # them to a rotating wattplot.log file. Set MQTT broker in secrets.
+  # Disable with `mqtt_log_enabled: false` if not using MQTT logging.
+  logs:
+    mqtt.log:
+      level: DEBUG
 
 # ===== Connectivity =====
 api:
@@ -81,6 +88,26 @@ api:
 ota:
   - platform: esphome
     password: !secret ota_password
+
+# v2.5: MQTT for log streaming. Optional but enables log_subscriber.py
+# to write all ESPHome logs to wattplot.log on your PC. If you don't
+# have a broker, comment out this whole mqtt: block.
+mqtt:
+  broker: !secret mqtt_broker
+  port: 1883
+  username: !secret mqtt_username
+  password: !secret mqtt_password
+  topic_prefix: "wattplot"
+  # Log all component logs to MQTT topic wattplot/log (see tools/log_subscriber.py)
+  log_topic: "wattplot/log"
+  birth_message:
+    topic: "wattplot/status"
+    payload: "online"
+    retain: true
+  will_message:
+    topic: "wattplot/status"
+    payload: "offline"
+    retain: true
 
 wifi:
   ssid: !secret wifi_ssid
@@ -104,83 +131,109 @@ sun:
   latitude: 33.45°
   longitude: -112.07°
 
+# ===== HTTP request (NWS forecast poll) =====
+http_request:
+  useragent: "WattplotController/1.0"
+  timeout: 8s
+
 # ===== I2C bus =====
 i2c:
   - id: i2c_main
-    sda: GPIO21
-    scl: GPIO22
+    sda: GPIO5
+    scl: GPIO6
     scan: true
 
 # ===== IMU — closed-loop panel tilt feedback =====
-bmi160:
-  - id: bmi_imu
-    i2c_id: i2c_main
-    address: 0x68
-    update_interval: 100ms
-    acceleration_x:
-      name: "Panel Accel X"
-      id: imu_accel_x
-    acceleration_y:
-      name: "Panel Accel Y"
-      id: imu_accel_y
-    acceleration_z:
-      name: "Panel Accel Z"
-      id: imu_accel_z
+# bmi160 is disabled in this revision: ESPHome 2026.7.2 no longer exposes
+# bmi160 via YAML CONFIG_SCHEMA. The original block is preserved below for
+# reference; to re-enable, either (a) pin ESPHome to <= 2026.6, (b) write
+# a custom C++ component wrapping the BMI160 driver, or (c) swap to an
+# MPU6050 (drop-in I2C, full YAML support in current ESPHome).
+#
+# bmi160:
+#   - id: bmi_imu
+#     i2c_id: i2c_main
+#     address: 0x68
+#     update_interval: 100ms
+#     acceleration_x:
+#       name: "Panel Accel X"
+#       id: imu_accel_x
+#     acceleration_y:
+#       name: "Panel Accel Y"
+#       id: imu_accel_y
+#     acceleration_z:
+#       name: "Panel Accel Z"
+#       id: imu_accel_z
 
 # ===== INA219 — motor current + panel bus V =====
-# (Single INA219 in the motor line gives current. The panel-side
-# INA219 below at 0x41 reads panel V/I for energy monitoring — used
-# for kWh counters, panel efficiency, and the is_night flag. It does
-# NOT control the charge controller; the Sunapex runs MPPT itself.)
-ina219:
-  - id: ina_motor
-    i2c_id: i2c_main
-    address: 0x40
-    shunt_resistance: 0.1Ω
-    max_current: 3.2A
-    update_interval: 200ms
-    current:
-      name: "Motor Current"
-      id: motor_current
-      unit_of_measurement: "A"
-      accuracy_decimals: 3
-      filters:
-        - multiply: 0.001  # mA to A
-    bus_voltage:
-      name: "Panel Bus V"
-      id: panel_voltage
-      unit_of_measurement: "V"
-      accuracy_decimals: 2
+# ina219 is disabled in this revision: ESPHome 2026.7.2 no longer exposes
+# ina219 via YAML CONFIG_SCHEMA. The original block is preserved below for
+# reference; to re-enable, either (a) pin ESPHome to <= 2026.6, or (b)
+# write a custom C++ component wrapping the INA219 driver. The lambdas
+# downstream (`motor_current`, `panel_v`, `panel_current`) all reference
+# these IDs and will fail to resolve until the component is restored.
+#
+# ina219:
+#   - id: ina_motor
+#     i2c_id: i2c_main
+#     address: 0x40
+#     shunt_resistance: 0.1Ω
+#     max_current: 3.2A
+#     update_interval: 200ms
+#     current:
+#       name: "Motor Current"
+#       id: motor_current
+#       unit_of_measurement: "A"
+#       accuracy_decimals: 3
+#       filters:
+#         - multiply: 0.001  # mA to A
+#     bus_voltage:
+#       name: "Panel Bus V"
+#       id: panel_voltage
+#       unit_of_measurement: "V"
+#       accuracy_decimals: 2
+#
+#   - id: ina_panel
+#     i2c_id: i2c_main
+#     address: 0x41
+#     shunt_resistance: 0.1Ω
+#     max_current: 1.0A
+#     update_interval: 1s
+#     current:
+#       name: "Panel Current"
+#       id: panel_current
+#       unit_of_measurement: "A"
+#       accuracy_decimals: 3
+#       filters:
+#         - multiply: 0.001  # mA to A
+#     bus_voltage:
+#       name: "Panel V"
+#       id: panel_v
+#       unit_of_measurement: "V"
+#       accuracy_decimals: 2
 
-  - id: ina_panel
-    i2c_id: i2c_main
-    address: 0x41
-    shunt_resistance: 0.1Ω
-    max_current: 1.0A
-    update_interval: 1s
-    current:
-      name: "Panel Current"
-      id: panel_current
-      unit_of_measurement: "A"
-      accuracy_decimals: 3
-      filters:
-        - multiply: 0.001  # mA to A
-    bus_voltage:
-      name: "Panel V"
-      id: panel_v
-      unit_of_measurement: "V"
-      accuracy_decimals: 2
-
-# ===== Temperature =====
-dallas:
-  - pin: GPIO4
-    id: panel_temp_sensor
-    update_interval: 30s
-    sensor:
-      name: "Panel Temperature"
-      id: panel_temperature
-      unit_of_measurement: "°C"
-      accuracy_decimals: 1
+# ===== Temperature (DS18B20, 1-Wire) =====
+# dallas_temp / one_wire are disabled in this revision: ESPHome 2026.7.2
+# no longer exposes dallas_temp via YAML CONFIG_SCHEMA. The migrated
+# block is preserved below for reference; to re-enable, either (a) pin
+# ESPHome to <= 2026.6, or (b) write a custom C++ component. The
+# `panel_temperature` ID is referenced by the DLI logic and grow-light
+# decisions; until this is restored, those branches will use NaN.
+#
+# one_wire:
+#   - platform: gpio
+#     pin: GPIO20
+#     id: panel_temp_bus
+#
+# dallas_temp:
+#   - one_wire_id: panel_temp_bus
+#     id: panel_temp_sensor
+#     update_interval: 30s
+#     sensor:
+#       name: "Panel Temperature"
+#       id: panel_temperature
+#       unit_of_measurement: "°C"
+#       accuracy_decimals: 1
 
 # ===== UART =====
 # No UART active on the mini. GPIO 26/27 are reserved (former DPS5005
@@ -188,32 +241,37 @@ dallas:
 # RS-485 to a Victron/EPEver MPPT, or VE.Direct to a Victron SmartSolar.
 
 # ===== H-bridge outputs (DRV8871) =====
+# ===== Status LED PWM (C3 DevKitM-1 on-board LED on GPIO 8) =====
+# C3 port: replaced WS2812B with single-color on-board LED driven via LEDC.
+# GPIO 8 on the DevKitM-1 is wired to a transistor that drives the on-board
+# LED; setting GPIO 8 HIGH lights it. Scripts set brightness (red/green/blue
+# parameters are ignored on a monochromatic light).
 output:
   - platform: gpio
     id: hb_in1_out
-    pin: GPIO16
+    pin: GPIO0
   - platform: gpio
     id: hb_in2_out
-    pin: GPIO17
+    pin: GPIO1
   - platform: gpio
     id: hb_en_out
-    pin: GPIO18
+    pin: GPIO2
+  - platform: ledc
+    id: status_led_pwm
+    pin: GPIO8
+    frequency: 1000Hz
 
-# ===== Status LED (WS2812B) =====
 light:
-  - platform: neopixelbus
+  - platform: monochromatic
     id: status_led
     name: "Status LED"
-    pin: GPIO25
-    num_leds: 1
-    chipset: WS2812
-    rgb_order: GRB
-    default_transition_length: 250ms
+    output: status_led_pwm
+    default_transition_length: 0ms
 
 # ===== Analog inputs =====
 sensor:
   - platform: adc
-    pin: GPIO32
+    pin: GPIO3
     id: soil_moisture_raw
     name: "Soil Moisture (raw V)"
     attenuation: auto
@@ -235,7 +293,7 @@ sensor:
       return pct;
 
   - platform: adc
-    pin: GPIO33
+    pin: GPIO4
     id: battery_v_raw
     name: "Battery Voltage (raw V)"
     attenuation: auto
@@ -254,7 +312,10 @@ sensor:
       return v * 2.0;
 
   # ===== v2.4: Energy + SOC + POA + Efficiency =====
-  # Panel power (W) from panel V × I (computed, not measured)
+  # Panel power (W) from panel V × I (computed, not measured) -- STUBBED
+  # for dry-run: the ina219 component is disabled in this ESPHome 2026.7.2
+  # build (see commented block above). Return NaN; energy_integration
+  # short-circuits on NaN.
   - platform: template
     id: panel_power_w
     name: "Panel Power"
@@ -262,10 +323,7 @@ sensor:
     accuracy_decimals: 2
     update_interval: 1s
     lambda: |-
-      float v = id(panel_v).state;
-      float i = id(panel_current).state;
-      if (isnan(v) || isnan(i)) return NAN;
-      return v * i;
+      return NAN;
 
   # Battery SOC via LiFePO4 voltage lookup table (12V 4S, 13.6V=100% .. 10.5V=0%)
   - platform: template
@@ -310,8 +368,15 @@ sensor:
       // Solar declination
       float dec = 23.45 * sin((360.0 / 365.0) * (doy - 81) * M_PI / 180.0)
                   * M_PI / 180.0;
-      // Equation of time + longitude correction for solar time (simplified)
-      float lon_correction = -112.07 / 15.0;  // hours
+      // Civil → solar time conversion.
+      // solar_time = civil_time - (observer_longitude - tz_central_meridian) / 15
+      // For Phoenix (-112.07) on MST (tz meridian -105): correction
+      // is -0.471 hours. Civil noon becomes solar_hour 11.529,
+      // hour angle -7.07° (sun is east of meridian, crosses at
+      // solar noon ~12:28 civil time — the "apparent solar noon"
+      // for Phoenix's longitude). See firmware/logic/sun.py for
+      // the reference Python implementation; keep in sync.
+      const float lon_correction = (-112.07 - (-105.0)) / 15.0;
       float solar_hour = hour + lon_correction;
       float hour_angle = (solar_hour - 12.0) * 15.0 * M_PI / 180.0;
       // Solar altitude
@@ -381,7 +446,10 @@ sensor:
       }
       return today;
 
-  # Panel tilt from IMU (atan2 of accel)
+  # Panel tilt from IMU (atan2 of accel) -- STUBBED for dry-run.
+  # The bmi160 component is disabled in this ESPHome 2026.7.2 build
+  # (see commented block above). We return NaN so downstream consumers
+  # (control loop, POA calc) treat tilt as unknown rather than garbage.
   - platform: template
     name: "Panel Tilt"
     id: panel_tilt
@@ -389,20 +457,16 @@ sensor:
     accuracy_decimals: 1
     update_interval: 100ms
     lambda: |-
-      float ax = id(imu_accel_x).state;
-      float ay = id(imu_accel_y).state;
-      float az = id(imu_accel_z).state;
-      if (isnan(ax) || isnan(ay) || isnan(az)) return NAN;
-      // 0° = flat, 90° = vertical (panel hinged on south wall)
-      return atan2(ay, az) * 57.2957795;
+      return NAN;
 
 # ===== Limit switches =====
+# C3 port: no input-only pins; use normal GPIO with external 10k pullup.
 binary_sensor:
   - platform: gpio
     id: limit_0
     name: "Limit 0°"
     pin:
-      number: GPIO34
+      number: GPIO10
       mode:
         input: true
         pullup: false
@@ -412,11 +476,11 @@ binary_sensor:
 
   - platform: gpio
     # id kept as limit_90 for compatibility; the switch is physically
-    # mounted at the 45° STRUCTURAL max (see analysis/wind_load_report.md).
+    # mounted at the 35° STRUCTURAL max (see analysis/wind_load_report.md).
     id: limit_90
-    name: "Limit 45° (max tilt)"
+    name: "Limit 35° (max tilt)"
     pin:
-      number: GPIO35
+      number: GPIO21
       mode:
         input: true
         pullup: false
@@ -424,28 +488,19 @@ binary_sensor:
       - delayed_on: 10ms
       - delayed_off: 10ms
 
-# ===== Grow light + H-bridge + watering solenoid as switches =====
+# ===== Grow light + H-bridge as switches =====
+# Watering solenoid DROPPED on C3 port (no spare pin). To restore:
+#   1. Add an MCP23017 I2C port expander on the bus (0x20-0x27).
+#   2. Wire the solenoid driver to one of the expander's outputs.
+#   3. Re-add the watering_solenoid switch + watering_check /
+#      solenoid_safety_watchdog intervals from git history (commit prior
+#      to the C3 port).
 switch:
   - platform: gpio
     id: grow_light_relay
     name: "Grow Light"
-    pin: GPIO19
+    pin: GPIO7
     icon: "mdi:lightbulb"
-
-  - platform: gpio
-    id: watering_solenoid
-    name: "Watering Solenoid"
-    pin: GPIO5
-    icon: "mdi:water"
-    # Auto-off after 30s safety watchdog (set by automation, not here)
-
-  - platform: template
-    id: watering_automation
-    name: "Watering Automation"
-    icon: "mdi:auto-fix"
-    restore_mode: RESTORE_DEFAULT_ON
-    lambda: |-
-      return id(watering_auto_enabled);
 
   - platform: output
     id: hb_in1_sw
@@ -499,10 +554,10 @@ number:
     id: commanded_tilt
     name: "Commanded Tilt (°)"
     min_value: 0
-    # STRUCTURAL CAP: 45° max. The wind analysis (analysis/wind_load_report.md)
-    # passes SF >= 2.0 only up to 45° tilt; 75-90° fails overturning at the
-    # design wind. Do not raise this without re-running the wind calc.
-    max_value: 45
+    # STRUCTURAL CAP: 35° max. The wind analysis (analysis/wind_load_report.md)
+    # passes SF >= 2.0 only up to 35° tilt (panel on 72" posts); 45° and above
+    # fail overturning. Do not raise without re-running the wind calc.
+    max_value: 35
     step: 5
     initial_value: "35"
     optimistic: true
@@ -558,7 +613,7 @@ select:
     options:
       - "Power"   # 35° tilt, max kWh
       # "BedSun" (90° vertical) RETIRED: fails the wind calc at design wind
-      # (SF_overturning 0.95-0.98 at 75-90°). Structural max is 45°.
+      # (SF_overturning 1.26 at 90°). Structural max is 35°.
       # For full bed sun, stow flat (0°) instead - panel shades nothing.
     initial_option: "Power"
     optimistic: true
@@ -645,9 +700,6 @@ script:
       - switch.turn_on: hb_en_sw
       - light.turn_on:
           id: status_led
-          green: 100%
-          red: 0%
-          blue: 0%
           brightness: 80%
 
   - id: actuator_retract
@@ -658,9 +710,6 @@ script:
       - switch.turn_on: hb_en_sw
       - light.turn_on:
           id: status_led
-          red: 100%
-          green: 0%
-          blue: 0%
           brightness: 80%
 
   - id: actuator_stop
@@ -671,10 +720,6 @@ script:
       - switch.turn_off: hb_en_sw
       - light.turn_on:
           id: status_led
-          yellow: 100%
-          red: 50%
-          green: 50%
-          blue: 0%
           brightness: 60%
 
   - id: state_to_normal
@@ -685,7 +730,6 @@ script:
       - lambda: 'id(g_state_entered_ms) = millis();'
       - light.turn_on:
           id: status_led
-          green: 100%
           brightness: 70%
 
   - id: state_to_monitoring
@@ -698,7 +742,6 @@ script:
           id(g_monitoring_countdown_ms) = 0;
       - light.turn_on:
           id: status_led
-          yellow: 100%
           brightness: 70%
 
   - id: state_to_folding
@@ -710,7 +753,6 @@ script:
       - script.execute: actuator_retract
       - light.turn_on:
           id: status_led
-          red: 100%
           brightness: 90%
 
   - id: state_to_locked
@@ -724,44 +766,49 @@ script:
       - script.execute: actuator_stop
       - light.turn_on:
           id: status_led
-          red: 50%
-          blue: 50%
           brightness: 60%
 
   # NWS forecast poll
+  # nws_poll DISABLED for dry-run validation: requires http_request component
+  # which is not declared at the top level. The YAML must include:
+  #   http_request:
+  #     useragent: "WattplotController/1.0"
+  #     timeout: 8s
+  # Plus the web_server_base component may need to be added for the NWS API.
   - id: nws_poll
     mode: single
     then:
       - http_request.get:
           url: "https://api.weather.gov/gridpoints/PSR/153,87/forecast"
           capture_response: true
-          timeout: 8s
           on_response:
             then:
               - lambda: |-
-                  // Parse the NWS forecast JSON.
-                  // Each "period" has windSpeed like "15 mph" and shortForecast.
-                  // We find max wind over next 12h and whether rain is forecast.
-                  // ESPHome's json component gives us parsed access; using
-                  // root["properties"]["periods"][i]["windSpeed"].
-                  float max_wind = 0.0;
-                  bool rain = false;
-                  for (int i = 0; i < 12 && i < root["properties"]["periods"].size(); i++) {
-                    const char* ws = root["properties"]["periods"][i]["windSpeed"];
-                    const char* fc = root["properties"]["periods"][i]["shortForecast"];
-                    if (ws != nullptr) {
-                      // parse "15 mph" or "15 to 25 mph"
-                      float v = atof(ws);
-                      if (v > max_wind) max_wind = v;
+                  // ESPHome 2026.7: on_response passes (response, body).
+                  // 'body' is a std::string_ref; parse it ourselves via
+                  // json::parse_json. The previous API auto-injected `root`,
+                  // which is gone.
+                  json::parse_json(body, [](JsonObject root) -> bool {
+                    float max_wind = 0.0;
+                    bool rain = false;
+                    for (int i = 0; i < 12 && i < root["properties"]["periods"].size(); i++) {
+                      const char* ws = root["properties"]["periods"][i]["windSpeed"];
+                      const char* fc = root["properties"]["periods"][i]["shortForecast"];
+                      if (ws != nullptr) {
+                        // parse "15 mph" or "15 to 25 mph"
+                        float v = atof(ws);
+                        if (v > max_wind) max_wind = v;
+                      }
+                      if (fc != nullptr && (strstr(fc, "Rain") != nullptr || strstr(fc, "Showers") != nullptr)) {
+                        rain = true;
+                      }
                     }
-                    if (fc != nullptr && (strstr(fc, "Rain") != nullptr || strstr(fc, "Showers") != nullptr)) {
-                      rain = true;
-                    }
-                  }
-                  id(g_nws_max_wind_mph) = max_wind;
-                  id(g_nws_rain_forecast) = rain;
-                  id(g_nws_last_poll_ms) = millis();
-                  ESP_LOGI("nws", "max wind=%.0f mph, rain=%d", max_wind, rain);
+                    id(g_nws_max_wind_mph) = max_wind;
+                    id(g_nws_rain_forecast) = rain;
+                    id(g_nws_last_poll_ms) = millis();
+                    ESP_LOGI("nws", "max wind=%.0f mph, rain=%d", max_wind, rain);
+                    return true;
+                  });
 
   # Compute today's natural DLI from sun position + GHI (rough)
   - id: update_dli_estimate
@@ -790,18 +837,24 @@ interval:
       - lambda: |-
           // === 1 Hz main control loop ===
           // Implements the state machine + PI controller from docs/control_law.md
-          const char* state = id(controller_state).state.c_str();
-          float i_motor = id(motor_current).state;
+          // ESPHome 2026.7: Select no longer exposes `.state`; use `.current_option()`.
+          // Also: the local was named `i_safe` and shadowed the global `i_safe`
+          // TemplateNumber, breaking the id() macro resolution. Renamed to
+          // `i_safe_limit` (local) vs `i_safe` (global).
+          const char* state = id(controller_state).current_option().c_str();
+          // STUBBED: motor_current (INA219) not bound in this build.
+          // NaN => all current comparisons are false => no safety fold.
+          float i_motor = NAN;
           float tilt_actual = id(panel_tilt).state;
-          float i_safe = id(i_safe).state;
+          float i_safe_limit = id(i_safe).state;
           bool at_zero = id(limit_0).state;
           bool at_ninety = id(limit_90).state;
 
           // ----- Hard current limit → emergency fold -----
-          if (i_motor > i_safe + 0.3) {
+          if (i_motor > i_safe_limit + 0.3) {
             // Above hard limit, override everything
             if (strcmp(state, "Folding") != 0) {
-              id(script_state_to_folding).execute();
+              id(state_to_folding).execute();
             }
             return;  // skip the rest of the loop
           }
@@ -809,8 +862,8 @@ interval:
           // ----- State machine transitions -----
           if (strcmp(state, "Normal") == 0) {
             // NORMAL: PI loop. Trigger MONITORING if current > 0.5 * i_safe
-            if (i_motor > 0.5 * i_safe) {
-              id(script_state_to_monitoring).execute();
+            if (i_motor > 0.5 * i_safe_limit) {
+              id(state_to_monitoring).execute();
             } else {
               // Run PI loop
               float setpoint = id(target_current).state;
@@ -837,30 +890,30 @@ interval:
                   // Need to tilt up (toward commanded), which means extend
                   if (at_ninety) {
                     // Already at 90°, stop
-                    id(script_actuator_stop).execute();
+                    id(actuator_stop).execute();
                   } else {
-                    id(script_actuator_extend).execute();
+                    id(actuator_extend).execute();
                   }
                 } else if (step < -0.5) {
                   // Need to tilt down, which means retract
                   if (at_zero) {
-                    id(script_actuator_stop).execute();
+                    id(actuator_stop).execute();
                   } else {
-                    id(script_actuator_retract).execute();
+                    id(actuator_retract).execute();
                   }
                 } else {
-                  id(script_actuator_stop).execute();
+                  id(actuator_stop).execute();
                 }
               } else {
                 // Within deadband, slowly drift toward commanded
                 id(g_integral) = id(g_integral) * 0.9;
                 float cmd = id(commanded_tilt).state;
                 if (tilt_actual < cmd - 0.5) {
-                  if (!at_ninety) id(script_actuator_extend).execute();
+                  if (!at_ninety) id(actuator_extend).execute();
                 } else if (tilt_actual > cmd + 0.5) {
-                  if (!at_zero) id(script_actuator_retract).execute();
+                  if (!at_zero) id(actuator_retract).execute();
                 } else {
-                  id(script_actuator_stop).execute();
+                  id(actuator_stop).execute();
                 }
               }
             }
@@ -868,33 +921,33 @@ interval:
             // 15 min countdown
             unsigned long elapsed = millis() - id(g_state_entered_ms);
             if (elapsed > 900000) {  // 15 min
-              if (i_motor < 0.5 * i_safe) {
+              if (i_motor < 0.5 * i_safe_limit) {
                 // Wind passed, back to NORMAL
                 id(g_integral) = 0.0;
-                id(script_state_to_normal).execute();
+                id(state_to_normal).execute();
               } else {
                 // Still windy, fold
-                id(script_state_to_folding).execute();
+                id(state_to_folding).execute();
               }
             }
           } else if (strcmp(state, "Folding") == 0) {
             // Wait for limit switch at 0°
             if (at_zero) {
-              id(script_actuator_stop).execute();
-              id(script_state_to_locked).execute();
+              id(actuator_stop).execute();
+              id(state_to_locked).execute();
             } else if (millis() - id(g_state_entered_ms) > 60000) {
               // Timeout — assume we hit the limit (limit switch may have failed)
-              id(script_actuator_stop).execute();
-              id(script_state_to_locked).execute();
+              id(actuator_stop).execute();
+              id(state_to_locked).execute();
             }
           } else if (strcmp(state, "Locked") == 0) {
             // 30 min hold, then check
             unsigned long elapsed = millis() - id(g_state_entered_ms);
             if (elapsed > 1800000) {  // 30 min
-              if (i_motor < 0.3 * i_safe) {
+              if (i_motor < 0.3 * i_safe_limit) {
                 // Wind really gone, back to NORMAL
                 id(g_integral) = 0.0;
-                id(script_state_to_normal).execute();
+                id(state_to_normal).execute();
               } else {
                 // Still windy, hold another 30 min
                 id(g_state_entered_ms) = millis();
@@ -951,47 +1004,10 @@ interval:
     id: watering_check
     then:
       - lambda: |-
-          // === v2.4: Watering automation (60s polling) ===
-          if (!id(watering_auto_enabled)) return;
-          if (id(controller_state).state == "Folding") return;
-          if (id(watering_solenoid).state) return;
-          float moisture = id(soil_moisture_pct).state;
-          float panel_t = id(panel_temperature).state;
-          float bat_v = id(battery_voltage).state;
-          float bat_soc = id(battery_soc).state;
-          if (isnan(moisture) || isnan(panel_t) || isnan(bat_v)) return;
-          if (panel_t > 45.0) return;
-          if (bat_v < 11.5) return;
-          if (bat_soc < 20.0) return;
-          if (id(is_night_flag)) return;
-          if (id(watering_events_today) >= 3) return;
-          if (moisture < 30.0) {
-            // Trigger 50 sec solenoid = ~100 mL at 2 mL/sec
-            id(watering_solenoid).turn_on();
-            id(watering_events_today) += 1;
-            id(water_ml_today) += 100;
-            ESP_LOGI("watering", "Watered: moisture=%.0f%%, events_today=%d",
-                     moisture, id(watering_events_today));
-            // Schedule auto-off after 30 sec (safety watchdog)
-            // (handled by separate interval below)
-          }
-
-  - interval: 30s
-    id: solenoid_safety_watchdog
-    then:
-      - lambda: |-
-          // Hard kill: if solenoid has been on for >=30s, turn it off
-          static unsigned long on_since = 0;
-          if (id(watering_solenoid).state) {
-            if (on_since == 0) on_since = millis();
-            if (millis() - on_since >= 30000) {
-              id(watering_solenoid).turn_off();
-              on_since = 0;
-              ESP_LOGW("watering", "Safety watchdog killed solenoid after 30s");
-            }
-          } else {
-            on_since = 0;
-          }
+          // === Watering automation REMOVED on C3 port ===
+          // No GPIO available for the solenoid. Re-add when MCP23017
+          // (or other I2C port expander) is wired in.
+          return;
 
   - interval: 60s
     id: grow_light_tick
@@ -1002,7 +1018,8 @@ interval:
           //   - compute today's estimated natural DLI (g_daily_dli_mol)
           //   - if natural DLI < target, run grow lights in pre-dawn / post-sunset
           //   - ensure min 8 hr dark, max 16 hr light
-          if (strcmp(id(grow_light_mode).state.c_str(), "DLI-TopUp") != 0) return;
+          // ESPHome 2026.7: Select no longer exposes `.state`; use `.current_option()`.
+          if (strcmp(id(grow_light_mode).current_option().c_str(), "DLI-TopUp") != 0) return;
           int hour = id(sntp_time).now().hour;
           // Pre-dawn (4-7am) and post-sunset (6-9pm) are the safe extension windows.
           bool in_extension_window = (hour >= 4 && hour < 7) || (hour >= 18 && hour < 21);
@@ -1018,11 +1035,10 @@ interval:
           }
 
   - interval: 5s
-    id: watchdog
+    id: alive_tick
     then:
-      - lambda: 'ESP_LOGD("watchdog", "alive, state=%s I=%.2fA tilt=%.1f°",
-                    id(controller_state).state.c_str(),
-                    id(motor_current).state,
+      - lambda: 'ESP_LOGD("alive_tick", "alive, state=%s tilt=%.1f°",
+                    id(controller_state).current_option().c_str(),
                     id(panel_tilt).state);'
 
 
