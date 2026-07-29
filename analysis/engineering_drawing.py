@@ -10,43 +10,46 @@ Design (v2 — all-wood frame):
   - Actuator mount: 2x6 clevis on the north rail, 2x6 block on north wall
   - No posts, no beam — the wood frame is the structure
 """
-import os
 import math
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-from matplotlib.patches import Rectangle, Polygon
+import os
 
+import matplotlib
+
+matplotlib.use("Agg")
 # ----------------------------------------------------------------------------
 # Geometry (matches wattplot_params.py + models/freecad/parts/*.py)
 # ----------------------------------------------------------------------------
 import sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from wattplot_params import BED, PANEL
-from models.freecad.materials import LUMBER
 
-P = dict(
-    bed_outer_L   = BED['outer_L_in'],
-    bed_outer_W   = BED['outer_W_in'],
-    bed_wall_thk  = LUMBER['2x12']['actual_t'],   # 1.5
-    bed_wall_h    = LUMBER['2x12']['actual_h'],   # 11.25 (actual 2x12, not nominal 12)
-    skid_h        = BED['skid_h_in'],
-    panel_L       = PANEL['L_in'],
-    panel_W       = PANEL['W_in'],
-    panel_t       = PANEL['thickness_in'],
-    panel_tilt    = PANEL['panel_tilt_deg'],
+import matplotlib.patches as mpatches
+import matplotlib.pyplot as plt
+from matplotlib.patches import Polygon, Rectangle
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from models.freecad.materials import LUMBER
+from wattplot_params import BED, PANEL
+
+P = {
+    "bed_outer_L": BED['outer_L_in'],
+    "bed_outer_W": BED['outer_W_in'],
+    "bed_wall_thk": LUMBER['2x12']['actual_t'],   # 1.5
+    "bed_wall_h": LUMBER['2x12']['actual_h'],   # 11.25 (actual 2x12, not nominal 12)
+    "skid_h": BED['skid_h_in'],
+    "panel_L": PANEL['L_in'],
+    "panel_W": PANEL['W_in'],
+    "panel_t": PANEL['thickness_in'],
+    "panel_tilt": PANEL['panel_tilt_deg'],
     # Frame members
-    rail_W        = LUMBER['2x6']['actual_t'],   # 1.5
-    rail_H        = LUMBER['2x6']['actual_h'],   # 5.5
-    brace_W       = LUMBER['2x4']['actual_t'],   # 1.5
-    brace_H       = LUMBER['2x4']['actual_h'],   # 3.5
-)
+    "rail_W": LUMBER['2x6']['actual_t'],   # 1.5
+    "rail_H": LUMBER['2x6']['actual_h'],   # 5.5
+    "brace_W": LUMBER['2x4']['actual_t'],   # 1.5
+    "brace_H": LUMBER['2x4']['actual_h'],   # 3.5
+}
 
 
 def draw_tilt(tilt_deg):
     P['panel_tilt'] = float(tilt_deg)
-    fig, ax = plt.subplots(figsize=(14, 10))
+    _fig, ax = plt.subplots(figsize=(14, 10))
 
     # World coords (side view = YZ plane looking from +X east).
     # In 2D: x_2d = Z (south=north), y_2d = Y (up).
@@ -189,19 +192,19 @@ def draw_tilt(tilt_deg):
     # ---- Dimension annotations ----
     # Bed width
     ax.annotate("", xy=(bed_z0, -skid_h - 5), xytext=(bed_z1, -skid_h - 5),
-                arrowprops=dict(arrowstyle='<->', color='black', lw=0.8))
+                arrowprops={"arrowstyle": '<->', "color": 'black', "lw": 0.8})
     ax.text(0, -skid_h - 9, f'Bed: {bedW/12:.2f} ft wide',
             ha='center', fontsize=9)
 
     # Frame height (rail height above the wall)
     ax.annotate("", xy=(bedW/2 + 4, wh), xytext=(bedW/2 + 4, wh + rail_h),
-                arrowprops=dict(arrowstyle='<->', color='blue', lw=1.0))
+                arrowprops={"arrowstyle": '<->', "color": 'blue', "lw": 1.0})
     ax.text(bedW/2 + 6, wh + rail_h/2, f"{rail_h:.1f}\"\n2x6 rail",
             color='blue', fontsize=9, va='center')
 
     # Panel high Y dimension (when tilted)
     ax.annotate("", xy=(high_z + 2, wh), xytext=(high_z + 2, high_y),
-                arrowprops=dict(arrowstyle='<->', color='green', lw=1.0))
+                arrowprops={"arrowstyle": '<->', "color": 'green', "lw": 1.0})
     ax.text(high_z + 4, (wh + high_y)/2, f"high\n{((high_y-wh)/12):.1f} ft",
             color='green', fontsize=8, va='center')
 
@@ -212,7 +215,7 @@ def draw_tilt(tilt_deg):
     # Wind arrow (from south, hitting the panel)
     wind_y = high_y - 8
     ax.annotate("", xy=(bedW/2 + 4, wind_y), xytext=(bedW/2 + 20, wind_y),
-                arrowprops=dict(arrowstyle='->', color='red', lw=2.0))
+                arrowprops={"arrowstyle": '->', "color": 'red', "lw": 2.0})
     ax.text(bedW/2 + 22, wind_y + 2, "Wind 115 mph\n(from south)", color='red', fontsize=10, ha='left', weight='bold')
 
     # Force vectors on panel (decomposed)
@@ -222,10 +225,10 @@ def draw_tilt(tilt_deg):
     centroid_y = (wh + high_y) / 2
     centroid_z = (bedW/2 + high_z) / 2
     ax.annotate("", xy=(centroid_z, centroid_y + 10), xytext=(centroid_z, centroid_y),
-                arrowprops=dict(arrowstyle='->', color='#c0392b', lw=1.5))
+                arrowprops={"arrowstyle": '->', "color": '#c0392b', "lw": 1.5})
     ax.text(centroid_z + 1, centroid_y + 12, f"↑ {fv} lb\nuplift", color='#c0392b', fontsize=8)
     ax.annotate("", xy=(centroid_z - 10, centroid_y), xytext=(centroid_z, centroid_y),
-                arrowprops=dict(arrowstyle='->', color='#2c3e50', lw=1.5))
+                arrowprops={"arrowstyle": '->', "color": '#2c3e50', "lw": 1.5})
     ax.text(centroid_z - 12, centroid_y + 2, f"{fh} lb →\ndrag", color='#2c3e50', fontsize=8, ha='right')
 
     # Pivot for overturning (north-bottom corner)

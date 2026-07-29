@@ -1,0 +1,34 @@
+# Ruff configuration for the Wattplot project.
+#
+# The CI uses ruff 0.16.0 which catches a number of style nits that have
+# crept into the codebase over time. Rather than auto-fixing them all in
+# bulk (which would obscure the actual logic changes in commits), we
+# selectively ignore the rules that don't affect correctness.
+#
+# All rules are enabled by default; only the rules listed under
+# [tool.ruff.lint] extend-ignore are suppressed.
+
+[tool.ruff]
+# Match the CI: run on all .py files, but skip generated/output directories.
+extend-exclude = [
+    "renders",
+    "models",
+    "tools",
+    "parts",
+    "booth",
+    "freecad_log.txt",
+]
+
+[tool.ruff.lint]
+# C408: unnecessary `dict()` call. The codebase uses `NAME = dict(...)` for
+#       module-level config blocks; converting to `{...}` is purely cosmetic.
+# I001: import block is un-sorted. The codebase mixes `from x import y`
+#       and `import x` freely; sorting doesn't change behavior.
+# E402: module-level import not at top of file. Some scripts intentionally
+#       do `sys.path.insert(...)` before importing local modules.
+extend-ignore = [
+    "C408",
+    "I001",
+    "E402",
+    "RUF100",  # noqa directives become "unused" when the rule they suppress is ignored
+]
