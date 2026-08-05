@@ -29,6 +29,9 @@ build/
 dist/
 *.egg
 
+# But the gallery/build/ image folder is source content, not a Python build artifact
+!docs/gallery/build/
+
 # Generated render outputs (regenerable from source)
 renders/*.png
 models/*.step
