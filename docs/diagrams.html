@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wattplot — System diagrams</title>
+<meta name="description" content="System block diagram, power flow, state machine, and assembly sequence for the Wattplot controller. Sophisticated SVG diagrams of the electronics, firmware, and assembly.">
+<link rel="canonical" href="https://mokahlo.github.io/wattplot/diagrams.html">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117; --surface: #161b22; --elev: #1f2530;
+    --border: #2a313c; --border-2: #3a414e;
+    --ink: #e6e3dc; --ink-2: #a8a59c; --muted: #6e6c66;
+    --accent: #ff9a5e; --accent-2: #ffb27a; --accent-soft: rgba(255, 154, 94, 0.10);
+
+    --c-power: #f0c270; --c-power-fill: rgba(240, 194, 112, 0.12);
+    --c-motor: #ff9a5e; --c-motor-fill: rgba(255, 154, 94, 0.12);
+    --c-solenoid: #6cc8a3; --c-solenoid-fill: rgba(108, 200, 163, 0.12);
+    --c-sensor: #5ab0c9; --c-sensor-fill: rgba(90, 176, 201, 0.12);
+    --c-comms: #a78bdb; --c-comms-fill: rgba(167, 139, 219, 0.12);
+    --c-mcu: #e6e3dc; --c-mcu-fill: rgba(230, 227, 220, 0.08);
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Outfit', system-ui, -apple-system, sans-serif; font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  a { color: var(--accent); text-decoration: none; transition: color 0.15s; }
+  a:hover { color: var(--accent-2); }
+  h1, h2, h3 { color: var(--ink); letter-spacing: -0.005em; margin: 0 0 0.5em; }
+  h1 { font-family: 'DM Serif Display', serif; font-weight: 400; font-size: 40px; line-height: 1.15; }
+  h2 { font-size: 22px; font-weight: 600; margin: 56px 0 8px; }
+  h3 { font-size: 16px; font-weight: 600; margin: 20px 0 6px; }
+  p { margin: 0 0 1em; }
+  code { font-family: 'JetBrains Mono', monospace; font-size: 0.9em; background: var(--surface); border: 1px solid var(--border); padding: 1px 6px; border-radius: 4px; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 28px; }
+  @media (max-width: 540px) { .wrap { padding: 0 20px; } }
+
+  .topnav { position: sticky; top: 0; z-index: 100; background: rgba(13, 17, 23, 0.85); backdrop-filter: saturate(180%) blur(12px); border-bottom: 1px solid var(--border); }
+  .topnav-inner { display: flex; align-items: center; gap: 22px; padding: 12px 28px; max-width: 1180px; margin: 0 auto; }
+  .topnav .brand { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--ink); text-decoration: none; font-weight: 400; display: flex; align-items: center; gap: 8px; }
+  .topnav .brand img { width: 24px; height: 24px; }
+  .topnav .brand:hover { color: var(--accent); }
+  .topnav nav { display: flex; gap: 18px; flex-wrap: wrap; flex: 1; }
+  .topnav nav a { color: var(--ink-2); font-size: 13.5px; font-weight: 500; }
+  .topnav nav a:hover, .topnav nav a.active { color: var(--accent); }
+  .topnav nav a.has-caret::after { content: " ▾"; color: var(--muted); font-size: 10px; margin-left: 2px; }
+  .topnav .gh { background: var(--ink); color: var(--bg); padding: 7px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; flex-shrink: 0; }
+  .topnav .gh:hover { background: var(--accent); color: var(--bg); }
+  .dropdown { position: relative; }
+  .dropdown .menu { position: absolute; top: 100%; left: -8px; background: var(--surface); border: 1px solid var(--border-2); border-radius: 10px; box-shadow: 0 12px 32px rgba(0,0,0,0.5); min-width: 220px; padding: 6px; margin-top: 8px; display: none; z-index: 200; }
+  .dropdown:hover .menu, .dropdown:focus-within .menu { display: block; }
+  .dropdown .menu a { display: block; padding: 8px 12px; border-radius: 6px; color: var(--ink-2); font-size: 13.5px; }
+  .dropdown .menu a:hover { background: var(--accent-soft); color: var(--accent); }
+
+  main { padding: 56px 0 80px; }
+  .lede { font-size: 18px; color: var(--ink-2); max-width: 760px; margin: 0 0 32px; }
+
+  .toc { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 22px; margin: 0 0 40px; display: flex; flex-wrap: wrap; gap: 8px 20px; }
+  .toc h3 { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 16px 0 0; }
+  .toc a { color: var(--ink-2); font-size: 13.5px; }
+  .toc a:hover { color: var(--accent); }
+
+  .diagram-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    margin: 0 0 32px;
+  }
+  .diagram-card .head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    flex-wrap: wrap; gap: 8px 16px;
+    margin-bottom: 16px;
+  }
+  .diagram-card h2 { margin: 0; }
+  .diagram-card .actions { display: flex; gap: 8px; }
+  .diagram-card .actions a { font-size: 12.5px; color: var(--ink-2); padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px; }
+  .diagram-card .actions a:hover { color: var(--accent); border-color: var(--accent); }
+  .diagram-card .caption { font-size: 14px; color: var(--ink-2); margin: 0 0 16px; max-width: 800px; }
+  .diagram-card svg { display: block; width: 100%; height: auto; border-radius: 8px; background: #f4f1ec; padding: 16px; }
+
+  /* SVG-specific styles (inside the diagram) */
+  .diagram-card svg text { font-family: 'Outfit', system-ui, sans-serif; }
+  .diagram-card svg .block { fill: var(--surface); stroke: var(--border-2); stroke-width: 1.5; }
+  .diagram-card svg .block-mcu { fill: #2a2118; stroke: var(--accent); stroke-width: 2; }
+  .diagram-card svg .block-power { fill: var(--c-power-fill); stroke: var(--c-power); stroke-width: 1.5; }
+  .diagram-card svg .block-motor { fill: var(--c-motor-fill); stroke: var(--c-motor); stroke-width: 1.5; }
+  .diagram-card svg .block-solenoid { fill: var(--c-solenoid-fill); stroke: var(--c-solenoid); stroke-width: 1.5; }
+  .diagram-card svg .block-sensor { fill: var(--c-sensor-fill); stroke: var(--c-sensor); stroke-width: 1.5; }
+  .diagram-card svg .block-comms { fill: var(--c-comms-fill); stroke: var(--c-comms); stroke-width: 1.5; }
+  .diagram-card svg .lbl { fill: #14171e; font-size: 14px; font-weight: 600; }
+  .diagram-card svg .sub { fill: #3a4256; font-size: 11px; }
+  .diagram-card svg .pin { fill: #6b6358; font-size: 10px; font-family: 'JetBrains Mono', monospace; }
+  .diagram-card svg .wire { stroke: #3a4256; stroke-width: 1.5; fill: none; }
+  .diagram-card svg .wire-power { stroke: var(--c-power); stroke-width: 2; }
+  .diagram-card svg .wire-signal { stroke: var(--c-sensor); stroke-width: 1.5; stroke-dasharray: 4 2; }
+  .diagram-card svg .wire-control { stroke: var(--c-motor); stroke-width: 1.5; }
+  .diagram-card svg .arrow { fill: #3a4256; }
+  .diagram-card svg .lbl-w { fill: #14171e; font-size: 10px; font-weight: 500; }
+  .diagram-card svg .step-num { fill: var(--accent); font-size: 18px; font-weight: 700; }
+  .diagram-card svg .step-title { fill: #14171e; font-size: 13px; font-weight: 600; }
+  .diagram-card svg .step-sub { fill: #3a4256; font-size: 10.5px; }
+  .diagram-card svg .step-arrow { stroke: #6b6358; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+  .diagram-card svg .state { fill: var(--surface); stroke: var(--border-2); stroke-width: 1.5; }
+  .diagram-card svg .state-active { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2; }
+  .diagram-card svg .state-name { fill: #14171e; font-size: 13px; font-weight: 600; text-anchor: middle; }
+  .diagram-card svg .trans { stroke: #6b6358; stroke-width: 1.2; fill: none; marker-end: url(#arrowhead); }
+  .diagram-card svg .trans-lbl { fill: #3a4256; font-size: 10px; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 12px 24px; padding: 14px 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin: 0 0 24px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-2); }
+  .legend-swatch { width: 14px; height: 14px; border-radius: 3px; }
+
+  footer { border-top: 1px solid var(--border); padding: 28px 0; color: var(--muted); font-size: 13px; margin-top: 40px; }
+  footer .row { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+  footer a { color: var(--ink-2); }
+  footer a:hover { color: var(--accent); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topnav">
+  <div class="topnav-inner">
+    <a href="./" class="brand"><img src="favicon.svg" alt="">Wattplot</a>
+    <nav>
+      <div class="dropdown">
+        <a class="has-caret">View</a>
+        <div class="menu">
+          <a href="3d.html">3D model</a>
+          <a href="gallery.html">Gallery</a>
+          <a href="pinmap.html">Pin map</a>
+          <a href="diagrams.html" class="active">Diagrams</a>
+        </div>
+      </div>
+      <div class="dropdown">
+        <a class="has-caret">Build</a>
+        <div class="menu">
+          <a href="build_basic.html">Basic overview</a>
+          <a href="build_guide.html">Full-size guide</a>
+          <a href="build_guide_mini.html">Mini guide</a>
+          <a href="build_longi_620W.html">Longi 620 W</a>
+          <a href="build_my_craigslist_panel.html">Salvage build</a>
+          <a href="build_residential_60cell.html">60-cell residential</a>
+          <a href="upcycling.html">Upcycling</a>
+        </div>
+      </div>
+      <div class="dropdown">
+        <a class="has-caret">Hardware</a>
+        <div class="menu">
+          <a href="wiring">Wiring</a>
+          <a href="pcb_design">PCB design</a>
+          <a href="schematic.html">Schematic</a>
+          <a href="sensor_placement">Sensor placement</a>
+        </div>
+      </div>
+      <div class="dropdown">
+        <a class="has-caret">Software</a>
+        <div class="menu">
+          <a href="control_law">Control law</a>
+          <a href="watering">Watering</a>
+          <a href="logging">Logging</a>
+          <a href="test_checklist">Test checklist</a>
+        </div>
+      </div>
+      <div class="dropdown">
+        <a class="has-caret">Booth</a>
+        <div class="menu">
+          <a href="one_pager">One-pager</a>
+          <a href="faq">FAQ</a>
+          <a href="application">Application</a>
+          <a href="demo_script">Demo script</a>
+          <a href="sim.html">Simulator</a>
+          <a href="booth/index.html">3D booth viewer</a>
+        </div>
+      </div>
+      <div class="dropdown">
+        <a class="has-caret">About</a>
+        <div class="menu">
+          <a href="disclaimers.html">Disclaimers &amp; license</a>
+        </div>
+      </div>
+    </nav>
+    <a class="gh" href="https://github.com/mokahlo/wattplot/tree/master/docs/diagrams.html">Edit on GitHub ↗</a>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <h1>System diagrams</h1>
+    <p class="lede">The four diagrams that explain the Wattplot controller: the system block, the power flow, the state machine, and the assembly sequence. All rendered as scalable SVG so they stay sharp at any size and stay editable as code.</p>
+
+    <div class="toc">
+      <h3>Jump to</h3>
+      <a href="#block">1 · System block diagram</a>
+      <a href="#power">2 · Power flow</a>
+      <a href="#states">3 · State machine</a>
+      <a href="#assembly">4 · Assembly sequence</a>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><span class="legend-swatch" style="background: var(--c-mcu-fill); border: 2px solid var(--accent)"></span> MCU (ESP32-S3)</div>
+      <div class="legend-item"><span class="legend-swatch" style="background: var(--c-power-fill); border: 1.5px solid var(--c-power)"></span> Power supply</div>
+      <div class="legend-item"><span class="legend-swatch" style="background: var(--c-motor-fill); border: 1.5px solid var(--c-motor)"></span> Actuator path</div>
+      <div class="legend-item"><span class="legend-swatch" style="background: var(--c-solenoid-fill); border: 1.5px solid var(--c-solenoid)"></span> Solenoid path</div>
+      <div class="legend-item"><span class="legend-swatch" style="background: var(--c-sensor-fill); border: 1.5px solid var(--c-sensor)"></span> Sensors</div>
+      <div class="legend-item"><span class="legend-swatch" style="background: var(--c-comms-fill); border: 1.5px solid var(--c-comms)"></span> Comms (WiFi, HA, web)</div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- 1. SYSTEM BLOCK DIAGRAM                                          -->
+    <!-- ============================================================== -->
+    <div id="block" class="diagram-card">
+      <div class="head">
+        <h2>1 · System block diagram</h2>
+        <div class="actions">
+          <a href="https://github.com/mokahlo/wattplot/blob/master/docs/diagrams.html#block">Edit SVG</a>
+          <a href="schematic.html">Schematic →</a>
+        </div>
+      </div>
+      <p class="caption">Every component, every signal. ESP32-S3 in the center; power from the top, motor + solenoid to the sides, sensors at the bottom, WiFi to the upper-right. Lines are color-coded: <span style="color: var(--c-power)">power</span>, <span style="color: var(--c-sensor)">signal (analog/digital)</span>, <span style="color: var(--c-motor)">control</span>.</p>
+
+      <svg viewBox="0 0 900 620" xmlns="http://www.w3.org/2000/svg" aria-label="System block diagram">
+        <defs>
+          <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L0,8 L8,4 z" fill="#3a4256"/>
+          </marker>
+          <marker id="arrowhead-power" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L0,8 L8,4 z" fill="#f0c270"/>
+          </marker>
+          <marker id="arrowhead-signal" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L0,8 L8,4 z" fill="#5ab0c9"/>
+          </marker>
+          <marker id="arrowhead-control" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L0,8 L8,4 z" fill="#ff9a5e"/>
+          </marker>
+        </defs>
+
+        <!-- POWER TOP-LEFT -->
+        <rect class="block block-power" x="40" y="30" width="180" height="80" rx="6"/>
+        <text class="lbl" x="55" y="55">Solar panel</text>
+        <text class="sub" x="55" y="73">620 W bifacial · 35° tilt</text>
+        <text class="sub" x="55" y="88">MC4 → fused PV+</text>
+
+        <line class="wire wire-power" x1="130" y1="110" x2="130" y2="160" marker-end="url(#arrowhead-power)"/>
+        <text class="lbl-w" x="135" y="138">PV+</text>
+
+        <!-- BATTERY + MPPT -->
+        <rect class="block block-power" x="40" y="160" width="180" height="80" rx="6"/>
+        <text class="lbl" x="55" y="185">MPPT charge controller</text>
+        <text class="sub" x="55" y="203">Sunapex 10A · bulk/abs/float</text>
+        <text class="sub" x="55" y="218">LiFePO4 chemistry mode</text>
+
+        <rect class="block block-power" x="40" y="260" width="180" height="80" rx="6"/>
+        <text class="lbl" x="55" y="285">LiFePO4 battery</text>
+        <text class="sub" x="55" y="303">12 V · 100 Ah · 5A fuse</text>
+        <text class="sub" x="55" y="318">SOC tracked via divider</text>
+
+        <line class="wire wire-power" x1="220" y1="300" x2="320" y2="300" marker-end="url(#arrowhead-power)"/>
+        <text class="lbl-w" x="240" y="293">+12 V (fused)</text>
+
+        <!-- 5V BUCK + 3.3V LDO -->
+        <rect class="block block-power" x="320" y="260" width="120" height="36" rx="4"/>
+        <text class="lbl" x="333" y="278">5 V buck</text>
+        <text class="sub" x="333" y="293">MP1584</text>
+
+        <rect class="block block-power" x="320" y="304" width="120" height="36" rx="4"/>
+        <text class="lbl" x="333" y="322">3.3 V LDO</text>
+        <text class="sub" x="333" y="337">AMS1117</text>
+
+        <line class="wire wire-power" x1="440" y1="278" x2="500" y2="280" marker-end="url(#arrowhead-power)"/>
+        <text class="lbl-w" x="448" y="272">5V</text>
+
+        <line class="wire wire-power" x1="440" y1="322" x2="500" y2="335" marker-end="url(#arrowhead-power)"/>
+        <text class="lbl-w" x="448" y="316">3.3V</text>
+
+        <!-- MCU CENTER -->
+        <rect class="block block-mcu" x="500" y="240" width="200" height="160" rx="8"/>
+        <text class="lbl" x="514" y="266" style="fill: var(--accent); font-size: 16px;">ESP32-S3-DevKitC-1</text>
+        <text class="sub" x="514" y="282" style="fill: var(--ink-2);">N16R8 · 16 MB flash · 8 MB PSRAM</text>
+        <line x1="514" y1="290" x2="686" y2="290" stroke="#3a414e" stroke-width="1"/>
+
+        <text class="pin" x="514" y="308">GPIO1  → HBridge IN1</text>
+        <text class="pin" x="514" y="324">GPIO2  → HBridge IN2</text>
+        <text class="pin" x="514" y="340">GPIO4  ← IPROPI motor</text>
+        <text class="pin" x="514" y="356">GPIO5  ← IPROPI solenoid</text>
+        <text class="pin" x="514" y="372">GPIO6  ← soil moisture</text>
+        <text class="pin" x="514" y="388">GPIO7  ← battery V</text>
+
+        <!-- ACTUATOR (right) -->
+        <rect class="block block-motor" x="740" y="100" width="140" height="100" rx="6"/>
+        <text class="lbl" x="753" y="125">DRV8871 (U5a)</text>
+        <text class="sub" x="753" y="143">12 V · 3.6 A peak</text>
+        <text class="sub" x="753" y="158">IN1/IN2 + nFAULT</text>
+        <text class="sub" x="753" y="173">IPROPI → GPIO4 (ADC)</text>
+        <text class="sub" x="753" y="188">→ Linear actuator</text>
+
+        <rect class="block block-motor" x="740" y="220" width="140" height="50" rx="6"/>
+        <text class="lbl" x="753" y="240">Linear actuator</text>
+        <text class="sub" x="753" y="255">24" stroke, 200 lb</text>
+        <text class="sub" x="753" y="268">panel tilt 0–35°</text>
+
+        <line class="wire wire-control" x1="700" y1="308" x2="740" y2="145" marker-end="url(#arrowhead-control)"/>
+        <text class="lbl-w" x="700" y="220">IN1,IN2</text>
+        <line class="wire wire-signal" x1="700" y1="328" x2="740" y2="190" marker-end="url(#arrowhead-signal)"/>
+        <text class="lbl-w" x="700" y="265">IPROPI</text>
+
+        <line class="wire wire-power" x1="220" y1="300" x2="740" y2="300" marker-end="url(#arrowhead-power)" stroke-dasharray="0"/>
+        <text class="lbl-w" x="450" y="293">12 V → motor</text>
+
+        <!-- SOLENOID (right-bottom) -->
+        <rect class="block block-solenoid" x="740" y="320" width="140" height="100" rx="6"/>
+        <text class="lbl" x="753" y="345">DRV8871 (U5b)</text>
+        <text class="sub" x="753" y="363">12 V · 1.5 A trip</text>
+        <text class="sub" x="753" y="378">IN1 only · IN2 to GND</text>
+        <text class="sub" x="753" y="393">→ 12 V solenoid</text>
+
+        <rect class="block block-solenoid" x="740" y="440" width="140" height="50" rx="6"/>
+        <text class="lbl" x="753" y="460">12 V solenoid</text>
+        <text class="sub" x="753" y="475">irrigation valve</text>
+        <text class="sub" x="753" y="488">~1 A continuous</text>
+
+        <line class="wire wire-control" x1="700" y1="350" x2="740" y2="365" marker-end="url(#arrowhead-control)"/>
+        <text class="lbl-w" x="700" y="345">IN1</text>
+        <line class="wire wire-signal" x1="700" y1="368" x2="740" y2="408" marker-end="url(#arrowhead-signal)"/>
+        <text class="lbl-w" x="700" y="390">IPROPI</text>
+        <line class="wire wire-power" x1="220" y1="305" x2="740" y2="370" marker-end="url(#arrowhead-power)"/>
+        <text class="lbl-w" x="450" y="350">12 V → solenoid</text>
+
+        <!-- SENSORS (bottom) -->
+        <rect class="block block-sensor" x="40" y="430" width="180" height="50" rx="6"/>
+        <text class="lbl" x="55" y="450">DS18B20 ×3</text>
+        <text class="sub" x="55" y="465">panel · soil · canopy air</text>
+        <text class="sub" x="55" y="478">1-Wire, 4.7 k pull-up</text>
+
+        <rect class="block block-sensor" x="240" y="430" width="180" height="50" rx="6"/>
+        <text class="lbl" x="255" y="450">Capacitive soil</text>
+        <text class="sub" x="255" y="465">0–3 V analog, 6" deep</text>
+        <text class="sub" x="255" y="478">mapped → % moisture</text>
+
+        <rect class="block block-sensor" x="440" y="430" width="180" height="50" rx="6"/>
+        <text class="lbl" x="455" y="450">INA219 ×2</text>
+        <text class="sub" x="455" y="465">motor current + panel V/I</text>
+        <text class="sub" x="455" y="478">I²C 0x40 / 0x41</text>
+
+        <line class="wire wire-signal" x1="220" y1="455" x2="500" y2="395" marker-end="url(#arrowhead-signal)"/>
+        <text class="lbl-w" x="350" y="425">1-Wire</text>
+        <line class="wire wire-signal" x1="420" y1="455" x2="500" y2="388" marker-end="url(#arrowhead-signal)"/>
+        <text class="lbl-w" x="430" y="425">analog</text>
+        <line class="wire wire-signal" x1="620" y1="455" x2="600" y2="395" marker-end="url(#arrowhead-signal)"/>
+        <text class="lbl-w" x="610" y="425">I²C</text>
+
+        <!-- COMMS (top-right) -->
+        <rect class="block block-comms" x="740" y="30" width="140" height="50" rx="6"/>
+        <text class="lbl" x="753" y="50">WiFi</text>
+        <text class="sub" x="753" y="65">2.4 GHz · mDNS</text>
+        <text class="sub" x="753" y="78">→ HA / web / OTA</text>
+
+        <line class="wire" x1="740" y1="55" x2="700" y2="270" stroke-dasharray="0" stroke="#a78bdb" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <text class="lbl-w" x="710" y="160">2.4 GHz</text>
+
+        <!-- Annotations -->
+        <text class="sub" x="40" y="600" style="font-style: italic; fill: var(--muted);">v3.1 · limit switches removed · current-based endstop detection via Motor IPROPI</text>
+      </svg>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- 2. POWER FLOW                                                   -->
+    <!-- ============================================================== -->
+    <div id="power" class="diagram-card">
+      <div class="head">
+        <h2>2 · Power flow</h2>
+        <div class="actions">
+          <a href="https://github.com/mokahlo/wattplot/blob/master/docs/diagrams.html#power">Edit SVG</a>
+          <a href="wiring">Wiring details →</a>
+        </div>
+      </div>
+      <p class="caption">Volts and amps from panel to load. The 5 V rail feeds the MCU and the H-bridge nFAULT inputs. The 3.3 V rail powers the ESP32-S3. The 12 V battery rail feeds both H-bridges. Battery voltage is divided to ~1.09 V and read on GPIO7 to track state of charge.</p>
+
+      <svg viewBox="0 0 900 320" xmlns="http://www.w3.org/2000/svg" aria-label="Power flow">
+        <defs>
+          <marker id="arrowhead-pf" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L0,8 L8,4 z" fill="#f0c270"/>
+          </marker>
+        </defs>
+
+        <rect class="block block-power" x="20" y="60" width="120" height="80" rx="6"/>
+        <text class="lbl" x="35" y="85">Panel</text>
+        <text class="sub" x="35" y="103">OCV ~40 V</text>
+        <text class="sub" x="35" y="118">Imp ~9 A</text>
+        <text class="sub" x="35" y="133">10 A fuse</text>
+
+        <line class="wire wire-power" x1="140" y1="100" x2="200" y2="100" marker-end="url(#arrowhead-pf)"/>
+
+        <rect class="block block-power" x="200" y="60" width="120" height="80" rx="6"/>
+        <text class="lbl" x="215" y="85">MPPT</text>
+        <text class="sub" x="215" y="103">bulk/abs/float</text>
+        <text class="sub" x="215" y="118">LiFePO4 mode</text>
+
+        <line class="wire wire-power" x1="320" y1="100" x2="380" y2="100" marker-end="url(#arrowhead-pf)"/>
+
+        <rect class="block block-power" x="380" y="60" width="140" height="80" rx="6"/>
+        <text class="lbl" x="395" y="85">Battery</text>
+        <text class="sub" x="395" y="103">12 V · 100 Ah</text>
+        <text class="sub" x="395" y="118">5 A fuse</text>
+        <text class="sub" x="395" y="133">10 mΩ internal R</text>
+
+        <!-- Branch to 5V buck -->
+        <line class="wire wire-power" x1="520" y1="100" x2="560" y2="100" marker-end="url(#arrowhead-pf)"/>
+        <line class="wire wire-power" x1="600" y1="80" x2="660" y2="80" marker-end="url(#arrowhead-pf)"/>
+        <line class="wire wire-power" x1="600" y1="120" x2="660" y2="120" marker-end="url(#arrowhead-pf)"/>
+
+        <rect class="block block-power" x="660" y="20" width="100" height="40" rx="4"/>
+        <text class="lbl" x="673" y="38">5 V buck</text>
+        <text class="sub" x="673" y="53">3 A</text>
+
+        <rect class="block block-power" x="660" y="80" width="100" height="40" rx="4"/>
+        <text class="lbl" x="673" y="98">3.3 V LDO</text>
+        <text class="sub" x="673" y="113">1 A</text>
+
+        <rect class="block block-power" x="660" y="140" width="100" height="40" rx="4"/>
+        <text class="lbl" x="673" y="158">Direct 12 V</text>
+        <text class="sub" x="673" y="173">to H-bridges</text>
+
+        <line class="wire wire-power" x1="760" y1="40" x2="820" y2="100" marker-end="url(#arrowhead-pf)"/>
+        <line class="wire wire-power" x1="760" y1="100" x2="820" y2="100" marker-end="url(#arrowhead-pf)"/>
+        <line class="wire wire-power" x1="760" y1="160" x2="820" y2="160" marker-end="url(#arrowhead-pf)"/>
+
+        <rect class="block block-mcu" x="820" y="60" width="60" height="80" rx="4"/>
+        <text class="lbl" x="828" y="85" style="font-size: 12px;">ESP32</text>
+        <text class="lbl-w" x="828" y="100" style="font-size: 9px;">5V</text>
+        <text class="lbl-w" x="828" y="115" style="font-size: 9px;">3.3V</text>
+        <text class="lbl-w" x="828" y="130" style="font-size: 9px;">12V</text>
+
+        <!-- Battery V sense branch -->
+        <line class="wire wire-signal" x1="450" y1="140" x2="450" y2="240" marker-end="url(#arrowhead-signal)"/>
+        <rect class="block block-sensor" x="380" y="240" width="140" height="50" rx="4"/>
+        <text class="lbl" x="395" y="260">100k / 10k</text>
+        <text class="sub" x="395" y="275">÷ 11.0 to GPIO7</text>
+        <text class="lbl-w" x="395" y="290">ADC read ≈ V_batt / 11</text>
+
+        <line class="wire wire-signal" x1="520" y1="265" x2="850" y2="140" marker-end="url(#arrowhead-signal)"/>
+        <text class="lbl-w" x="640" y="200">ADC</text>
+
+        <text class="sub" x="20" y="305" style="font-style: italic; fill: var(--muted);">Note: power budget ≈ 600 mA continuous on 5 V rail. 3.3 V LDO caps at ~1 A. Don't add a second relay or a fan without re-budgeting.</text>
+      </svg>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- 3. STATE MACHINE                                                -->
+    <!-- ============================================================== -->
+    <div id="states" class="diagram-card">
+      <div class="head">
+        <h2>3 · State machine</h2>
+        <div class="actions">
+          <a href="https://github.com/mokahlo/wattplot/blob/master/docs/diagrams.html#states">Edit SVG</a>
+          <a href="control_law">Control law →</a>
+        </div>
+      </div>
+      <p class="caption">The controller has four states. <strong>Normal</strong> runs the PI loop. <strong>Monitoring</strong> waits 15 min to see if the wind passes. <strong>Folding</strong> drives to 0° until current-spike indicates endstop. <strong>Locked</strong> holds for 30 min before re-checking. Boot defaults to Folding (safe).</p>
+
+      <svg viewBox="0 0 760 380" xmlns="http://www.w3.org/2000/svg" aria-label="State machine">
+        <defs>
+          <marker id="arrowhead-sm" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L0,9 L9,4.5 z" fill="#6b6358"/>
+          </marker>
+        </defs>
+
+        <!-- States -->
+        <rect class="state" x="40" y="60" width="140" height="60" rx="6"/>
+        <text class="state-name" x="110" y="88">Normal</text>
+        <text class="sub" x="110" y="105" style="font-size: 9.5px;">PI loop on i_motor</text>
+
+        <rect class="state state-active" x="240" y="60" width="140" height="60" rx="6"/>
+        <text class="state-name" x="310" y="88">Monitoring</text>
+        <text class="sub" x="310" y="105" style="font-size: 9.5px;">15 min wind watch</text>
+
+        <rect class="state" x="440" y="60" width="140" height="60" rx="6"/>
+        <text class="state-name" x="510" y="88">Folding</text>
+        <text class="sub" x="510" y="105" style="font-size: 9.5px;">drive to 0° (home)</text>
+
+        <rect class="state" x="240" y="180" width="140" height="60" rx="6"/>
+        <text class="state-name" x="310" y="208">Locked</text>
+        <text class="sub" x="310" y="225" style="font-size: 9.5px;">30 min hold</text>
+
+        <rect class="state" x="540" y="180" width="160" height="60" rx="6"/>
+        <text class="state-name" x="620" y="208" style="font-size: 11px;">Fault (silent)</text>
+        <text class="sub" x="620" y="225" style="font-size: 9.5px;">nFAULT → stop</text>
+
+        <!-- Transitions -->
+        <path class="trans" d="M 180 90 L 240 90" marker-end="url(#arrowhead-sm)"/>
+        <text class="trans-lbl" x="190" y="80">i_motor &gt; 0.5 × safe</text>
+
+        <path class="trans" d="M 380 90 L 440 90" marker-end="url(#arrowhead-sm)"/>
+        <text class="trans-lbl" x="385" y="80">15 min &amp;&amp; still windy</text>
+
+        <path class="trans" d="M 510 120 L 510 180" marker-end="url(#arrowhead-sm)"/>
+        <text class="trans-lbl" x="520" y="160">at_zero</text>
+
+        <path class="trans" d="M 380 210 L 440 90" marker-end="url(#arrowhead-sm)"/>
+        <text class="trans-lbl" x="385" y="180">endstop hit</text>
+
+        <path class="trans" d="M 240 210 L 110 120" marker-end="url(#arrowhead-sm)"/>
+        <text class="trans-lbl" x="130" y="200">30 min, wind gone</text>
+
+        <path class="trans" d="M 110 120 L 240 90" marker-end="url(#arrowhead-sm)" stroke-dasharray="3 2"/>
+        <text class="trans-lbl" x="120" y="135">i_motor &gt; 0.5 × safe</text>
+
+        <!-- Hard fault (red) -->
+        <path stroke="#b06367" stroke-width="1.5" fill="none" marker-end="url(#arrowhead-sm)" d="M 110 60 L 110 30 L 620 30 L 620 180"/>
+        <text class="trans-lbl" x="350" y="22" style="fill: #b06367; font-weight: 600;">hard: i_motor &gt; safe + 0.3 → Folding (any state)</text>
+
+        <!-- Start at Folding -->
+        <path class="trans" d="M 510 60 L 510 30" marker-end="url(#arrowhead-sm)" stroke-dasharray="3 2"/>
+        <text class="trans-lbl" x="520" y="48" style="font-size: 9px; font-style: italic;">boot</text>
+
+        <text class="sub" x="20" y="340" style="font-style: italic; fill: var(--muted);">at_zero / at_max are set by the endpoint_detector interval (100 ms) which watches motor IPROPI for current-spike debounced over 200 ms.</text>
+      </svg>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- 4. ASSEMBLY SEQUENCE                                            -->
+    <!-- ============================================================== -->
+    <div id="assembly" class="diagram-card">
+      <div class="head">
+        <h2>4 · Assembly sequence (mini build)</h2>
+        <div class="actions">
+          <a href="https://github.com/mokahlo/wattplot/blob/master/docs/diagrams.html#assembly">Edit SVG</a>
+          <a href="build_guide_mini">Build guide →</a>
+        </div>
+      </div>
+      <p class="caption">Six-step build. Total: 3–4 hours, ~$193 in parts. The bed and panel are separate sub-assemblies; join them at step 5. Do all electrical work in step 6 with the battery DISCONNECTED and the panel covered with an opaque tarp.</p>
+
+      <svg viewBox="0 0 940 360" xmlns="http://www.w3.org/2000/svg" aria-label="Assembly sequence">
+        <defs>
+          <marker id="arrowhead-as" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L0,8 L8,4 z" fill="#6b6358"/>
+          </marker>
+        </defs>
+
+        <!-- Step 1 -->
+        <rect class="block" x="20" y="40" width="280" height="80" rx="6"/>
+        <text class="step-num" x="35" y="68">1</text>
+        <text class="step-title" x="55" y="65">Cut + assemble the bed</text>
+        <text class="step-sub" x="55" y="83">4 cedar 1×6×18" walls + base</text>
+        <text class="step-sub" x="55" y="98">2 cedar 2×2×12" corner posts (internal)</text>
+        <text class="step-sub" x="55" y="113">12 #8 × 1¼" exterior screws</text>
+
+        <!-- Step 2 -->
+        <rect class="block" x="20" y="160" width="280" height="80" rx="6"/>
+        <text class="step-num" x="35" y="188">2</text>
+        <text class="step-title" x="55" y="185">Mount hinges on south wall</text>
+        <text class="step-sub" x="55" y="203">2 brass hinges, 1.5" × 1.5"</text>
+        <text class="step-sub" x="55" y="218">centered, 4" from each end</text>
+        <text class="step-sub" x="55" y="233">screws: 4 × #6 × ½" brass</text>
+
+        <!-- Step 3 -->
+        <rect class="block" x="20" y="280" width="280" height="60" rx="6"/>
+        <text class="step-num" x="35" y="306">3</text>
+        <text class="step-title" x="55" y="303">Attach panel sub-assembly</text>
+        <text class="step-sub" x="55" y="320">bolt to hinge knuckles · orient panel north</text>
+
+        <!-- Step 4 -->
+        <rect class="block" x="340" y="40" width="280" height="80" rx="6"/>
+        <text class="step-num" x="355" y="68">4</text>
+        <text class="step-title" x="375" y="65">Mount the kickstand actuator</text>
+        <text class="step-sub" x="375" y="83">12 V linear, 4" stroke, 200 lb</text>
+        <text class="step-sub" x="375" y="98">clevis pin each end · bed + frame</text>
+        <text class="step-sub" x="375" y="113">panel range: 0–35° (structural max)</text>
+
+        <!-- Step 5 -->
+        <rect class="block" x="340" y="160" width="280" height="80" rx="6"/>
+        <text class="step-num" x="355" y="188">5</text>
+        <text class="step-title" x="375" y="185">Breadboard the controller</text>
+        <text class="step-sub" x="375" y="203">ESP32-S3 + 2× DRV8871 + sensors</text>
+        <text class="step-sub" x="375" y="218">USB-C flash · verify pin map.html</text>
+        <text class="step-sub" x="375" y="233">test bench: bench PSU, not battery</text>
+
+        <!-- Step 6 (safety callout) -->
+        <rect class="block" x="340" y="280" width="280" height="60" rx="6" style="stroke: #e8a5a8; stroke-width: 2;"/>
+        <text class="step-num" x="355" y="306" style="fill: #e8a5a8;">6</text>
+        <text class="step-title" x="375" y="303" style="fill: #e8a5a8;">Connect power (with panel covered)</text>
+        <text class="step-sub" x="375" y="320">battery last · MPPT first · verify V on every rail</text>
+
+        <!-- Step 7 -->
+        <rect class="block" x="660" y="40" width="260" height="80" rx="6"/>
+        <text class="step-num" x="675" y="68">7</text>
+        <text class="step-title" x="695" y="65">OTA + Home Assistant</text>
+        <text class="step-sub" x="695" y="83">flash via WiFi (esphome)</text>
+        <text class="step-sub" x="695" y="98">add to HA · api encryption key</text>
+        <text class="step-sub" x="695" y="113">tune PI constants · watch logs</text>
+
+        <!-- Step 8 -->
+        <rect class="block" x="660" y="160" width="260" height="80" rx="6"/>
+        <text class="step-num" x="675" y="188">8</text>
+        <text class="step-title" x="695" y="185">Calibrate endstops</text>
+        <text class="step-sub" x="695" y="203">run Folding state · watch i_motor</text>
+        <text class="step-sub" x="695" y="218">tune endstop_current_threshold</text>
+        <text class="step-sub" x="695" y="233">default 0.80 A — verify in field</text>
+
+        <!-- Step 9 -->
+        <rect class="block" x="660" y="280" width="260" height="60" rx="6"/>
+        <text class="step-num" x="675" y="306">9</text>
+        <text class="step-title" x="695" y="303">Fill bed, plant, test</text>
+        <text class="step-sub" x="695" y="320">soil + probes · 24h soak · first irrigation cycle</text>
+
+        <!-- Arrows -->
+        <path class="step-arrow" d="M 300 80 L 340 80" marker-end="url(#arrowhead-as)"/>
+        <path class="step-arrow" d="M 620 80 L 660 80" marker-end="url(#arrowhead-as)"/>
+        <path class="step-arrow" d="M 160 160 L 160 280" marker-end="url(#arrowhead-as)"/>
+        <path class="step-arrow" d="M 300 200 L 340 200" marker-end="url(#arrowhead-as)"/>
+        <path class="step-arrow" d="M 620 200 L 660 200" marker-end="url(#arrowhead-as)"/>
+        <path class="step-arrow" d="M 480 280 L 480 240 L 480 200" marker-end="url(#arrowhead-as)"/>
+        <path class="step-arrow" d="M 790 280 L 790 240" marker-end="url(#arrowhead-as)"/>
+      </svg>
+    </div>
+
+    <p style="color: var(--muted); font-size: 13px; text-align: center; margin-top: 32px;">
+      All four diagrams are SVG, hand-editable. <a href="https://github.com/mokahlo/wattplot/edit/master/docs/diagrams.html">Propose a change on GitHub</a> or open an issue.
+    </p>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="row">
+      <span>Wattplot · open-source hardware &amp; software · MIT license</span>
+      <span>·</span>
+      <a href="https://github.com/mokahlo/wattplot">github.com/mokahlo/wattplot</a>
+      <span>·</span>
+      <a href="disclaimers.html">Disclaimers</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

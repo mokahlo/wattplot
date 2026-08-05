@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" role="img" aria-label="Wattplot">
+  <title>Wattplot</title>
+  <rect width="180" height="180" rx="34" fill="#0d1117"/>
+  <circle cx="135" cy="40" r="15.5" fill="#ff9a5e"/>
+  <g stroke="#ff9a5e" stroke-width="3.6" stroke-linecap="round">
+    <line x1="135" y1="9"  x2="135" y2="19"/>
+    <line x1="135" y1="61" x2="135" y2="71"/>
+    <line x1="104" y1="40" x2="114" y2="40"/>
+    <line x1="156" y1="40" x2="166" y2="40"/>
+    <line x1="114" y1="19"  x2="121" y2="26"/>
+    <line x1="149" y1="54"  x2="156" y2="61"/>
+    <line x1="156" y1="19"  x2="149" y2="26"/>
+    <line x1="114" y1="61"  x2="121" y2="54"/>
+  </g>
+  <rect x="22" y="62" width="118" height="73" rx="4" fill="#161b22" stroke="#e6e3dc" stroke-width="3.6"/>
+  <line x1="61" y1="62" x2="61" y2="135" stroke="#e6e3dc" stroke-width="2.4"/>
+  <line x1="101" y1="62" x2="101" y2="135" stroke="#e6e3dc" stroke-width="2.4"/>
+  <line x1="22" y1="98" x2="140" y2="98" stroke="#e6e3dc" stroke-width="2.4"/>
+  <circle cx="22" cy="73" r="3.8" fill="#a8a59c"/>
+  <circle cx="22" cy="124" r="3.8" fill="#a8a59c"/>
+  <path d="M 11 141 L 169 141 L 152 168 L 28 168 Z" fill="#2f6f5e"/>
+</svg>

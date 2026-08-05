@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -6,6 +6,9 @@
 <title>Wattplot — Gallery</title>
 <meta name="description" content="Concept renders, simulations, and visualizations of the Wattplot solar canopy planter. Full-size and mini builds, sun simulator, wind load, electronics.">
 <link rel="canonical" href="https://mokahlo.github.io/wattplot/gallery.html">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -97,6 +100,8 @@
     display: flex; align-items: center; justify-content: center;
   }
   .tile .frame img { width: 100%; height: 100%; object-fit: contain; }
+  .tile .frame.dark { background: #0d1117; }
+  .tile .frame.dark svg { width: 100%; height: 100%; }
   .tile .body { padding: 14px 16px 16px; flex: 1; }
   .tile h3 { font-size: 14.5px; font-weight: 600; margin: 0 0 4px; color: var(--ink); }
   .tile p { font-size: 12.5px; color: var(--ink-2); margin: 0; line-height: 1.45; }
@@ -124,13 +129,17 @@
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
   }
+  footer { border-top: 1px solid var(--border); padding: 28px 0; color: var(--muted); font-size: 13px; margin-top: 40px; }
+  footer .row { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+  footer a { color: var(--ink-2); }
+  footer a:hover { color: var(--accent); }
 </style>
 </head>
 <body>
 
 <header class="topnav">
   <div class="topnav-inner">
-    <a href="./" class="brand">Wattplot</a>
+    <a href="./" class="brand"><img src="favicon.svg" alt="">Wattplot</a>
     <nav>
       <div class="dropdown">
         <a class="has-caret">View</a>
@@ -138,6 +147,7 @@
           <a href="3d.html">3D model</a>
           <a href="gallery.html" class="active">Gallery</a>
           <a href="pinmap.html">Pin map</a>
+          <a href="diagrams.html">Diagrams</a>
         </div>
       </div>
       <div class="dropdown">
@@ -179,6 +189,12 @@
           <a href="demo_script">Demo script</a>
           <a href="sim.html">Simulator</a>
           <a href="booth/index.html">3D booth viewer</a>
+        </div>
+      </div>
+      <div class="dropdown">
+        <a class="has-caret">About</a>
+        <div class="menu">
+          <a href="disclaimers.html">Disclaimers &amp; license</a>
         </div>
       </div>
     </nav>
@@ -424,6 +440,179 @@
 
     </div>
 
+    <h2>Diagrams <span class="meta">4 system diagrams</span></h2>
+    <p style="color: var(--muted); font-size: 13px; margin: 0 0 14px;">Sophisticated SVG diagrams — the system block, power flow, firmware state machine, and assembly sequence. Click any preview for the full annotated version on the <a href="diagrams.html">Diagrams page</a>.</p>
+    <div class="grid grid-2">
+
+      <a class="tile" href="diagrams.html#block">
+        <div class="frame dark">
+          <svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="System block diagram preview">
+            <rect width="200" height="150" fill="#0d1117"/>
+            <!-- Panel -->
+            <rect x="14" y="22" width="38" height="22" rx="2" fill="#161b22" stroke="#f0c270" stroke-width="1.2"/>
+            <text x="33" y="36" font-family="JetBrains Mono, monospace" font-size="7" fill="#f0c270" text-anchor="middle">PANEL</text>
+            <!-- MPPT -->
+            <rect x="80" y="22" width="40" height="22" rx="2" fill="#161b22" stroke="#ff9a5e" stroke-width="1.2"/>
+            <text x="100" y="36" font-family="JetBrains Mono, monospace" font-size="7" fill="#ff9a5e" text-anchor="middle">MPPT</text>
+            <!-- Battery -->
+            <rect x="148" y="22" width="38" height="22" rx="2" fill="#161b22" stroke="#f0c270" stroke-width="1.2"/>
+            <text x="167" y="36" font-family="JetBrains Mono, monospace" font-size="7" fill="#f0c270" text-anchor="middle">BATT</text>
+            <!-- MCU -->
+            <rect x="80" y="74" width="40" height="22" rx="2" fill="#161b22" stroke="#e6e3dc" stroke-width="1.2"/>
+            <text x="100" y="88" font-family="JetBrains Mono, monospace" font-size="7" fill="#e6e3dc" text-anchor="middle">MCU</text>
+            <!-- Motor -->
+            <rect x="14" y="74" width="38" height="22" rx="2" fill="#161b22" stroke="#ff9a5e" stroke-width="1.2"/>
+            <text x="33" y="88" font-family="JetBrains Mono, monospace" font-size="7" fill="#ff9a5e" text-anchor="middle">MOTOR</text>
+            <!-- Solenoid -->
+            <rect x="148" y="74" width="38" height="22" rx="2" fill="#161b22" stroke="#6cc8a3" stroke-width="1.2"/>
+            <text x="167" y="88" font-family="JetBrains Mono, monospace" font-size="7" fill="#6cc8a3" text-anchor="middle">SOL</text>
+            <!-- Wires -->
+            <line x1="52" y1="33" x2="80" y2="33" stroke="#f0c270" stroke-width="1"/>
+            <line x1="120" y1="33" x2="148" y2="33" stroke="#f0c270" stroke-width="1"/>
+            <line x1="52" y1="85" x2="80" y2="85" stroke="#ff9a5e" stroke-width="1"/>
+            <line x1="120" y1="85" x2="148" y2="85" stroke="#6cc8a3" stroke-width="1"/>
+            <line x1="100" y1="44" x2="100" y2="74" stroke="#e6e3dc" stroke-width="1"/>
+            <line x1="167" y1="44" x2="167" y2="74" stroke="#6cc8a3" stroke-width="1"/>
+            <!-- Sensors -->
+            <circle cx="33" cy="124" r="3" fill="#5ab0c9"/>
+            <text x="33" y="138" font-family="JetBrains Mono, monospace" font-size="6" fill="#5ab0c9" text-anchor="middle">SENS</text>
+            <line x1="33" y1="121" x2="80" y2="96" stroke="#5ab0c9" stroke-width="0.8"/>
+          </svg>
+        </div>
+        <div class="body">
+          <h3>System block diagram</h3>
+          <p>Panel, MPPT, battery, MCU, motor, solenoid, sensors — color-coded wires. The whole controller on one page.</p>
+          <div class="tag">#block</div>
+        </div>
+      </a>
+
+      <a class="tile" href="diagrams.html#power">
+        <div class="frame dark">
+          <svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Power flow diagram preview">
+            <rect width="200" height="150" fill="#0d1117"/>
+            <!-- Battery on left -->
+            <rect x="14" y="56" width="30" height="38" rx="2" fill="#161b22" stroke="#f0c270" stroke-width="1.4"/>
+            <rect x="8" y="64" width="6" height="6" fill="#f0c270"/>
+            <rect x="8" y="80" width="6" height="6" fill="#f0c270"/>
+            <text x="29" y="79" font-family="JetBrains Mono, monospace" font-size="7" fill="#f0c270" text-anchor="middle">BATT</text>
+            <!-- MPPT in middle -->
+            <rect x="80" y="56" width="40" height="38" rx="2" fill="#161b22" stroke="#ff9a5e" stroke-width="1.4"/>
+            <text x="100" y="79" font-family="JetBrains Mono, monospace" font-size="7" fill="#ff9a5e" text-anchor="middle">MPPT</text>
+            <!-- Two rails on right -->
+            <rect x="148" y="42" width="40" height="14" rx="2" fill="#161b22" stroke="#f0c270" stroke-width="1"/>
+            <text x="168" y="52" font-family="JetBrains Mono, monospace" font-size="6" fill="#f0c270" text-anchor="middle">12V</text>
+            <rect x="148" y="62" width="40" height="14" rx="2" fill="#161b22" stroke="#5ab0c9" stroke-width="1"/>
+            <text x="168" y="72" font-family="JetBrains Mono, monospace" font-size="6" fill="#5ab0c9" text-anchor="middle">5V</text>
+            <rect x="148" y="82" width="40" height="14" rx="2" fill="#161b22" stroke="#a78bdb" stroke-width="1"/>
+            <text x="168" y="92" font-family="JetBrains Mono, monospace" font-size="6" fill="#a78bdb" text-anchor="middle">3.3V</text>
+            <!-- Arrows -->
+            <line x1="44" y1="75" x2="80" y2="75" stroke="#f0c270" stroke-width="1.2" marker-end="url(#arr)"/>
+            <line x1="120" y1="75" x2="148" y2="49" stroke="#f0c270" stroke-width="1" marker-end="url(#arr)"/>
+            <line x1="120" y1="75" x2="148" y2="69" stroke="#5ab0c9" stroke-width="1" marker-end="url(#arr)"/>
+            <line x1="120" y1="75" x2="148" y2="89" stroke="#a78bdb" stroke-width="1" marker-end="url(#arr)"/>
+            <defs>
+              <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#a8a59c"/>
+              </marker>
+            </defs>
+            <text x="100" y="130" font-family="JetBrains Mono, monospace" font-size="6" fill="#6e6c66" text-anchor="middle">power distribution</text>
+          </svg>
+        </div>
+        <div class="body">
+          <h3>Power flow</h3>
+          <p>Battery → MPPT → 12 V / 5 V / 3.3 V rails. What each subsystem actually sees on its supply pin.</p>
+          <div class="tag">#power</div>
+        </div>
+      </a>
+
+      <a class="tile" href="diagrams.html#states">
+        <div class="frame dark">
+          <svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="State machine diagram preview">
+            <rect width="200" height="150" fill="#0d1117"/>
+            <!-- 4 states -->
+            <circle cx="50" cy="50" r="18" fill="#161b22" stroke="#6cc8a3" stroke-width="1.4"/>
+            <text x="50" y="53" font-family="JetBrains Mono, monospace" font-size="7" fill="#6cc8a3" text-anchor="middle">NORM</text>
+            <circle cx="150" cy="50" r="18" fill="#161b22" stroke="#5ab0c9" stroke-width="1.4"/>
+            <text x="150" y="53" font-family="JetBrains Mono, monospace" font-size="7" fill="#5ab0c9" text-anchor="middle">MON</text>
+            <circle cx="150" cy="100" r="18" fill="#161b22" stroke="#ff9a5e" stroke-width="1.4"/>
+            <text x="150" y="103" font-family="JetBrains Mono, monospace" font-size="7" fill="#ff9a5e" text-anchor="middle">FOLD</text>
+            <circle cx="50" cy="100" r="18" fill="#161b22" stroke="#e8a5a8" stroke-width="1.4"/>
+            <text x="50" y="103" font-family="JetBrains Mono, monospace" font-size="7" fill="#e8a5a8" text-anchor="middle">LOCK</text>
+            <!-- Transitions -->
+            <line x1="68" y1="50" x2="132" y2="50" stroke="#a8a59c" stroke-width="1" marker-end="url(#arr2)"/>
+            <line x1="150" y1="68" x2="150" y2="82" stroke="#a8a59c" stroke-width="1" marker-end="url(#arr2)"/>
+            <line x1="132" y1="100" x2="68" y2="100" stroke="#a8a59c" stroke-width="1" marker-end="url(#arr2)"/>
+            <line x1="50" y1="82" x2="50" y2="68" stroke="#a8a59c" stroke-width="1" marker-end="url(#arr2)"/>
+            <!-- Diagonal (NORM -> FOLD) -->
+            <path d="M 62 62 Q 100 90 132 88" fill="none" stroke="#6e6c66" stroke-width="0.8" stroke-dasharray="3 2" marker-end="url(#arr2)"/>
+            <path d="M 138 62 Q 100 30 68 38" fill="none" stroke="#6e6c66" stroke-width="0.8" stroke-dasharray="3 2" marker-end="url(#arr2)"/>
+            <defs>
+              <marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#a8a59c"/>
+              </marker>
+            </defs>
+          </svg>
+        </div>
+        <div class="body">
+          <h3>Firmware state machine</h3>
+          <p>Normal, Monitoring, Folding, Locked — every transition, every trigger, every guard. The control loop in one picture.</p>
+          <div class="tag">#state</div>
+        </div>
+      </a>
+
+      <a class="tile" href="diagrams.html#assembly">
+        <div class="frame dark">
+          <svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Assembly sequence diagram preview">
+            <rect width="200" height="150" fill="#0d1117"/>
+            <!-- 9 steps in a 3x3 grid -->
+            <g font-family="JetBrains Mono, monospace" font-size="9" fill="#0d1117" text-anchor="middle">
+              <rect x="18" y="22" width="36" height="28" rx="3" fill="#ff9a5e"/>
+              <text x="36" y="40">1</text>
+              <rect x="82" y="22" width="36" height="28" rx="3" fill="#ff9a5e"/>
+              <text x="100" y="40">2</text>
+              <rect x="146" y="22" width="36" height="28" rx="3" fill="#ff9a5e"/>
+              <text x="164" y="40">3</text>
+              <rect x="18" y="61" width="36" height="28" rx="3" fill="#ff9a5e"/>
+              <text x="36" y="79">4</text>
+              <rect x="82" y="61" width="36" height="28" rx="3" fill="#ff9a5e"/>
+              <text x="100" y="79">5</text>
+              <rect x="146" y="61" width="36" height="28" rx="3" fill="#ff9a5e"/>
+              <text x="164" y="79">6</text>
+              <rect x="18" y="100" width="36" height="28" rx="3" fill="#6cc8a3"/>
+              <text x="36" y="118">7</text>
+              <rect x="82" y="100" width="36" height="28" rx="3" fill="#6cc8a3"/>
+              <text x="100" y="118">8</text>
+              <rect x="146" y="100" width="36" height="28" rx="3" fill="#6cc8a3"/>
+              <text x="164" y="118">9</text>
+            </g>
+            <!-- Arrows between steps -->
+            <g stroke="#a8a59c" stroke-width="0.8" fill="none">
+              <line x1="54" y1="36" x2="82" y2="36" marker-end="url(#arr3)"/>
+              <line x1="118" y1="36" x2="146" y2="36" marker-end="url(#arr3)"/>
+              <line x1="164" y1="50" x2="164" y2="61" marker-end="url(#arr3)"/>
+              <line x1="146" y1="75" x2="118" y2="75" marker-end="url(#arr3)"/>
+              <line x1="82" y1="75" x2="54" y2="75" marker-end="url(#arr3)"/>
+              <line x1="36" y1="89" x2="36" y2="100" marker-end="url(#arr3)"/>
+              <line x1="54" y1="114" x2="82" y2="114" marker-end="url(#arr3)"/>
+              <line x1="118" y1="114" x2="146" y2="114" marker-end="url(#arr3)"/>
+            </g>
+            <defs>
+              <marker id="arr3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#a8a59c"/>
+              </marker>
+            </defs>
+            <text x="100" y="143" font-family="JetBrains Mono, monospace" font-size="6" fill="#6e6c66" text-anchor="middle">1-6 frame · 7-9 wiring</text>
+          </svg>
+        </div>
+        <div class="body">
+          <h3>Assembly sequence</h3>
+          <p>Nine steps from lumber to live system. Frame build, hinge alignment, panel mount, wiring, MPPT, controller, test.</p>
+          <div class="tag">#assembly</div>
+        </div>
+      </a>
+
+    </div>
+
     <div class="empty">
       <h2>Add a concept</h2>
       <p>Drop a PNG/JPG into <code>docs/gallery/&lt;category&gt;/</code> and add a card to this page. The "Add concepts ↗" link in the top nav goes straight to the right GitHub folder.</p>
@@ -455,6 +644,17 @@
   document.getElementById('lb').addEventListener('click', e => { if (e.target.id === 'lb') closeLb(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLb(); });
 </script>
+<footer>
+  <div class="wrap">
+    <div class="row">
+      <span>Wattplot &middot; open-source hardware &amp; software &middot; MIT license</span>
+      <span>&middot;</span>
+      <a href="https://github.com/mokahlo/wattplot">github.com/mokahlo/wattplot</a>
+      <span>&middot;</span>
+      <a href="disclaimers.html">Disclaimers</a>
+    </div>
+  </div>
+</footer>
 
 </body>
 </html>

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Wattplot">
+  <title>Wattplot</title>
+  <!-- Background, rounded -->
+  <rect width="64" height="64" rx="12" fill="#0d1117"/>
+
+  <!-- Sun (top-right) -->
+  <circle cx="48" cy="14" r="5.5" fill="#ff9a5e"/>
+  <g stroke="#ff9a5e" stroke-width="1.4" stroke-linecap="round">
+    <line x1="48" y1="3"  x2="48" y2="6.5"/>
+    <line x1="48" y1="21.5" x2="48" y2="25"/>
+    <line x1="37" y1="14"  x2="40.5" y2="14"/>
+    <line x1="55.5" y1="14" x2="59" y2="14"/>
+    <line x1="40.5" y1="6.5"  x2="43"  y2="9"/>
+    <line x1="53"   y1="19"   x2="55.5" y2="21.5"/>
+    <line x1="55.5" y1="6.5"  x2="53"   y2="9"/>
+    <line x1="40.5" y1="21.5" x2="43"   y2="19"/>
+  </g>
+
+  <!-- Solar panel (centered) -->
+  <g>
+    <rect x="8" y="22" width="42" height="26" rx="1.5" fill="#161b22" stroke="#e6e3dc" stroke-width="1.4"/>
+    <!-- Cell grid: 3 cols x 2 rows -->
+    <line x1="22" y1="22"   x2="22" y2="48" stroke="#e6e3dc" stroke-width="0.9"/>
+    <line x1="36" y1="22"   x2="36" y2="48" stroke="#e6e3dc" stroke-width="0.9"/>
+    <line x1="8"  y1="35"   x2="50" y2="35" stroke="#e6e3dc" stroke-width="0.9"/>
+    <!-- Subtle shine -->
+    <line x1="13" y1="26"   x2="18" y2="26"   stroke="#3a414e" stroke-width="1.2" stroke-linecap="round"/>
+    <line x1="27" y1="40"   x2="32" y2="40"   stroke="#3a414e" stroke-width="1.2" stroke-linecap="round"/>
+  </g>
+
+  <!-- Hinge dots (left side) -->
+  <circle cx="8" cy="26" r="1.4" fill="#a8a59c"/>
+  <circle cx="8" cy="44" r="1.4" fill="#a8a59c"/>
+
+  <!-- Planter (trapezoid) -->
+  <path d="M 4 50 L 60 50 L 54 60 L 10 60 Z" fill="#2f6f5e"/>
+  <!-- Soil line -->
+  <line x1="9"  y1="53" x2="55" y2="53" stroke="#0d1117" stroke-width="0.8" opacity="0.4"/>
+</svg>
