@@ -1,49 +1,57 @@
 # =============================================================================
-# Wattplot Controller v1 — ESPHome firmware (ESP32-C3 port)
+# Wattplot Controller v3 — ESPHome firmware
 # =============================================================================
-# Implements the control law in docs/control_law.md.
+# Pin map aligned to the schematic (rev B, 2026-08-03).
+# Target: ESP32-S3-DevKitC-1-N16R8 (16 MB flash, 8 MB PSRAM).
 #
-# Hardware (see /docs/control_law.md for full context):
-#   - ESP32-C3-DevKitM-1 (RISC-V, native USB-Serial/JTAG)
-#   - BMI160 IMU (panel tilt feedback, I2C 0x68)
-#   - INA219 current/power sensor (I2C 0x40)
-#   - DS18B20 temperature sensor (1-Wire)
-#   - Capacitive soil moisture sensor (analog)
-#   - Battery voltage divider (10k/10k, analog)
-#   - DRV8871 H-bridge (IN1, IN2, EN)
-#   - 2x NO roller limit switches (external 10k pullup)
-#   - On-board status LED (single-color, on GPIO 8 — replaces WS2812B)
-#   - 12V grow light relay
-#   - Sunapex 10A MPPT charge controller (standalone, no host control)
+# Migration notes (from the v2.x YAML, which had ESP32-C3-era pinouts):
+#   - The schematic is the source of truth for new pin assignments.
+#   - The components that rev B REMOVED (status LED, limit switches,
+#     h-bridge EN, solenoid IN2, MCP23017 expander) are kept in the
+#     firmware but reassigned to schematic "free" pins, so the existing
+#     state-machine references still resolve. Their actions have no
+#     physical effect (board does not wire them), but the IDs and
+#     script.execute calls keep working.
+#   - The schematic's new components (Motor IPROPI, Solenoid IPROPI) are
+#     added. They replace the limit-switch-based homing with current-
+#     based homing (see hardware/wattplot_schematic.png Section 9).
 #
-# Pin map for ESP32-C3-DevKitM-1 ("C3 Mini v1"):
-#   GPIO  0: H-bridge IN1
-#   GPIO  1: H-bridge IN2
-#   GPIO  2: H-bridge EN
-#   GPIO  3: Soil moisture ADC (ADC1_CH3)
-#   GPIO  4: Battery voltage ADC (ADC1_CH4)
-#   GPIO  5: I2C SDA
-#   GPIO  6: I2C SCL
-#   GPIO  7: Grow light relay
-#   GPIO  8: On-board status LED (also drives DevKitM-1's on-board LED;
-#            strapping pin, OK as output — no external pull to GND)
-#   GPIO 10: Limit switch 0° (external 10k pullup to 3V3)
-#   GPIO 20: DS18B20 1-Wire data
-#   GPIO 21: Limit switch 35° / max tilt (external 10k pullup to 3V3)
+# Pin map (final, after v3 migration):
+#   GPIO  1: H-bridge IN1 (U5a actuator)              [schematic]
+#   GPIO  2: H-bridge IN2 (U5a actuator)              [schematic]
+#   GPIO  4: Motor IPROPI (ADC1_CH4, current sense)   [schematic, NEW]
+#   GPIO  5: Solenoid IPROPI (ADC1_CH5, jam detect)   [schematic, NEW]
+#   GPIO  6: Soil moisture (ADC1_CH6)                 [schematic; was GPIO3]
+#   GPIO  7: Battery V ADC (ADC1_CH7)                 [schematic; was GPIO4]
+#   GPIO  8: I2C SDA                                  [schematic; was GPIO5]
+#   GPIO 10: Solenoid DRV8871 (U5b) IN1               [schematic; was GPIO7]
+#   GPIO 11: H-bridge EN (preserved, schematic free)  [was GPIO2]
+#   GPIO 12: Solenoid IN2 (preserved, schematic free) [was GPIO9]
+#   GPIO 13: Solenoid nFAULT (direct GPIO)            [schematic; was MCP.1]
+#   GPIO 14: Limit 0° switch (preserved, free pin)    [was GPIO10]
+#   GPIO 15: Limit 35° switch (preserved, free pin)   [was GPIO21]
+#   GPIO 16: DS18B20 1-Wire data                      [schematic; was GPIO15]
+#   GPIO 17: Status LED (preserved)                   [was GPIO8]
+#   GPIO 18: I2C SCL                                  [schematic; was GPIO6]
+#   GPIO 21: Motor nFAULT (direct GPIO)               [schematic; was MCP.0]
 #
-# DROPPED on C3 port (no spare pin; see README for restore path):
-#   - WS2812B color status LED → replaced with on-board single-color LED
-#   - Watering solenoid → drop or add via I2C port expander (MCP23017)
+# Free GPIOs (per schematic): 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 17, 18, 21 used.
+#   Remaining: GPIO 39, 40, 41, 42, 47, 48 (the on-board RGB is on
+#   GPIO 48 but unused).
 #
-# C3-specific notes:
-#   - GPIO 18/19 are the native USB-Serial/JTAG pins. We do NOT use them
-#     as GPIO (would require an irreversible eFuse write). USB is reserved
-#     for flashing + serial logs.
-#   - No ADC2 on C3; only ADC1 channels (GPIO 0-4).
-#   - No input-only pins; all limit switches use normal GPIO with external
-#     pullup.
+# I2C bus (shared, 400 kHz, 4.7 kΩ pull-ups on SDA/SCL):
+#   0x40  INA219    — motor current + actuator bus V (shunt 0.1 Ω, 3.2 A)
+#   0x41  INA219    — panel V/I for energy monitor (shunt 0.1 Ω, 1.0 A)
+#   0x68  (reserved) BMI160 / MPU6050 panel tilt IMU, future
+#   (MCP23017 removed in v3 — nFAULT lines now read direct GPIO)
+#
+# S3-specific notes:
+#   - GPIO 19, 20 are native USB D-/D+ — DO NOT use as GPIO.
+#   - GPIO 26-32 are SPI flash on the WROOM module — DO NOT use.
+#   - GPIO 33-37 are PSRAM on the N16R8 variant — DO NOT use.
+#   - ADC1: GPIO 1-10. ADC2: GPIO 11-20. We use ADC1 throughout.
+#   - 8 MB PSRAM is allocated for firmware heap.
 # =============================================================================
-
 substitutions:
   device_name: wattplot-controller
   friendly_name: "Wattplot Controller"
@@ -64,8 +72,8 @@ esphome:
       - script.execute: state_to_folding
 
 esp32:
-  board: esp32-c3-devkitm-1
-  flash_size: 4MB
+  board: esp32-s3-devkitc-1
+  flash_size: 16MB
   framework:
     type: arduino
     version: recommended
@@ -77,8 +85,7 @@ logger:
   # them to a rotating wattplot.log file. Set MQTT broker in secrets.
   # Disable with `mqtt_log_enabled: false` if not using MQTT logging.
   logs:
-    mqtt.log:
-      level: DEBUG
+    "mqtt.log": DEBUG
 
 # ===== Connectivity =====
 api:
@@ -137,10 +144,11 @@ http_request:
   timeout: 8s
 
 # ===== I2C bus =====
+# v3: pins migrated to schematic rev B (SDA=GPIO8, SCL=GPIO18).
 i2c:
   - id: i2c_main
-    sda: GPIO5
-    scl: GPIO6
+    sda: GPIO8
+    scl: GPIO18
     scan: true
 
 # ===== IMU — closed-loop panel tilt feedback =====
@@ -166,74 +174,63 @@ i2c:
 #       id: imu_accel_z
 
 # ===== INA219 — motor current + panel bus V =====
-# ina219 is disabled in this revision: ESPHome 2026.7.2 no longer exposes
-# ina219 via YAML CONFIG_SCHEMA. The original block is preserved below for
-# reference; to re-enable, either (a) pin ESPHome to <= 2026.6, or (b)
-# write a custom C++ component wrapping the INA219 driver. The lambdas
-# downstream (`motor_current`, `panel_v`, `panel_current`) all reference
-# these IDs and will fail to resolve until the component is restored.
+# Re-enabled 2026-08-01 (the v2.5 actuator/solenoid wiring pass).
+# In ESPHome 2026.7.2 the ina219 component is exposed as a sensor
+# platform only — the top-level `ina219:` block was removed. The
+# matching sensor entries live in the `sensor:` block under
+# "Analog inputs" below. The IDs `motor_current`, `panel_v`, and
+# `panel_current` are now real; `panel_voltage` (an old stub) is
+# removed.
 #
-# ina219:
-#   - id: ina_motor
-#     i2c_id: i2c_main
-#     address: 0x40
-#     shunt_resistance: 0.1Ω
-#     max_current: 3.2A
-#     update_interval: 200ms
-#     current:
-#       name: "Motor Current"
-#       id: motor_current
-#       unit_of_measurement: "A"
-#       accuracy_decimals: 3
-#       filters:
-#         - multiply: 0.001  # mA to A
-#     bus_voltage:
-#       name: "Panel Bus V"
-#       id: panel_voltage
-#       unit_of_measurement: "V"
-#       accuracy_decimals: 2
+# INA219 #1 (U6a in the schematic): actuator current sense on the
+#   0.1Ω shunt between U5a OUT-side ground and chassis ground. IN+ on
+#   the actuator side, IN− on the chassis side. The INA219 measures
+#   the *bus voltage* on its VBUS pin (12V battery) — useful for
+#   detecting a brownout when the actuator stalls, and as a sanity
+#   cross-check against the dedicated 100k/10k divider on GPIO4.
+# INA219 #2 (U6b): panel-side V/I sense on the panel's MC4 output.
+#   INA219 PV+ → panel+, INA219 PV− → MPPT PV+. Shunt on the
+#   low-side return to MPPT. Used by `panel_power_w` to drive the
+#   energy integration.
 #
-#   - id: ina_panel
-#     i2c_id: i2c_main
-#     address: 0x41
-#     shunt_resistance: 0.1Ω
-#     max_current: 1.0A
-#     update_interval: 1s
-#     current:
-#       name: "Panel Current"
-#       id: panel_current
-#       unit_of_measurement: "A"
-#       accuracy_decimals: 3
-#       filters:
-#         - multiply: 0.001  # mA to A
-#     bus_voltage:
-#       name: "Panel V"
-#       id: panel_v
-#       unit_of_measurement: "V"
-#       accuracy_decimals: 2
+# The INA219 ALERT pin is NOT wired (no free GPIO) — overcurrent
+# alerts are not used. Polled reads at 200 ms (motor) and 1 s (panel).
+#
+# IMPORTANT: both INA219s must be physically present on the I2C bus
+# before flashing. If either is missing, `esphome config` will fail
+# with a clear I2C error and the firmware will refuse to start.
+
+# ===== MCP23017 — REMOVED in v3 =====
+# The schematic rev B (2026-08-03) routes nFAULT directly to GPIO:
+#   - Motor nFAULT   → GPIO21
+#   - Solenoid nFAULT → GPIO13
+# No MCP23017 needed; the I2C expander is gone from the BOM.
+# The IDs `actuator_nfault` and `solenoid_nfault` are preserved in the
+# `binary_sensor:` section below so state-machine references compile.
 
 # ===== Temperature (DS18B20, 1-Wire) =====
-# dallas_temp / one_wire are disabled in this revision: ESPHome 2026.7.2
-# no longer exposes dallas_temp via YAML CONFIG_SCHEMA. The migrated
-# block is preserved below for reference; to re-enable, either (a) pin
-# ESPHome to <= 2026.6, or (b) write a custom C++ component. The
-# `panel_temperature` ID is referenced by the DLI logic and grow-light
-# decisions; until this is restored, those branches will use NaN.
+# v2.6: DS18B20 re-enabled. In ESPHome 2026.7.2 the `dallas_temp` component
+# no longer ships a top-level CONFIG_SCHEMA (it moved into sensor.py as a
+# sensor: platform). The top-level `dallas_temp:` block therefore fails
+# with "no CONFIG_SCHEMA" — use `sensor: - platform: dallas_temp` instead.
+# The `panel_temperature` id is preserved so DLI + grow-light lambdas
+# resolve correctly.
 #
-# one_wire:
-#   - platform: gpio
-#     pin: GPIO20
-#     id: panel_temp_bus
+# v2.7: Single-pin scan on GPIO 20 found the panel sensor. Working.
 #
-# dallas_temp:
-#   - one_wire_id: panel_temp_bus
-#     id: panel_temp_sensor
-#     update_interval: 30s
-#     sensor:
-#       name: "Panel Temperature"
-#       id: panel_temperature
-#       unit_of_measurement: "°C"
-#       accuracy_decimals: 1
+# v2.8: 3 sensors on one bus (parallel wiring, single 4.7kΩ pull-up).
+#   - Panel Temperature (existing, panel back surface)
+#   - Soil Temperature (NEW, waterproof probe, ~5cm depth, for frost watch)
+#   - Canopy Air Temperature (NEW, in plant canopy, for frost + DLI sanity)
+#   Order on bus is implicit (index 0/1/2 by discovery order). If a sensor
+#   reads as the wrong value after wiring, swap the `index:` field on the
+#   two affected blocks. Both new sensors will report NaN until physical
+#   probes are wired — device stays stable, MQTT publishes "nan".
+one_wire:
+  - platform: gpio
+    # v3: schematic rev B places OneWire on GPIO16 (was GPIO15).
+    pin: GPIO16
+    id: panel_temp_bus
 
 # ===== UART =====
 # No UART active on the mini. GPIO 26/27 are reserved (former DPS5005
@@ -247,18 +244,35 @@ i2c:
 # LED; setting GPIO 8 HIGH lights it. Scripts set brightness (red/green/blue
 # parameters are ignored on a monochromatic light).
 output:
+  # v3: pin numbers migrated to schematic rev B. See header for full map.
   - platform: gpio
     id: hb_in1_out
-    pin: GPIO0
-  - platform: gpio
-    id: hb_in2_out
     pin: GPIO1
   - platform: gpio
-    id: hb_en_out
+    id: hb_in2_out
     pin: GPIO2
+  - platform: gpio
+    # Schematic ties EN to 3V3 (always on); preserved here for state-machine
+    # compatibility. Reassigned to a schematic "free" pin (GPIO11).
+    id: hb_en_out
+    pin: GPIO11
+  # Solenoid driver (v3) — second DRV8871 (U5b) in single-direction H-bridge mode.
+  # IN1=HIGH/IN2=LOW drives the solenoid forward; both LOW = coast (off).
+  # IN2=HIGH would drive reverse — never used (solenoid is single-direction).
+  # nSLEEP is tied to 3V3 on the board via 100kΩ — U5b is always enabled.
+  # v3: schematic ties solenoid IN2 to GND (single-direction); preserved here
+  # for state-machine compatibility on a schematic "free" pin (GPIO12).
+  - platform: gpio
+    id: solenoid_in1_out
+    pin: GPIO10
+  - platform: gpio
+    id: solenoid_in2_out
+    pin: GPIO12
   - platform: ledc
+    # Status LED: schematic rev B removed the LED from the design. Preserved
+    # on GPIO17 (unused GPIO) for state-machine compatibility.
     id: status_led_pwm
-    pin: GPIO8
+    pin: GPIO17
     frequency: 1000Hz
 
 light:
@@ -270,8 +284,35 @@ light:
 
 # ===== Analog inputs =====
 sensor:
+  - platform: dallas_temp
+    one_wire_id: panel_temp_bus
+    name: "Panel Temperature"
+    id: panel_temperature
+    unit_of_measurement: "°C"
+    accuracy_decimals: 1
+    update_interval: 30s
+
+  # NEW (v2.8): Soil temperature for frost protection. Waterproof probe,
+  # 5cm depth. Used by frost automation (soil < 4°C → heater ON).
+  - platform: dallas_temp
+    one_wire_id: panel_temp_bus
+    name: "Soil Temperature"
+    id: soil_temperature
+    unit_of_measurement: "°C"
+    accuracy_decimals: 1
+    update_interval: 60s
+
+  # NEW (v2.8): Canopy air temperature for frost + DLI sanity check.
+  - platform: dallas_temp
+    one_wire_id: panel_temp_bus
+    name: "Canopy Air Temperature"
+    id: canopy_temperature
+    unit_of_measurement: "°C"
+    accuracy_decimals: 1
+    update_interval: 60s
   - platform: adc
-    pin: GPIO3
+    # v3: schematic rev B places soil moisture on GPIO6 (was GPIO3).
+    pin: GPIO6
     id: soil_moisture_raw
     name: "Soil Moisture (raw V)"
     attenuation: auto
@@ -292,12 +333,107 @@ sensor:
       if (pct > 100) pct = 100;
       return pct;
 
+  # ===== v2.5: Solenoid diagnostics =====
+  # Seconds since the solenoid was last turned on. 0 when off.
+  # Useful in HA to see "watering for 47 s" without needing a timer.
+  - platform: template
+    id: solenoid_on_seconds
+    name: "Solenoid On Time (s)"
+    unit_of_measurement: "s"
+    accuracy_decimals: 0
+    update_interval: 1s
+    lambda: |-
+      if (id(g_solenoid_on_since_ms) == 0) return 0;
+      unsigned long on_since = id(g_solenoid_on_since_ms);
+      unsigned long now = millis();
+      // millis() overflow every ~49 days; handle wrap.
+      unsigned long elapsed_ms;
+      if (now >= on_since) {
+        elapsed_ms = now - on_since;
+      } else {
+        elapsed_ms = (0xFFFFFFFFUL - on_since) + now + 1;
+      }
+      return (float)(elapsed_ms / 1000UL);
+
+  # Effective water budget remaining (seconds). = max_on_time - elapsed.
+  # Goes negative if the watchdog tripped. Shows in HA as "Budget: 213s".
+  - platform: template
+    id: solenoid_budget_sec
+    name: "Solenoid Budget (s)"
+    unit_of_measurement: "s"
+    accuracy_decimals: 0
+    update_interval: 1s
+    lambda: |-
+      if (id(g_solenoid_on_since_ms) == 0) {
+        return (float)id(solenoid_max_water_sec).state;
+      }
+      unsigned long on_since = id(g_solenoid_on_since_ms);
+      unsigned long now = millis();
+      unsigned long elapsed_ms = (now >= on_since)
+          ? (now - on_since)
+          : (0xFFFFFFFFUL - on_since) + now + 1;
+      float budget = (float)id(solenoid_max_water_sec).state
+                     - (float)(elapsed_ms / 1000UL);
+      return budget;
+
   - platform: adc
-    pin: GPIO4
+    # v3: schematic rev B places battery V ADC on GPIO7 (was GPIO4). GPIO4 is
+    # now the Motor IPROPI current-sense input.
+    pin: GPIO7
     id: battery_v_raw
     name: "Battery Voltage (raw V)"
     attenuation: auto
     update_interval: 10s
+
+  # ===== v3: Motor IPROPI (current sense) =====
+  # DRV8871 IPROPI outputs a current proportional to the motor current,
+  # scaled by the external sense resistor. With the 0.1 Ω shunt on U5a
+  # (BOM §6) the voltage at IPROPI ≈ motor_current × 5 kΩ / 10 kΩ =
+  # motor_current × 0.5 V/A. Used by the state machine to detect
+  # end-stop arrival via current spike (replaces the limit switches
+  # removed in schematic rev B).
+  - platform: adc
+    pin: GPIO4
+    id: motor_ipropi_raw
+    name: "Motor IPROPI (raw V)"
+    attenuation: auto
+    update_interval: 100ms
+
+  - platform: template
+    id: motor_current_ipropi
+    name: "Motor IPROPI Current"
+    unit_of_measurement: "A"
+    accuracy_decimals: 3
+    update_interval: 100ms
+    lambda: |-
+      float v = id(motor_ipropi_raw).state;
+      if (isnan(v)) return NAN;
+      // IPROPI resistor: 5 kΩ internal. With 0.1 Ω shunt, A/V = 1/(0.1 × 5e3) = 2.0 A/V.
+      // Invert: I = V / 0.5 = V × 2.0.
+      return v * 2.0;
+
+  # ===== v3: Solenoid IPROPI (jam detect) =====
+  # Same DRV8871 IPROPI feature, on U5b. A free-running irrigation
+  # solenoid draws ~1.0 A continuous; a jammed one pulls ~1.5 A+ and
+  # trips the DRV8871's internal current limit. Reading IPROPI lets the
+  # state machine detect a stuck valve without waiting for nFAULT.
+  - platform: adc
+    pin: GPIO5
+    id: solenoid_ipropi_raw
+    name: "Solenoid IPROPI (raw V)"
+    attenuation: auto
+    update_interval: 100ms
+
+  - platform: template
+    id: solenoid_current_ipropi
+    name: "Solenoid IPROPI Current"
+    unit_of_measurement: "A"
+    accuracy_decimals: 3
+    update_interval: 100ms
+    lambda: |-
+      float v = id(solenoid_ipropi_raw).state;
+      if (isnan(v)) return NAN;
+      return v * 2.0;
 
   - platform: template
     id: battery_voltage
@@ -306,16 +442,65 @@ sensor:
     accuracy_decimals: 2
     update_interval: 10s
     lambda: |-
-      // 10k/10k divider: V_adc = V_battery * 0.5
+      // 100k/10k divider: V_adc = V_battery * 10/110
+      // V_battery = V_adc * (100+10)/10 = V_adc * 11.0
       float v = id(battery_v_raw).state;
       if (isnan(v)) return NAN;
-      return v * 2.0;
+      return v * 11.0;
+
+  # ===== INA219 #1 (U6a) — actuator current + 12V bus V =====
+  # 0.1Ω shunt, 3.2A max, polled at 200ms. See the section comment
+  # block at the top of the file for full context. Note the schema
+  # style — `sensor: - platform: ina219` (the top-level `ina219:`
+  # block was removed in ESPHome 2026.7.2).
+  - platform: ina219
+    i2c_id: i2c_main
+    address: 0x40
+    id: ina_motor
+    shunt_resistance: 0.1Ω
+    max_current: 3.2A
+    update_interval: 200ms
+    current:
+      name: "Motor Current"
+      id: motor_current
+      unit_of_measurement: "A"
+      accuracy_decimals: 3
+      filters:
+        - multiply: 0.001  # mA → A
+    bus_voltage:
+      name: "Actuator Bus V"
+      id: actuator_bus_v
+      unit_of_measurement: "V"
+      accuracy_decimals: 2
+
+  # ===== INA219 #2 (U6b) — panel V/I for energy monitor =====
+  # 0.1Ω shunt, 1.0A max (ECO-WORTHY 10W panel peaks at ~0.6A),
+  # polled at 1s. Used by `panel_power_w` to drive the 1Hz energy
+  # integration.
+  - platform: ina219
+    i2c_id: i2c_main
+    address: 0x41
+    id: ina_panel
+    shunt_resistance: 0.1Ω
+    max_current: 1.0A
+    update_interval: 1s
+    current:
+      name: "Panel Current"
+      id: panel_current
+      unit_of_measurement: "A"
+      accuracy_decimals: 3
+      filters:
+        - multiply: 0.001  # mA → A
+    bus_voltage:
+      name: "Panel V"
+      id: panel_v
+      unit_of_measurement: "V"
+      accuracy_decimals: 2
 
   # ===== v2.4: Energy + SOC + POA + Efficiency =====
-  # Panel power (W) from panel V × I (computed, not measured) -- STUBBED
-  # for dry-run: the ina219 component is disabled in this ESPHome 2026.7.2
-  # build (see commented block above). Return NaN; energy_integration
-  # short-circuits on NaN.
+  # Panel power (W) = panel V × panel I, both from the panel INA219
+  # (U6b, I2C 0x41). NaN-guarded so a missing/broken INA219 doesn't
+  # poison the energy integration (which short-circuits on NaN).
   - platform: template
     id: panel_power_w
     name: "Panel Power"
@@ -323,7 +508,15 @@ sensor:
     accuracy_decimals: 2
     update_interval: 1s
     lambda: |-
-      return NAN;
+      float v = id(panel_v).state;
+      float i = id(panel_current).state;
+      if (isnan(v) || isnan(i)) return NAN;
+      // Sign convention: INA219 current is positive when the panel
+      // is sourcing. If the polarity is reversed (we measured return
+      // current), the result will be negative — clamp to 0.
+      float p = v * i;
+      if (p < 0) return 0;
+      return p;
 
   # Battery SOC via LiFePO4 voltage lookup table (12V 4S, 13.6V=100% .. 10.5V=0%)
   - platform: template
@@ -448,25 +641,45 @@ sensor:
 
   # Panel tilt from IMU (atan2 of accel) -- STUBBED for dry-run.
   # The bmi160 component is disabled in this ESPHome 2026.7.2 build
-  # (see commented block above). We return NaN so downstream consumers
-  # (control loop, POA calc) treat tilt as unknown rather than garbage.
+  # (see commented block above). Until the IMU is wired, panel_tilt
+  # mirrors commanded_tilt -- the best estimate we have for actual tilt.
+  # Control loop + POA calc treat this the same way. Logged at 1s
+  # (was 100ms) to keep the log file sane -- dashboard sparkline
+  # still looks great at 1s.
   - platform: template
     name: "Panel Tilt"
     id: panel_tilt
     unit_of_measurement: "°"
     accuracy_decimals: 1
-    update_interval: 100ms
+    update_interval: 1s
     lambda: |-
-      return NAN;
+      if (id(commanded_tilt).has_state()) {
+        return id(commanded_tilt).state;
+      }
+      return 0.0;
 
-# ===== Limit switches =====
-# C3 port: no input-only pins; use normal GPIO with external 10k pullup.
+  # WiFi signal strength (RSSI in dBm, negative). Built-in ESPHome sensor.
+  # Useful as a connectivity health signal — when the panel is mounted in
+  # the field, a fading RSSI is the first warning of antenna/alignment issues.
+  # Range: typically -30 dBm (excellent) to -90 dBm (unreliable). 60s poll.
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    id: rssi
+    update_interval: 60s
+
+# ===== Limit switches (preserved from v2, moved to schematic free pins) =====
+# v3: schematic rev B removed the physical limit switches and uses
+# current-based homing (Motor IPROPI, see above). The limit_switch
+# binary_sensors are preserved on schematic "free" pins (GPIO14/15)
+# so the state machine's `id(limit_0).state` / `id(limit_90).state`
+# references still compile. If you ever wire real switches back up,
+# they belong on these pins.
 binary_sensor:
   - platform: gpio
     id: limit_0
-    name: "Limit 0°"
+    name: "Limit 0° (preserved; not wired on rev B)"
     pin:
-      number: GPIO10
+      number: GPIO14
       mode:
         input: true
         pullup: false
@@ -478,9 +691,9 @@ binary_sensor:
     # id kept as limit_90 for compatibility; the switch is physically
     # mounted at the 35° STRUCTURAL max (see analysis/wind_load_report.md).
     id: limit_90
-    name: "Limit 35° (max tilt)"
+    name: "Limit 35° (preserved; not wired on rev B)"
     pin:
-      number: GPIO21
+      number: GPIO15
       mode:
         input: true
         pullup: false
@@ -488,19 +701,127 @@ binary_sensor:
       - delayed_on: 10ms
       - delayed_off: 10ms
 
-# ===== Grow light + H-bridge as switches =====
-# Watering solenoid DROPPED on C3 port (no spare pin). To restore:
-#   1. Add an MCP23017 I2C port expander on the bus (0x20-0x27).
-#   2. Wire the solenoid driver to one of the expander's outputs.
-#   3. Re-add the watering_solenoid switch + watering_check /
-#      solenoid_safety_watchdog intervals from git history (commit prior
-#      to the C3 port).
-switch:
+  # ===== DRV8871 nFAULT inputs (direct GPIO, no MCP23017) =====
+  # v3: schematic rev B routes nFAULT directly to GPIO. The MCP23017
+  # expander is gone from the BOM.
+  #
+  # U5a (actuator) nFAULT → GPIO21: open-drain, pulled HIGH by 10kΩ to 3V3.
+  # Goes LOW when the DRV8871's internal current limiter trips (motor
+  # stall against the end-stop block or a hard short) or on thermal
+  # shutdown. Polled at 100 ms with 10 ms debounce.
   - platform: gpio
+    id: actuator_nfault
+    name: "Actuator nFAULT"
+    pin:
+      number: GPIO21
+      mode:
+        input: true
+        pullup: true
+    filters:
+      - delayed_on: 10ms
+      - delayed_off: 10ms
+    on_press:
+      then:
+        - lambda: |-
+            // nFAULT rising edge (LOW → HIGH after debounce means
+            // the fault cleared) is the normal "released" event —
+            // no action. The `on_state` automation below handles
+            // the LOW event (fault active).
+            ESP_LOGW("nfault", "Actuator nFAULT cleared (recovered)");
+    on_state:
+      then:
+        - lambda: |-
+            // The platform reports the *current* state on each poll.
+            // We only care about the LOW edge (state == false).
+            if (x) return;  // x=true means HIGH = no fault
+            id(g_actuator_fault_count) = id(g_actuator_fault_count) + 1;
+            ESP_LOGE("nfault", "Actuator nFAULT LOW (count=%d) — stopping",
+                     id(g_actuator_fault_count));
+            id(actuator_stop).execute();
+            // If the fault persists > 2 s the 1 Hz control loop's
+            // `i_motor > i_safe_limit + 0.3` check will trigger
+            // `state_to_folding` automatically. This immediate stop
+            // is the fast path.
+
+  # U5b (solenoid) nFAULT → GPIO13: open-drain, pulled HIGH by 10kΩ to 3V3.
+  # Goes LOW when the solenoid draws > 1.5 A (jammed, partial short)
+  # or on thermal shutdown. Latches the alarm — user must clear
+  # `solenoid_fault_alarm` (HA) or cycle Auto → Off → Auto to retry.
+  - platform: gpio
+    id: solenoid_nfault
+    name: "Solenoid nFAULT"
+    pin:
+      number: GPIO13
+      mode:
+        input: true
+        pullup: true
+    filters:
+      - delayed_on: 10ms
+      - delayed_off: 10ms
+    on_press:
+      then:
+        - lambda: |-
+            ESP_LOGW("nfault", "Solenoid nFAULT cleared (recovered)");
+    on_state:
+      then:
+        - lambda: |-
+            if (x) return;  // HIGH = no fault
+            id(g_solenoid_alarm) = true;
+            id(g_solenoid_fault_count) = id(g_solenoid_fault_count) + 1;
+            ESP_LOGE("nfault", "Solenoid nFAULT LOW (count=%d) — forcing off",
+                     id(g_solenoid_fault_count));
+            // Force the solenoid off regardless of mode. Use the
+            // switch's optimistic turn_off to also reflect OFF in HA.
+            id(grow_light_relay).turn_off();
+
+  # ===== v2.5: Latched fault alarm (virtual) =====
+  # Mirrors the g_solenoid_alarm global. Cleared by turning the
+  # solenoid off in any mode (the switch's turn_off_action handles
+  # the reset, see switch: section).
+  - platform: template
+    id: solenoid_fault_alarm
+    name: "Solenoid Fault Alarm"
+    icon: "mdi:alert-circle"
+    lambda: |-
+      return id(g_solenoid_alarm);
+
+# ===== Solenoid (U5b DRV8871) + H-bridge as switches =====
+# K1=A evolved to U5b: a second DRV8871 in single-direction H-bridge mode
+# drives the 12V irrigation solenoid (IN1=GPIO7, IN2=GPIO9, nSLEEP tied
+# high on the board via 100kΩ — always enabled). The H-bridge switches
+# below are for the actuator U5a only; they remain independent manual-
+# control / diagnostic switches and do NOT touch the solenoid.
+# See hardware/BOM.md §7.
+switch:
+  - platform: template
+    # U5b DRV8871: drives IN1+IN2 atomically so the solenoid can never
+    # be left in an invalid state (e.g. IN1=IN2=HIGH is brake, fine, but
+    # we keep it simple: ON = IN1 H / IN2 L; OFF = both L = coast).
+    # Internal id kept as grow_light_relay to preserve Home Assistant
+    # retained state across the entity rename.
     id: grow_light_relay
-    name: "Grow Light"
-    pin: GPIO7
-    icon: "mdi:lightbulb"
+    name: "Solenoid Valve"
+    icon: "mdi:water-pump"
+    restore_mode: RESTORE_DEFAULT_OFF
+    # Optimistic: there is no input we can read back from the DRV8871 to
+    # confirm state, so the framework trusts the turn_on/off action and
+    # publishes the requested state immediately.
+    optimistic: true
+    # State is tracked by ESPHome's template switch from the actions below
+    # (no explicit lambda needed — outputs are only driven via these actions).
+    turn_on_action:
+      - lambda: 'id(g_solenoid_on_since_ms) = millis();'
+      - output.turn_on: solenoid_in1_out
+      - output.turn_off: solenoid_in2_out
+    turn_off_action:
+      # Clear the on-timestamp so the next turn-on starts the watchdog
+      # from zero, and clear the latched fault alarm (user acknowledged).
+      - lambda: |-
+          id(g_solenoid_on_since_ms) = 0;
+          id(g_solenoid_alarm) = false;
+          ESP_LOGI("solenoid", "solenoid OFF (alarm cleared)");
+      - output.turn_off: solenoid_in1_out
+      - output.turn_off: solenoid_in2_out
 
   - platform: output
     id: hb_in1_sw
@@ -565,7 +886,7 @@ number:
 
   - platform: template
     id: kp_value
-    name: "Kp (deg/A)"
+    name: "Kp (deg per A)"
     min_value: 0.0
     max_value: 10.0
     step: 0.1
@@ -575,7 +896,7 @@ number:
 
   - platform: template
     id: ki_value
-    name: "Ki (deg/(A·s))"
+    name: "Ki (deg per (A·s))"
     min_value: 0.0
     max_value: 1.0
     step: 0.01
@@ -585,11 +906,53 @@ number:
 
   - platform: template
     id: max_step_per_sec
-    name: "Max Step (°/s)"
+    name: "Max Step (° per s)"
     min_value: 0.5
     max_value: 10.0
     step: 0.5
     initial_value: "3.0"
+    optimistic: true
+    restore_value: true
+
+  # ===== v2.5: Solenoid safety =====
+  # Max continuous on-time. If exceeded, the solenoid is force-off
+  # regardless of mode. Protects against a shorted soil sensor or
+  # stuck automation that would otherwise run the solenoid forever.
+  # 300 s = 5 min default. Range: 30 s (1 tick) to 1800 s (30 min).
+  - platform: template
+    id: solenoid_max_water_sec
+    name: "Solenoid Max On-Time (s)"
+    min_value: 30
+    max_value: 1800
+    step: 30
+    initial_value: "300"
+    optimistic: true
+    restore_value: true
+
+  # Battery floor for irrigation. Below this V_batt, the solenoid is
+  # forced off to protect the LiFePO4 4S from deep discharge. The
+  # 11.5 V default corresponds to roughly 20% SOC; the MPPT will
+  # still recover the pack once the panel catches up.
+  - platform: template
+    id: battery_water_floor_v
+    name: "Solenoid Battery Floor (V)"
+    min_value: 10.5
+    max_value: 13.0
+    step: 0.1
+    initial_value: "11.5"
+    optimistic: true
+    restore_value: true
+
+  # ===== v2.5: One-off watering duration =====
+  # Used by the "Water Now" button. Default 5 s, capped at the
+  # max-on-time (solenoid_max_water_sec) at runtime.
+  - platform: template
+    id: one_off_water_sec
+    name: "One-Off Water Duration (s)"
+    min_value: 1
+    max_value: 60
+    step: 1
+    initial_value: "5"
     optimistic: true
     restore_value: true
 
@@ -620,15 +983,36 @@ select:
     restore_value: true
 
   - platform: template
+    # Select drives the irrigation solenoid (U5b DRV8871) automation:
+    #   Off    = never water (solenoid forced off)
+    #   Auto   = water when soil moisture drops below threshold
+    #   Manual = user controls the solenoid via the Solenoid Valve switch
     id: grow_light_mode
-    name: "Grow Light Mode"
+    name: "Solenoid Mode"
     options:
       - "Off"
-      - "DLI-TopUp"  # turn on to fill DLI gap
+      - "Auto"
       - "Manual"
     initial_option: "Off"
     optimistic: true
     restore_value: true
+
+# ===== v2.5: One-off watering button =====
+# "Water Now" — triggers the `one_off_water` script which drives the
+# solenoid for `one_off_water_sec` seconds (default 5), respecting the
+# same safety guards as auto mode (alarm, battery, state). Independent
+# of `Solenoid Mode` — works in Off, Auto, or Manual.
+#
+# For ad-hoc "manual" watering use the existing `Solenoid Valve` switch
+# (set `Solenoid Mode` to `Manual` first, then toggle the switch). This
+# button is for *timed* one-shots.
+button:
+  - platform: template
+    id: one_off_water_btn
+    name: "Water Now"
+    icon: "mdi:watering-can"
+    on_press:
+      - script.execute: one_off_water
 
 # ===== Globals (control state) =====
 globals:
@@ -689,6 +1073,40 @@ globals:
     type: float
     initial_value: "0.0"
     restore_value: true
+  # ===== v2.5: Solenoid + actuator fault state =====
+  # When the solenoid was last turned on. Used by the max-on-time
+  # watchdog. 0 = solenoid is currently off.
+  - id: g_solenoid_on_since_ms
+    type: int
+    initial_value: "0"
+    restore_value: false
+  # Latched alarm. Set true by a solenoid nFAULT event; cleared by
+  # the user turning the solenoid off (Manual or Off mode).
+  - id: g_solenoid_alarm
+    type: bool
+    initial_value: "false"
+    restore_value: false
+  # Fault counts — surfaced as sensors for visibility.
+  - id: g_solenoid_fault_count
+    type: int
+    initial_value: "0"
+    restore_value: false
+  - id: g_actuator_fault_count
+    type: int
+    initial_value: "0"
+    restore_value: false
+  # Track when the actuator's nFAULT last cleared, for the
+  # "fault-persists-too-long → fold" decision.
+  - id: g_actuator_fault_since_ms
+    type: int
+    initial_value: "0"
+    restore_value: false
+  # One-off watering duration in ms (set by the one_off_water script,
+  # read by the `delay:` action). 0 when not active.
+  - id: g_one_off_dur_ms
+    type: int
+    initial_value: "0"
+    restore_value: false
 
 # ===== Scripts (actuator + state transitions + side-effects) =====
 script:
@@ -829,6 +1247,42 @@ script:
           id(g_daily_dli_mol) = est;
           ESP_LOGI("dli", "Estimated natural DLI: %.0f mol/m²/day", est);
 
+  # ===== v2.5: One-off watering =====
+  # Triggered by the "Water Now" button. Safety check: alarm only.
+  # The auto-tick (grow_light_tick) keeps the battery-floor check;
+  # the one-off button is a manual override and is therefore more
+  # permissive — the user explicitly asked for water, and they're at
+  # the bench with a known-good power supply. Capped at
+  # solenoid_max_water_sec at runtime.
+  #
+  # NOTE: the Folding/Locked state interlock is intentionally NOT
+  # applied here. The auto-tick (grow_light_tick) refuses to water
+  # during a wind-event state, but a manual button press is an
+  # explicit user override — they want water regardless.
+  - id: one_off_water
+    mode: restart  # pressing the button again mid-water restarts the timer
+    then:
+      - lambda: |-
+          if (id(g_solenoid_alarm)) {
+            ESP_LOGW("solenoid", "one-off: alarm latched, skipped");
+            return;
+          }
+          int dur_ms = (int)(id(one_off_water_sec).state * 1000.0f);
+          int max_ms = (int)(id(solenoid_max_water_sec).state * 1000.0f);
+          if (dur_ms > max_ms) {
+            ESP_LOGW("solenoid", "one-off: %dms capped to %dms (max-on-time)",
+                     dur_ms, max_ms);
+            dur_ms = max_ms;
+          }
+          id(g_one_off_dur_ms) = dur_ms;
+          ESP_LOGI("solenoid", "one-off: water for %dms", dur_ms);
+      - switch.turn_on: grow_light_relay
+      - delay: !lambda 'return id(g_one_off_dur_ms);'
+      - switch.turn_off: grow_light_relay
+      - lambda: |-
+          ESP_LOGI("solenoid", "one-off: done");
+          id(g_one_off_dur_ms) = 0;
+
 # ===== Intervals =====
 interval:
   - interval: 1s
@@ -842,9 +1296,33 @@ interval:
           // TemplateNumber, breaking the id() macro resolution. Renamed to
           // `i_safe_limit` (local) vs `i_safe` (global).
           const char* state = id(controller_state).current_option().c_str();
-          // STUBBED: motor_current (INA219) not bound in this build.
-          // NaN => all current comparisons are false => no safety fold.
-          float i_motor = NAN;
+          // v2.5: read motor current from INA219 (U6a, 0x40, 0.1Ω shunt,
+          // 200 ms poll). NaN-guard for the first few seconds after boot
+          // before the I2C read lands.
+          float i_motor = id(motor_current).state;
+          if (isnan(i_motor)) i_motor = 0.0;  // treat NaN as 0A, not Infinity
+          // v2.5: actuator nFAULT persistence check. The DRV8871's
+          // internal current limit (ITRIP ~1.15A) trips before INA219
+          // sees a real overcurrent on the wire. The on_state automation
+          // already stops the actuator on the rising edge; here we check
+          // persistence (> 2 s) and trigger a fold.
+          if (id(actuator_nfault).state) {  // true = fault active (LOW)
+            if (id(g_actuator_fault_since_ms) == 0) {
+              id(g_actuator_fault_since_ms) = millis();
+            } else {
+              unsigned long fault_elapsed = millis() - id(g_actuator_fault_since_ms);
+              if (fault_elapsed > 2000 &&
+                  strcmp(state, "Folding") != 0 &&
+                  strcmp(state, "Locked") != 0) {
+                ESP_LOGE("control", "Actuator nFAULT persistent > 2s — folding");
+                id(g_actuator_fault_count) = id(g_actuator_fault_count) + 1;
+                id(state_to_folding).execute();
+                return;
+              }
+            }
+          } else {
+            id(g_actuator_fault_since_ms) = 0;
+          }
           float tilt_actual = id(panel_tilt).state;
           float i_safe_limit = id(i_safe).state;
           bool at_zero = id(limit_0).state;
@@ -1001,34 +1479,75 @@ interval:
           id(is_night_flag) = (p < 0.5);
 
   - interval: 60s
-    id: watering_check
-    then:
-      - lambda: |-
-          // === Watering automation REMOVED on C3 port ===
-          // No GPIO available for the solenoid. Re-add when MCP23017
-          // (or other I2C port expander) is wired in.
-          return;
-
-  - interval: 60s
+    # U5b DRV8871: this tick drives the irrigation solenoid in Auto mode
+    # (K1=A → U5b evolution: 5V relay → 2nd DRV8871). Interval id kept as
+    # grow_light_tick to preserve state across the rename.
     id: grow_light_tick
     then:
       - lambda: |-
-          // === Grow light DLI top-up ===
-          // If grow light mode is DLI-TopUp:
-          //   - compute today's estimated natural DLI (g_daily_dli_mol)
-          //   - if natural DLI < target, run grow lights in pre-dawn / post-sunset
-          //   - ensure min 8 hr dark, max 16 hr light
-          // ESPHome 2026.7: Select no longer exposes `.state`; use `.current_option()`.
-          if (strcmp(id(grow_light_mode).current_option().c_str(), "DLI-TopUp") != 0) return;
-          int hour = id(sntp_time).now().hour;
-          // Pre-dawn (4-7am) and post-sunset (6-9pm) are the safe extension windows.
-          bool in_extension_window = (hour >= 4 && hour < 7) || (hour >= 18 && hour < 21);
-          if (!in_extension_window) {
+          // === Solenoid auto-watering (U5b DRV8871) ===
+          // v2.5: layered safety guards before applying the soil trigger.
+          //
+          // 1. Mode gate: Off / Manual — leave the switch alone.
+          // 2. State interlock: don't water during Folding/Locked.
+          // 3. Latched fault alarm: don't retry until user clears.
+          // 4. Soil sensor NaN: don't water on bad reading.
+          // 5. Battery floor: don't deep-discharge the LiFePO4 pack.
+          // 6. Max on-time: force off if exceeded.
+          //
+          // The mode-1 logic (Auto + soil < 35%) only fires if all
+          // the guards above pass.
+          const char* mode = id(grow_light_mode).current_option().c_str();
+          if (strcmp(mode, "Auto") != 0) {
+            return;  // Off or Manual — user is in control
+          }
+          // 2. State interlock
+          const char* ctl = id(controller_state).current_option().c_str();
+          if (strcmp(ctl, "Folding") == 0 || strcmp(ctl, "Locked") == 0) {
             id(grow_light_relay).turn_off();
             return;
           }
-          // For v1: if daily DLI estimate < target, turn on grow light
-          if (id(g_daily_dli_mol) < id(g_dli_target_mol)) {
+          // 3. Latched fault alarm
+          if (id(g_solenoid_alarm)) {
+            id(grow_light_relay).turn_off();
+            ESP_LOGW("solenoid", "solenoid alarm latched — auto disabled");
+            return;
+          }
+          // 4. Soil sensor NaN guard
+          float soil = id(soil_moisture_pct).state;
+          if (isnan(soil)) {
+            id(grow_light_relay).turn_off();
+            ESP_LOGW("solenoid", "soil sensor NaN — auto disabled");
+            return;
+          }
+          // 5. Battery floor guard
+          float v_batt = id(battery_voltage).state;
+          if (!isnan(v_batt) && v_batt < id(battery_water_floor_v).state) {
+            id(grow_light_relay).turn_off();
+            ESP_LOGW("solenoid", "V_batt %.2fV below floor %.2fV — auto disabled",
+                     v_batt, id(battery_water_floor_v).state);
+            return;
+          }
+          // 6. Max on-time watchdog
+          if (id(g_solenoid_on_since_ms) != 0) {
+            unsigned long on_since = id(g_solenoid_on_since_ms);
+            unsigned long now = millis();
+            unsigned long elapsed_ms = (now >= on_since)
+                ? (now - on_since)
+                : (0xFFFFFFFFUL - on_since) + now + 1;
+            if (elapsed_ms / 1000UL >= (unsigned long)id(solenoid_max_water_sec).state) {
+              id(grow_light_relay).turn_off();
+              id(g_solenoid_alarm) = true;  // latch — user must clear
+              ESP_LOGE("solenoid",
+                       "Max on-time %us exceeded (elapsed %ums) — FORCED OFF + alarm",
+                       (unsigned)id(solenoid_max_water_sec).state, (unsigned)elapsed_ms);
+              return;
+            }
+          }
+          // Primary control: water when soil < 35%.
+          // 35% is "needs water" for a typical garden bed using the
+          // 0-100% mapping (dry ~0%, wet ~100%).
+          if (soil < 35.0) {
             id(grow_light_relay).turn_on();
           } else {
             id(grow_light_relay).turn_off();
