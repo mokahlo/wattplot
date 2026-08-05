@@ -1,11 +1,27 @@
-# Wattplot v2
+# Wattplot
 
-A DIY, open-source planter (up to 8 ft × 5 ft) with a tilting solar canopy
-on top. Grow tomatoes underneath; make power above. A parametric,
-code-first design: 3D model, sun simulation, wind-load analysis, cut
-lists, and firmware all generated from one params file.
+**Give an old solar panel a second life.**
 
-> **Status:** pre-prototype. The mechanical / structural / aerodynamic design is validated by 3D model + ASCE 7-22 wind calc + geometric shadow raycaster. The smart controller (ESP32-based) and custom PCB are next steps.
+A raised garden bed whose canopy is a working solar panel — the same
+square foot grows tomatoes *and* generates electricity. Symbiosis of
+energy production and agriculture: the plants get filtered afternoon
+shade where they need it most; the panel keeps generating on a
+structure that would have been lumber anyway.
+
+Open-source end-to-end: 3D model, sun simulation, wind-load analysis,
+cut lists, schematic (rev B), ESPHome firmware (v3.1), PCB layout, and
+a GitHub Pages site. MIT license, no paywalls, no telemetry.
+
+> **Status:** working prototype. The Mini v2.4 is built and running on
+> the bench. The full-size build (Longi 620W) is mechanically and
+> aerodynamically validated by FreeCAD 3D model + ASCE 7-22 wind
+> calc + geometric shadow raycaster. Firmware v3.1 is compiled and
+> ready to flash (the chip is currently wedged; see [Status &
+> roadmap](#status--roadmap) below).
+
+**Live site:** [mokahlo.github.io/wattplot](https://mokahlo.github.io/wattplot/) ·
+**3D booth viewer:** [mokahlo.github.io/wattplot/booth/](https://mokahlo.github.io/wattplot/booth/) ·
+**Data dashboard:** [mokahlo.github.io/wattplot/data.html](https://mokahlo.github.io/wattplot/data.html)
 
 ## Two builds, one structure
 
@@ -25,6 +41,28 @@ Same bed, same 72" corner posts, same panel rails — pick your tilt mechanism:
 bed that shades its crop and pays you back in watts, built with a drill
 and a saw. Smart is the flagship upgrade — every Basic build has the
 strut holes and pivot line to accept the actuator later.
+
+## Status & roadmap
+
+| Layer | State | Notes |
+|---|---|---|
+| 3D model | ✅ Validated | FreeCAD assembly, STEP+STL+FCStd export. 5 panel presets. |
+| Sun simulation | ✅ Validated | `analysis/sun_simulator.py` — annual kWh, daily DLI, tomato yield. |
+| Wind load | ✅ Validated | ASCE 7-22, Cat II 700-yr, Exp C, Phoenix. |
+| Cut lists | ✅ Validated | `models/cut_list.py` — every board, every cut. |
+| Mini v2.4 (electronics) | ✅ Built & running on bench | 18×14″, 10W panel, kickstand actuator, ESPHome firmware. |
+| Full-size structural (Basic) | ✅ Designed | 8×5 ft bed, no electronics. Weekend build. |
+| Full-size Smart (electronics) | 🟡 Firmware ready, chip wedged | Schematic rev B + firmware v3.1 compiled; needs physical BOOT+RESET. |
+| Custom PCB | ✅ Designed | Schematic + PCB layout. JLCPCB-ready. |
+| GitHub Pages site | ✅ Live | Dark theme, 10+ pages, 3D viewer, data dashboard, gallery, diagrams. |
+| Booth materials | 🟡 Mid-refresh | One-pager + FAQ + poster + sim ready; needs new symbiosis framing. |
+| Trademark (WattPlot name) | 🟡 Coexistence request drafted | `docs/_internal/COEXISTENCE_REQUEST.md`. Awaiting Andrew Welch's reply. |
+
+What this means in practice: the design is complete, the documentation
+is live, the firmware builds clean. The two remaining "blocked" items
+are (1) recovering the wedged ESP32-S3 so we can flash v3.1, and
+(2) hearing back from the WattPlot.com operator on whether coexistence
+on the name is OK.
 
 ## Design rules (enforced)
 
