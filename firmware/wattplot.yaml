@@ -667,41 +667,8 @@ sensor:
     id: rssi
     update_interval: 60s
 
-# ===== Limit switches (preserved from v2, moved to schematic free pins) =====
-# v3: schematic rev B removed the physical limit switches and uses
-# current-based homing (Motor IPROPI, see above). The limit_switch
-# binary_sensors are preserved on schematic "free" pins (GPIO14/15)
-# so the state machine's `id(limit_0).state` / `id(limit_90).state`
-# references still compile. If you ever wire real switches back up,
-# they belong on these pins.
+# ===== DRV8871 nFAULT inputs (direct GPIO, no MCP23017) =====
 binary_sensor:
-  - platform: gpio
-    id: limit_0
-    name: "Limit 0° (preserved; not wired on rev B)"
-    pin:
-      number: GPIO14
-      mode:
-        input: true
-        pullup: false
-    filters:
-      - delayed_on: 10ms
-      - delayed_off: 10ms
-
-  - platform: gpio
-    # id kept as limit_90 for compatibility; the switch is physically
-    # mounted at the 35° STRUCTURAL max (see analysis/wind_load_report.md).
-    id: limit_90
-    name: "Limit 35° (preserved; not wired on rev B)"
-    pin:
-      number: GPIO15
-      mode:
-        input: true
-        pullup: false
-    filters:
-      - delayed_on: 10ms
-      - delayed_off: 10ms
-
-  # ===== DRV8871 nFAULT inputs (direct GPIO, no MCP23017) =====
   # v3: schematic rev B routes nFAULT directly to GPIO. The MCP23017
   # expander is gone from the BOM.
   #
@@ -956,6 +923,22 @@ number:
     optimistic: true
     restore_value: true
 
+  # ===== v3.1: Endstop current threshold =====
+  # Motor current (A) above which we consider the actuator to have hit
+  # an endstop. Tune in the field: above normal run current (~0.5 A),
+  # below stall current (DRV8871 ITRIP ~1.15 A = ~0.58 V at IPROPI
+  # which ≈ 1.15 A given 0.1 Ω shunt and 5 kΩ internal resistor).
+  # A clean endstop hit pulls 0.8-1.0 A sustained for ~200 ms.
+  - platform: template
+    id: endstop_current_threshold
+    name: "Endstop Current Threshold (A)"
+    min_value: 0.4
+    max_value: 2.0
+    step: 0.05
+    initial_value: "0.80"
+    optimistic: true
+    restore_value: true
+
 # ===== State machine =====
 select:
   - platform: template
@@ -1104,6 +1087,32 @@ globals:
   # One-off watering duration in ms (set by the one_off_water script,
   # read by the `delay:` action). 0 when not active.
   - id: g_one_off_dur_ms
+    type: int
+    initial_value: "0"
+    restore_value: false
+
+  # ===== v3.1: Current-based endstop state =====
+  # Schematic rev B removed the physical limit switches and uses the
+  # DRV8871's motor current spike (via Motor IPROPI, GPIO4) to detect
+  # when the actuator hits an endstop. The endpoint_detector interval
+  # below watches i_motor_ipropi and sets these flags. The 1 Hz control
+  # loop reads them in place of the old limit switch binary_sensors.
+  #
+  # g_at_zero  : true when the actuator is fully retracted (at 0°).
+  # g_at_max   : true when the actuator is fully extended (at 35°).
+  #             Both are reset by driving in the opposite direction;
+  #             the spike detector sets exactly one of them.
+  - id: g_at_zero
+    type: bool
+    initial_value: "false"
+    restore_value: false
+  - id: g_at_max
+    type: bool
+    initial_value: "false"
+    restore_value: false
+  # Last time we saw an endstop hit. Used by on-boot re-homing to
+  # know if calibration is stale (e.g. after a long power-down).
+  - id: g_endstop_last_hit_ms
     type: int
     initial_value: "0"
     restore_value: false
@@ -1325,8 +1334,10 @@ interval:
           }
           float tilt_actual = id(panel_tilt).state;
           float i_safe_limit = id(i_safe).state;
-          bool at_zero = id(limit_0).state;
-          bool at_ninety = id(limit_90).state;
+          // v3.1: limits come from current-spike detection (g_at_zero / g_at_max),
+          // not physical switches. The endpoint_detector interval sets these.
+          bool at_zero = id(g_at_zero);
+          bool at_ninety = id(g_at_max);
 
           // ----- Hard current limit → emergency fold -----
           if (i_motor > i_safe_limit + 0.3) {
@@ -1551,6 +1562,53 @@ interval:
             id(grow_light_relay).turn_on();
           } else {
             id(grow_light_relay).turn_off();
+          }
+
+  - interval: 100ms
+    # v3.1: Endpoint detector (current-based homing).
+    # Watches motor IPROPI for a sustained spike. When i_motor_ipropi
+    # stays above `endstop_current_threshold` for >= 200 ms, the
+    # actuator has hit an endstop. Direction is read from the H-bridge
+    # output switches (hb_in1_sw / hb_in2_sw) so we know whether to set
+    # g_at_zero (retracted) or g_at_max (extended).
+    #
+    # 200 ms debounce filters motor startup inrush (~50-100 ms) and
+    # short load spikes. Stall current (DRV8871 ITRIP) trips the
+    # on_state nFAULT automation; we operate *below* that threshold
+    # but *above* normal run current.
+    id: endpoint_detector
+    then:
+      - lambda: |-
+          static unsigned long spike_start_ms = 0;
+          float i_prop = id(motor_current_ipropi).state;
+          if (isnan(i_prop)) {
+            spike_start_ms = 0;
+            return;
+          }
+          float threshold = id(endstop_current_threshold).state;
+          if (i_prop > threshold) {
+            if (spike_start_ms == 0) spike_start_ms = millis();
+            if (millis() - spike_start_ms > 200) {
+              bool in1 = id(hb_in1_sw).state;
+              bool in2 = id(hb_in2_sw).state;
+              if (in1 && !in2) {
+                // Extending -> hit the 35° endstop
+                id(g_at_max) = true;
+                id(g_at_zero) = false;
+                id(g_endstop_last_hit_ms) = millis();
+                ESP_LOGI("endpoint", "Endstop hit: AT MAX (i=%.2f A)", i_prop);
+              } else if (!in1 && in2) {
+                // Retracting -> hit the 0° endstop
+                id(g_at_zero) = true;
+                id(g_at_max) = false;
+                id(g_endstop_last_hit_ms) = millis();
+                ESP_LOGI("endpoint", "Endstop hit: AT ZERO (i=%.2f A)", i_prop);
+              }
+              // If both or neither switch is on, the spike is invalid
+              // (e.g. a load spike while stopped) — ignore.
+            }
+          } else {
+            spike_start_ms = 0;
           }
 
   - interval: 5s
