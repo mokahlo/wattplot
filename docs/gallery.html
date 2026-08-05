@@ -128,8 +128,23 @@
   .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 200; display: none; align-items: center; justify-content: center; padding: 32px; }
   .lightbox.open { display: flex; }
   .lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 6px; }
-  .lightbox .close { position: absolute; top: 16px; right: 24px; color: #fff; font-size: 32px; font-weight: 300; cursor: pointer; background: rgba(255,255,255,0.1); width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; line-height: 1; }
+  .lightbox .close, .lightbox .lb-bg { position: absolute; top: 16px; cursor: pointer; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; line-height: 1; }
+  .lightbox .close { right: 24px; color: #fff; font-size: 32px; font-weight: 300; background: rgba(255,255,255,0.1); }
   .lightbox .close:hover { background: rgba(255,255,255,0.2); }
+  .lightbox .lb-bg { right: 78px; color: #fff; background: rgba(255,255,255,0.1); border: 0; padding: 0; font: inherit; }
+  .lightbox .lb-bg:hover { background: rgba(255,255,255,0.2); }
+  .lightbox .lb-bg svg { width: 20px; height: 20px; }
+  .lightbox .lb-bg .lb-bg-dark { display: block; }
+  .lightbox .lb-bg .lb-bg-light { display: none; }
+  /* White-bg variant for technical drawings (PCBs, schematics) */
+  .lightbox.light { background: #ffffff; }
+  .lightbox.light .close { color: #0d1117; background: rgba(0,0,0,0.06); }
+  .lightbox.light .close:hover { background: rgba(0,0,0,0.12); }
+  .lightbox.light .lb-bg { color: #0d1117; background: rgba(0,0,0,0.06); }
+  .lightbox.light .lb-bg:hover { background: rgba(0,0,0,0.12); }
+  .lightbox.light .lb-bg .lb-bg-dark { display: none; }
+  .lightbox.light .lb-bg .lb-bg-light { display: block; }
+  .lightbox.light img { box-shadow: 0 12px 40px rgba(0,0,0,0.25); border-radius: 4px; }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
@@ -310,7 +325,7 @@
     <h2>Electronics <span class="meta">3 diagrams</span></h2>
     <div class="grid grid-3">
 
-      <a class="tile" href="gallery/electronics/pcb-schematic.png" data-lightbox>
+      <a class="tile" href="gallery/electronics/pcb-schematic.png" data-lightbox data-bg="white">
         <div class="frame"><img src="gallery/electronics/pcb-schematic.png" alt="PCB schematic" loading="lazy"></div>
         <div class="body">
           <h3>PCB schematic</h3>
@@ -318,7 +333,7 @@
           <div class="tag">pcb_schematic.png</div>
         </div>
       </a>
-      <a class="tile" href="gallery/electronics/mini-breadboard-diagram.png" data-lightbox>
+      <a class="tile" href="gallery/electronics/mini-breadboard-diagram.png" data-lightbox data-bg="white">
         <div class="frame"><img src="gallery/electronics/mini-breadboard-diagram.png" alt="Mini breadboard diagram" loading="lazy"></div>
         <div class="body">
           <h3>Mini breadboard diagram</h3>
@@ -326,7 +341,7 @@
           <div class="tag">mini_breadboard_diagram.png</div>
         </div>
       </a>
-      <a class="tile" href="gallery/electronics/mini-breadboard-schematic.png" data-lightbox>
+      <a class="tile" href="gallery/electronics/mini-breadboard-schematic.png" data-lightbox data-bg="white">
         <div class="frame"><img src="gallery/electronics/mini-breadboard-schematic.png" alt="Mini breadboard schematic" loading="lazy"></div>
         <div class="body">
           <h3>Mini breadboard schematic</h3>
@@ -629,26 +644,53 @@
 </main>
 
 <div class="lightbox" id="lb" role="dialog" aria-label="Image viewer">
+  <button class="lb-bg" id="lb-bg-toggle" type="button" aria-label="Toggle background (dark/white)">
+    <svg class="lb-bg-dark" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    <svg class="lb-bg-light" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+  </button>
   <div class="close" onclick="document.getElementById('lb').classList.remove('open')" aria-label="Close" role="button" tabindex="0">×</div>
   <img id="lb-img" alt="">
 </div>
 
 <script>
-  document.querySelectorAll('[data-lightbox]').forEach(a => {
-    a.addEventListener('click', e => {
-      e.preventDefault();
-      document.getElementById('lb-img').src = a.href;
-      document.getElementById('lb').classList.add('open');
-      document.body.style.overflow = 'hidden';
+  // Per-image background: tiles can declare data-bg="white" (or "dark")
+  // and the lightbox opens with that background. Users can also flip
+  // it with the round button in the top-right of the lightbox.
+  (function() {
+    var lb = document.getElementById('lb');
+    var img = document.getElementById('lb-img');
+    var bgBtn = document.getElementById('lb-bg-toggle');
+    var currentBg = 'dark';
+
+    function applyBg(b) {
+      currentBg = b;
+      lb.classList.toggle('light', b === 'light');
+    }
+
+    document.querySelectorAll('[data-lightbox]').forEach(function(a) {
+      a.addEventListener('click', function(e) {
+        e.preventDefault();
+        img.src = a.href;
+        img.alt = a.querySelector('img') ? a.querySelector('img').alt : '';
+        applyBg(a.getAttribute('data-bg') === 'white' ? 'light' : 'dark');
+        lb.classList.add('open');
+        document.body.style.overflow = 'hidden';
+      });
     });
-  });
-  function closeLb() {
-    document.getElementById('lb').classList.remove('open');
-    document.body.style.overflow = '';
-  }
-  document.querySelector('.lightbox .close').addEventListener('click', closeLb);
-  document.getElementById('lb').addEventListener('click', e => { if (e.target.id === 'lb') closeLb(); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLb(); });
+
+    bgBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      applyBg(currentBg === 'light' ? 'dark' : 'light');
+    });
+
+    function closeLb() {
+      lb.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+    document.querySelector('.lightbox .close').addEventListener('click', closeLb);
+    lb.addEventListener('click', function(e) { if (e.target.id === 'lb') closeLb(); });
+    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeLb(); });
+  })();
 </script>
 <footer>
   <div class="wrap">
