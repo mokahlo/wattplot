@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wattplot — Gallery</title>
+<meta name="description" content="Concept renders, simulations, and visualizations of the Wattplot solar canopy planter. Full-size and mini builds, sun simulator, wind load, electronics.">
+<link rel="canonical" href="https://mokahlo.github.io/wattplot/gallery.html">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117; --surface: #161b22; --elev: #1f2530;
+    --border: #2a313c; --border-2: #3a414e; --line-soft: #20262f;
+    --ink: #e6e3dc; --ink-2: #a8a59c; --muted: #6e6c66;
+    --accent: #ff9a5e; --accent-2: #ffb27a; --accent-soft: rgba(255, 154, 94, 0.10);
+    --good: #6cc8a3; --bad: #e8a5a8;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+    font-size: 16px; line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; transition: color 0.15s; }
+  a:hover { color: var(--accent-2); }
+  h1, h2, h3 { letter-spacing: -0.005em; margin: 0 0 0.5em; color: var(--ink); }
+  h1 { font-family: 'DM Serif Display', serif; font-weight: 400; font-size: 42px; line-height: 1.1; }
+  h2 { font-family: 'DM Serif Display', serif; font-weight: 400; font-size: 26px; line-height: 1.15; margin: 56px 0 6px; }
+  h2 .meta { font-family: 'Outfit', sans-serif; font-size: 13px; color: var(--muted); font-weight: 500; margin-left: 8px; }
+  p { margin: 0 0 1em; }
+  code, .mono { font-family: 'JetBrains Mono', monospace; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 28px; }
+  @media (max-width: 540px) { .wrap { padding: 0 20px; } }
+
+  .topnav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(13, 17, 23, 0.85);
+    backdrop-filter: saturate(180%) blur(12px);
+    -webkit-backdrop-filter: saturate(180%) blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  .topnav-inner {
+    display: flex; align-items: center; gap: 26px;
+    padding: 14px 28px; max-width: 1180px; margin: 0 auto;
+  }
+  .topnav .brand {
+    font-family: 'DM Serif Display', serif; font-size: 22px;
+    color: var(--ink); text-decoration: none; font-weight: 400;
+  }
+  .topnav .brand:hover { color: var(--accent); }
+  .topnav nav { display: flex; gap: 20px; flex-wrap: wrap; flex: 1; }
+  .topnav nav a { color: var(--ink-2); font-size: 14px; font-weight: 500; text-decoration: none; }
+  .topnav nav a:hover, .topnav nav a.active { color: var(--accent); }
+  .topnav nav a.has-caret::after { content: " ▾"; color: var(--muted); font-size: 10px; margin-left: 2px; }
+  .topnav .gh {
+    background: var(--ink); color: var(--bg);
+    padding: 7px 14px; border-radius: 8px;
+    font-size: 13px; font-weight: 600; text-decoration: none;
+  }
+  .topnav .gh:hover { background: var(--accent); color: var(--bg); }
+  .dropdown { position: relative; }
+  .dropdown .menu {
+    position: absolute; top: 100%; left: -8px;
+    background: var(--surface); border: 1px solid var(--border-2);
+    border-radius: 10px; box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+    min-width: 220px; padding: 6px; margin-top: 8px; display: none; z-index: 200;
+  }
+  .dropdown:hover .menu, .dropdown:focus-within .menu { display: block; }
+  .dropdown .menu a { display: block; padding: 8px 12px; border-radius: 6px; color: var(--ink-2); font-size: 13.5px; }
+  .dropdown .menu a:hover { background: var(--accent-soft); color: var(--accent); }
+
+  main { padding: 56px 0 80px; }
+  .lede { font-size: 17px; color: var(--ink-2); max-width: 720px; margin: 0 0 40px; }
+
+  .grid { display: grid; gap: 14px; }
+  .grid-2 { grid-template-columns: repeat(2, 1fr); }
+  .grid-3 { grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 900px) { .grid-3 { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 540px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+  .tile {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.18s;
+    text-decoration: none;
+    color: inherit;
+    display: flex; flex-direction: column;
+  }
+  .tile:hover { transform: translateY(-2px); border-color: var(--border-2); background: var(--elev); text-decoration: none; }
+  .tile .frame {
+    background: #f4f1ec;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .tile .frame img { width: 100%; height: 100%; object-fit: contain; }
+  .tile .body { padding: 14px 16px 16px; flex: 1; }
+  .tile h3 { font-size: 14.5px; font-weight: 600; margin: 0 0 4px; color: var(--ink); }
+  .tile p { font-size: 12.5px; color: var(--ink-2); margin: 0; line-height: 1.45; }
+  .tile .tag { font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-top: 8px; }
+
+  .empty {
+    background: var(--surface);
+    border: 1px dashed var(--border-2);
+    border-radius: 14px;
+    padding: 40px 24px;
+    text-align: center;
+    color: var(--ink-2);
+    margin: 32px 0;
+  }
+  .empty h2 { margin-top: 0; color: var(--ink); }
+  .empty code { font-family: 'JetBrains Mono', monospace; background: var(--bg); padding: 2px 6px; border-radius: 4px; color: var(--ink); }
+
+  /* Lightbox */
+  .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 200; display: none; align-items: center; justify-content: center; padding: 32px; }
+  .lightbox.open { display: flex; }
+  .lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 6px; }
+  .lightbox .close { position: absolute; top: 16px; right: 24px; color: #fff; font-size: 32px; font-weight: 300; cursor: pointer; background: rgba(255,255,255,0.1); width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; line-height: 1; }
+  .lightbox .close:hover { background: rgba(255,255,255,0.2); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topnav">
+  <div class="topnav-inner">
+    <a href="./" class="brand">Wattplot</a>
+    <nav>
+      <div class="dropdown">
+        <a class="has-caret">View</a>
+        <div class="menu">
+          <a href="3d.html">3D model</a>
+          <a href="gallery.html" class="active">Gallery</a>
+          <a href="pinmap.html">Pin map</a>
+        </div>
+      </div>
+      <div class="dropdown">
+        <a class="has-caret">Build</a>
+        <div class="menu">
+          <a href="build_basic.html">Basic overview</a>
+          <a href="build_guide.html">Full-size guide</a>
+          <a href="build_guide_mini.html">Mini guide</a>
+          <a href="build_longi_620W.html">Longi 620 W</a>
+          <a href="build_my_craigslist_panel.html">Salvage build</a>
+          <a href="build_residential_60cell.html">60-cell residential</a>
+          <a href="upcycling.html">Upcycling</a>
+        </div>
+      </div>
+      <div class="dropdown">
+        <a class="has-caret">Hardware</a>
+        <div class="menu">
+          <a href="wiring.html">Wiring</a>
+          <a href="pcb_design.html">PCB design</a>
+          <a href="schematic.html">Schematic</a>
+          <a href="sensor_placement.html">Sensor placement</a>
+        </div>
+      </div>
+      <div class="dropdown">
+        <a class="has-caret">Software</a>
+        <div class="menu">
+          <a href="control_law.html">Control law</a>
+          <a href="watering.html">Watering</a>
+          <a href="logging.html">Logging</a>
+          <a href="test_checklist.html">Test checklist</a>
+        </div>
+      </div>
+      <div class="dropdown">
+        <a class="has-caret">Booth</a>
+        <div class="menu">
+          <a href="one_pager.html">One-pager</a>
+          <a href="faq.html">FAQ</a>
+          <a href="application.html">Application</a>
+          <a href="demo_script.html">Demo script</a>
+          <a href="sim.html">Simulator</a>
+          <a href="booth/index.html">3D booth viewer</a>
+        </div>
+      </div>
+    </nav>
+    <a class="gh" href="https://github.com/mokahlo/wattplot/tree/master/docs/gallery">Add concepts ↗</a>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <h1>Gallery</h1>
+    <p class="lede">Renders, simulations, and visualizations of the Wattplot. Click any image to view it full-size. To add a new concept, drop a PNG into <code style="font-family: 'JetBrains Mono', monospace; background: var(--surface); border: 1px solid var(--border); padding: 1px 6px; border-radius: 4px;">docs/gallery/&lt;category&gt;/</code> via GitHub and add a card below.</p>
+
+    <h2>Build <span class="meta">11 renders</span></h2>
+    <div class="grid grid-3">
+
+      <a class="tile" href="gallery/build/iso.png" data-lightbox>
+        <div class="frame"><img src="gallery/build/iso.png" alt="Full-size Wattplot, isometric view" loading="lazy"></div>
+        <div class="body">
+          <h3>Isometric, full-size</h3>
+          <p>8 × 5 ft bed, 35° tilt, bifacial panel. The marquee render.</p>
+          <div class="tag">wattplot_v2_iso.png</div>
+        </div>
+      </a>
+      <a class="tile" href="gallery/build/flat-iso.png" data-lightbox>
+        <div class="frame"><img src="gallery/build/flat-iso.png" alt="Folded flat, isometric" loading="lazy"></div>
+        <div class="body">
+          <h3>Folded flat, isometric</h3>
+          <p>Same build, panel at 0° — the wind-folding pose.</p>
+          <div class="tag">wattplot_v2_flat_iso.png</div>
+        </div>
+      </a>
+      <a class="tile" href="gallery/build/side-35deg.png" data-lightbox>
+        <div class="frame"><img src="gallery/build/side-35deg.png" alt="Side view at 35°" loading="lazy"></div>
+        <div class="body">
+          <h3>Side view, 35° tilt</h3>
+          <p>"Power" mode. Structural max, max kWh.</p>
+          <div class="tag">side_view_035.png</div>
+        </div>
+      </a>
+      <a class="tile" href="gallery/build/side-90deg.png" data-lightbox>
+        <div class="frame"><img src="gallery/build/side-90deg.png" alt="Side view at 90°" loading="lazy"></div>
+        <div class="body">
+          <h3>Side view, 90° tilt</h3>
+          <p>Vertical. Retired in v3 — fails the wind calc.</p>
+          <div class="tag">side_view_090.png</div>
+        </div>
+      </a>
+      <a class="tile" href="gallery/build/side-0deg.png" data-lightbox>
+        <div class="frame"><img src="gallery/build/side-0deg.png" alt="Side view at 0°" loading="lazy"></div>
+        <div class="body">
+          <h3>Side view, 0° (folded)</h3>
+          <p>Panel flat on the bed. The stow pose.</p>
+          <div class="tag">side_view.png</div>
+        </div>
+      </a>
+      <a class="tile" href="gallery/build/top.png" data-lightbox>
+        <div class="frame"><img src="gallery/build/top.png" alt="Top-down" loading="lazy"></div>
+        <div class="body">
+          <h3>Top-down</h3>
+          <p>Bed + frame + panel, looking straight down.</p>
+          <div class="tag">wattplot_v2_top.png</div>
+        </div>
+      </a>
+      <a class="tile" href="gallery/build/east.png" data-lightbox>
+        <div class="frame"><img src="gallery/build/east.png" alt="East elevation" loading="lazy"></div>
+        <div class="body">
+          <h3>East elevation</h3>
+          <p>Short side. PCB enclosure visible.</p>
+          <div class="tag">east_side.png</div>
+        </div>
+      </a>
+      <a class="tile" href="gallery/build/south.png" data-lightbox>
+        <div class="frame"><img src="gallery/build/south.png" alt="South elevation" loading="lazy"></div>
+        <div class="body">
+          <h3>South elevation</h3>
+          <p>Long side. Hinge axis, cable routing.</p>
+          <div class="tag">south.png</div>
+        </div>
+      </a>
+      <a class="tile" href="gallery/build/north.png" data-lightbox>
+        <div class="frame"><img src="gallery/build/north.png" alt="North elevation" loading="lazy"></div>
+        <div class="body">
+          <h3>North elevation</h3>
+          <p>Long side, opposite. Actuator mount visible.</p>
+          <div class="tag">north.png</div>
+        </div>
+      </a>
+      <a class="tile" href="gallery/build/mini-iso.png" data-lightbox>
+        <div class="frame"><img src="gallery/build/mini-iso.png" alt="Mini build, isometric" loading="lazy"></div>
+        <div class="body">
+          <h3>Mini build, isometric</h3>
+          <p>18 × 14 inch, ~$193, 3–4 hours. The starter build.</p>
+          <div class="tag">mini_iso.png</div>
+        </div>
+      </a>
+      <a class="tile" href="gallery/build/mini-top.png" data-lightbox>
+        <div class="frame"><img src="gallery/build/mini-top.png" alt="Mini build, top-down" loading="lazy"></div>
+        <div class="body">
+          <h3>Mini build, top-down</h3>
+          <p>Compact and clean.</p>
+          <div class="tag">mini_top.png</div>
+        </div>
+      </a>
+
+    </div>
+
+    <h2>Electronics <span class="meta">3 diagrams</span></h2>
+    <div class="grid grid-3">
+
+      <a class="tile" href="gallery/electronics/pcb-schematic.png" data-lightbox>
+        <div class="frame"><img src="gallery/electronics/pcb-schematic.png" alt="PCB schematic" loading="lazy"></div>
+        <div class="body">
+          <h3>PCB schematic</h3>
+          <p>14 sections, 5V/3.3V power tree, dual H-bridges.</p>
+          <div class="tag">pcb_schematic.png</div>
+        </div>
+      </a>
+      <a class="tile" href="gallery/electronics/mini-breadboard-diagram.png" data-lightbox>
+        <div class="frame"><img src="gallery/electronics/mini-breadboard-diagram.png" alt="Mini breadboard diagram" loading="lazy"></div>
+        <div class="body">
+          <h3>Mini breadboard diagram</h3>
+          <p>For the mini build, no PCB. Where every wire goes.</p>
+          <div class="tag">mini_breadboard_diagram.png</div>
+        </div>
+      </a>
+      <a class="tile" href="gallery/electronics/mini-breadboard-schematic.png" data-lightbox>
+        <div class="frame"><img src="gallery/electronics/mini-breadboard-schematic.png" alt="Mini breadboard schematic" loading="lazy"></div>
+        <div class="body">
+          <h3>Mini breadboard schematic</h3>
+          <p>The schematic version of the breadboard. For sanity-checking.</p>
+          <div class="tag">mini_breadboard_schematic.png</div>
+        </div>
+      </a>
+
+    </div>
+
+    <h2>Simulations <span class="meta">6 charts</span></h2>
+    <div class="grid grid-2">
+
+      <a class="tile" href="gallery/simulations/dashboard.png" data-lightbox>
+        <div class="frame"><img src="gallery/simulations/dashboard.png" alt="Live dashboard preview" loading="lazy"></div>
+        <div class="body">
+          <h3>Live dashboard</h3>
+          <p>Tilt, current, sun, wind, water, energy.</p>
+          <div class="tag">dashboard_preview.png</div>
+        </div>
+      </a>
+      <a class="tile" href="gallery/simulations/sun-daily-dli.png" data-lightbox>
+        <div class="frame"><img src="gallery/simulations/sun-daily-dli.png" alt="Daily DLI" loading="lazy"></div>
+        <div class="body">
+          <h3>Daily DLI, 12 months</h3>
+          <p>Simulated daily light integral at Phoenix lat (33.45°N).</p>
+          <div class="tag">sun_simulator_daily_dli.png</div>
+        </div>
+      </a>
+      <a class="tile" href="gallery/simulations/sun-monthly-dli.png" data-lightbox>
+        <div class="frame"><img src="gallery/simulations/sun-monthly-dli.png" alt="Monthly DLI" loading="lazy"></div>
+        <div class="body">
+          <h3>Monthly DLI</h3>
+          <p>Same data, aggregated by month. Plan varieties around it.</p>
+          <div class="tag">sun_simulator_monthly_dli.png</div>
+        </div>
+      </a>
+      <a class="tile" href="gallery/simulations/sun-scatter.png" data-lightbox>
+        <div class="frame"><img src="gallery/simulations/sun-scatter.png" alt="Sun position scatter" loading="lazy"></div>
+        <div class="body">
+          <h3>Sun position, 365 days</h3>
+          <p>Where the sun is in the sky over a year.</p>
+          <div class="tag">sun_simulator_scatter.png</div>
+        </div>
+      </a>
+      <a class="tile" href="gallery/simulations/wind-forces.png" data-lightbox>
+        <div class="frame"><img src="gallery/simulations/wind-forces.png" alt="Wind load forces" loading="lazy"></div>
+        <div class="body">
+          <h3>Wind load, forces</h3>
+          <p>ASCE 7-22 wind forces on the tilted panel. The 35° max tilt is set by this.</p>
+          <div class="tag">wind_load_forces.png</div>
+        </div>
+      </a>
+      <a class="tile" href="gallery/simulations/wind-summary.png" data-lightbox>
+        <div class="frame"><img src="gallery/simulations/wind-summary.png" alt="Wind load summary" loading="lazy"></div>
+        <div class="body">
+          <h3>Wind load, summary</h3>
+          <p>Safety factor at each tilt angle. Anything &gt; 2.0 is acceptable.</p>
+          <div class="tag">wind_load_summary.png</div>
+        </div>
+      </a>
+
+    </div>
+
+    <h2>Booth <span class="meta">9 wood-only renders</span></h2>
+    <p style="color: var(--muted); font-size: 13px; margin: 0 0 14px;">Booth-friendly wood-only renders — the frame and bed without the panel or electronics, optimized for a 4K display.</p>
+    <div class="grid grid-3">
+
+      <a class="tile" href="gallery/booth/wood-v8.png" data-lightbox>
+        <div class="frame"><img src="gallery/booth/wood-v8.png" alt="Wood frame, v8" loading="lazy"></div>
+        <div class="body">
+          <h3>Wood frame, v8</h3>
+          <p>Current best. The 8-iteration evolution.</p>
+          <div class="tag">wood_only_preview.png</div>
+        </div>
+      </a>
+      <a class="tile" href="gallery/booth/wood-v8-viewer.png" data-lightbox>
+        <div class="frame"><img src="gallery/booth/wood-v8-viewer.png" alt="Wood frame, v8 with viewer background" loading="lazy"></div>
+        <div class="body">
+          <h3>Wood frame, v8 (viewer bg)</h3>
+          <p>Same as v8, viewer background baked in for a 4K booth display.</p>
+          <div class="tag">wood_only_viewer.png</div>
+        </div>
+      </a>
+      <a class="tile" href="gallery/booth/wood-v1.png" data-lightbox>
+        <div class="frame"><img src="gallery/booth/wood-v1.png" alt="Wood frame, v1" loading="lazy"></div>
+        <div class="body">
+          <h3>Wood frame, v1</h3>
+          <p>First iteration. The "does this even make sense?" stage.</p>
+          <div class="tag">wood_preview.png</div>
+        </div>
+      </a>
+      <a class="tile" href="gallery/booth/wood-v3.png" data-lightbox>
+        <div class="frame"><img src="gallery/booth/wood-v3.png" alt="Wood frame, v3" loading="lazy"></div>
+        <div class="body">
+          <h3>Wood frame, v3</h3>
+          <p>Mid-iteration. Hinge design settling down.</p>
+          <div class="tag">wood_v3_preview.png</div>
+        </div>
+      </a>
+      <a class="tile" href="gallery/booth/wood-v5.png" data-lightbox>
+        <div class="frame"><img src="gallery/booth/wood-v5.png" alt="Wood frame, v5" loading="lazy"></div>
+        <div class="body">
+          <h3>Wood frame, v5</h3>
+          <p>The 4-corner hinge arrangement took shape.</p>
+          <div class="tag">wood_v5_preview.png</div>
+        </div>
+      </a>
+      <a class="tile" href="gallery/booth/wood-v7.png" data-lightbox>
+        <div class="frame"><img src="gallery/booth/wood-v7.png" alt="Wood frame, v7" loading="lazy"></div>
+        <div class="body">
+          <h3>Wood frame, v7</h3>
+          <p>Just before v8. Almost there.</p>
+          <div class="tag">wood_v7_preview.png</div>
+        </div>
+      </a>
+
+    </div>
+
+    <div class="empty">
+      <h2>Add a concept</h2>
+      <p>Drop a PNG/JPG into <code>docs/gallery/&lt;category&gt;/</code> and add a card to this page. The "Add concepts ↗" link in the top nav goes straight to the right GitHub folder.</p>
+      <p style="margin-bottom: 0;">Categories: <code>build/</code> · <code>electronics/</code> · <code>simulations/</code> · <code>booth/</code></p>
+    </div>
+
+  </div>
+</main>
+
+<div class="lightbox" id="lb" role="dialog" aria-label="Image viewer">
+  <div class="close" onclick="document.getElementById('lb').classList.remove('open')" aria-label="Close" role="button" tabindex="0">×</div>
+  <img id="lb-img" alt="">
+</div>
+
+<script>
+  document.querySelectorAll('[data-lightbox]').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      document.getElementById('lb-img').src = a.href;
+      document.getElementById('lb').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    });
+  });
+  function closeLb() {
+    document.getElementById('lb').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  document.querySelector('.lightbox .close').addEventListener('click', closeLb);
+  document.getElementById('lb').addEventListener('click', e => { if (e.target.id === 'lb') closeLb(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLb(); });
+</script>
+
+</body>
+</html>

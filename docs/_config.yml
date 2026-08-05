@@ -1,0 +1,48 @@
+# Wattplot GitHub Pages site config
+# See https://jekyllrb.com/docs/configuration/options/
+
+title: Wattplot
+description: A planter with a hinged, ballast-mounted solar canopy.
+tagline: Open-source hardware &amp; software
+url: https://mokahlo.github.io
+baseurl: /wattplot
+lang: en_US
+
+# Markdown engine
+markdown: kramdown
+highlighter: rouge
+
+# Sass: we don't need it; the theme is plain CSS embedded in pages
+sass:
+  quiet_deps: true
+
+# Use the minima theme ONLY for things we haven't overridden. The
+# custom default layout (see _layouts/default.html) wraps every page
+# in the dark theme + site nav.
+theme: minima
+defaults:
+  - scope:
+      path: ""
+      type: pages
+    values:
+      layout: default
+
+# Exclude build artifacts
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+  - "_site"
+  - ".jekyll-cache"
+  - ".bundle"
+  - "booth/*.bak"
+  - "booth/*.stl.bak"
+  - "gallery/**/*.tmp"
+
+# Plugins (none needed; we don't use jekyll-feed, jekyll-seo-tag, etc.
+# We just need the default markdown renderer.)
+plugins: []
+
+# Permalinks — keep the .html extensions so existing links don't break
+permalink: /:basename/

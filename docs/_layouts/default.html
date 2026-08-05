@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="{{ page.lang | default: 'en' }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% if page.title %}{{ page.title }} · {% endif %}Wattplot</title>
+  {% if page.description %}<meta name="description" content="{{ page.description }}">{% endif %}
+  <link rel="canonical" href="https://mokahlo.github.io/wattplot{{ page.url }}">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #0d1117;
+      --surface:   #161b22;
+      --elev:      #1f2530;
+      --border:    #2a313c;
+      --border-2:  #3a414e;
+      --line-soft: #20262f;
+      --ink:       #e6e3dc;
+      --ink-2:     #a8a59c;
+      --muted:     #6e6c66;
+      --accent:    #ff9a5e;
+      --accent-2:  #ffb27a;
+      --accent-soft: rgba(255, 154, 94, 0.10);
+      --good:      #6cc8a3;
+      --bad:       #e8a5a8;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    a { color: var(--accent); text-decoration: none; transition: color 0.15s; }
+    a:hover { color: var(--accent-2); }
+    h1, h2, h3, h4, h5, h6 { color: var(--ink); font-weight: 600; letter-spacing: -0.005em; line-height: 1.3; margin: 1.6em 0 0.5em; }
+    h1 { font-size: 32px; }
+    h2 { font-size: 24px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+    h3 { font-size: 19px; }
+    p { margin: 0 0 1em; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 0.9em; background: var(--surface); border: 1px solid var(--border); padding: 1px 6px; border-radius: 4px; color: var(--ink); }
+    pre { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; overflow-x: auto; }
+    pre code { background: none; border: none; padding: 0; }
+    blockquote { border-left: 3px solid var(--accent); margin: 0 0 1em; padding: 4px 16px; color: var(--ink-2); background: var(--surface); border-radius: 0 8px 8px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 0 0 1.5em; }
+    th, td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; }
+    th { background: var(--surface); font-weight: 600; }
+    tr:nth-child(even) td { background: rgba(255, 255, 255, 0.02); }
+    ul, ol { margin: 0 0 1em; padding-left: 1.5em; }
+    li { margin-bottom: 0.25em; }
+    img { max-width: 100%; height: auto; border-radius: 8px; }
+    hr { border: 0; border-top: 1px solid var(--border); margin: 32px 0; }
+
+    .wrap { max-width: 980px; margin: 0 auto; padding: 0 28px; }
+    @media (max-width: 540px) { .wrap { padding: 0 20px; } }
+
+    /* Top nav */
+    .topnav { position: sticky; top: 0; z-index: 100; background: rgba(13, 17, 23, 0.85); backdrop-filter: saturate(180%) blur(12px); -webkit-backdrop-filter: saturate(180%) blur(12px); border-bottom: 1px solid var(--border); }
+    .topnav-inner { display: flex; align-items: center; gap: 22px; padding: 12px 28px; max-width: 1180px; margin: 0 auto; }
+    .topnav .brand { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--ink); text-decoration: none; font-weight: 400; flex-shrink: 0; }
+    .topnav .brand:hover { color: var(--accent); }
+    .topnav nav { display: flex; gap: 18px; flex-wrap: wrap; flex: 1; }
+    .topnav nav a { color: var(--ink-2); font-size: 13.5px; font-weight: 500; }
+    .topnav nav a:hover, .topnav nav a.active { color: var(--accent); }
+    .topnav nav a.has-caret::after { content: " ▾"; color: var(--muted); font-size: 10px; margin-left: 2px; }
+    .topnav .gh { background: var(--ink); color: var(--bg); padding: 7px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; flex-shrink: 0; }
+    .topnav .gh:hover { background: var(--accent); color: var(--bg); }
+    .dropdown { position: relative; }
+    .dropdown .menu { position: absolute; top: 100%; left: -8px; background: var(--surface); border: 1px solid var(--border-2); border-radius: 10px; box-shadow: 0 12px 32px rgba(0,0,0,0.5); min-width: 220px; padding: 6px; margin-top: 8px; display: none; z-index: 200; }
+    .dropdown:hover .menu, .dropdown:focus-within .menu { display: block; }
+    .dropdown .menu a { display: block; padding: 8px 12px; border-radius: 6px; color: var(--ink-2); font-size: 13.5px; }
+    .dropdown .menu a:hover { background: var(--accent-soft); color: var(--accent); }
+
+    main { padding: 48px 0 80px; }
+
+    footer { border-top: 1px solid var(--border); padding: 28px 0; color: var(--muted); font-size: 13px; margin-top: 40px; }
+    footer .row { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+    footer a { color: var(--ink-2); }
+    footer a:hover { color: var(--accent); }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="topnav">
+  <div class="topnav-inner">
+    <a href="{{ '/' | relative_url }}" class="brand">Wattplot</a>
+    <nav>
+      <div class="dropdown">
+        <a class="has-caret">View</a>
+        <div class="menu">
+          <a href="{{ '/3d.html' | relative_url }}">3D model</a>
+          <a href="{{ '/gallery.html' | relative_url }}">Gallery</a>
+          <a href="{{ '/pinmap.html' | relative_url }}">Pin map</a>
+        </div>
+      </div>
+      <div class="dropdown">
+        <a class="has-caret">Build</a>
+        <div class="menu">
+          <a href="{{ '/build_basic.html' | relative_url }}">Basic overview</a>
+          <a href="{{ '/build_guide.html' | relative_url }}">Full-size guide</a>
+          <a href="{{ '/build_guide_mini.html' | relative_url }}">Mini guide</a>
+          <a href="{{ '/build_longi_620W.html' | relative_url }}">Longi 620 W</a>
+          <a href="{{ '/build_my_craigslist_panel.html' | relative_url }}">Salvage build</a>
+          <a href="{{ '/build_residential_60cell.html' | relative_url }}">60-cell residential</a>
+          <a href="{{ '/upcycling.html' | relative_url }}">Upcycling</a>
+        </div>
+      </div>
+      <div class="dropdown">
+        <a class="has-caret">Hardware</a>
+        <div class="menu">
+          <a href="{{ '/wiring.html' | relative_url }}">Wiring</a>
+          <a href="{{ '/pcb_design.html' | relative_url }}">PCB design</a>
+          <a href="{{ '/schematic.html' | relative_url }}">Schematic</a>
+          <a href="{{ '/sensor_placement.html' | relative_url }}">Sensor placement</a>
+        </div>
+      </div>
+      <div class="dropdown">
+        <a class="has-caret">Software</a>
+        <div class="menu">
+          <a href="{{ '/control_law.html' | relative_url }}">Control law</a>
+          <a href="{{ '/watering.html' | relative_url }}">Watering</a>
+          <a href="{{ '/logging.html' | relative_url }}">Logging</a>
+          <a href="{{ '/test_checklist.html' | relative_url }}">Test checklist</a>
+        </div>
+      </div>
+      <div class="dropdown">
+        <a class="has-caret">Booth</a>
+        <div class="menu">
+          <a href="{{ '/one_pager.html' | relative_url }}">One-pager</a>
+          <a href="{{ '/faq.html' | relative_url }}">FAQ</a>
+          <a href="{{ '/application.html' | relative_url }}">Application</a>
+          <a href="{{ '/demo_script.html' | relative_url }}">Demo script</a>
+          <a href="{{ '/sim.html' | relative_url }}">Simulator</a>
+          <a href="{{ '/booth/index.html' | relative_url }}">3D booth viewer</a>
+        </div>
+      </div>
+    </nav>
+    <a class="gh" href="https://github.com/mokahlo/wattplot">GitHub ↗</a>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    {{ content }}
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="row">
+      <span>Wattplot · open-source hardware &amp; software · MIT license</span>
+      <span>·</span>
+      <a href="https://github.com/mokahlo/wattplot">github.com/mokahlo/wattplot</a>
+      <span>·</span>
+      <a href="https://github.com/mokahlo/wattplot/edit/master/docs/{{ page.path }}">Edit this page</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
