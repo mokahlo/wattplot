@@ -116,6 +116,86 @@ Length 72" is a standard Home Depot cut.
 
 ---
 
+## Electronics (controller PCB + harness)
+
+The full-size build uses the schematic rev B controller PCB. Components are
+grouped by **subsystem** so you know which part of the system each part
+serves. Schematic reference designators (U5a, U5b, etc.) are included for
+cross-reference to `docs/schematic.html`.
+
+### Power tree (battery → 5 V → 3.3 V)
+| Qty | Item | Subsystem | Source | Cost |
+|---|---|---|---|---|
+| 1 | XT60 panel-mount connector | Power tree | Amazon / Amass | ~$2 |
+| 1 | 10 A ATO fuse + inline holder | Power tree | Amazon / auto | ~$3 |
+| 1 | SS34 schottky diode (reverse polarity) | Power tree | Digi-Key | <$1 |
+| 1 | SMBJ16A TVS diode (16 V clamp) | Power tree | Digi-Key | <$1 |
+| 1 | MP1584EN buck module, 4.5–28 V → 5 V, 3 A | Power tree | Amazon | ~$3 |
+| 1 | AMS1117-3.3 LDO regulator (SOT-223) | Power tree | Digi-Key | <$1 |
+| 2 | 100 µF / 35 V electrolytic (input + output bulk) | Power tree | Amazon | <$1 |
+| 1 | 10 µF / 10 V ceramic (LDO output) | Power tree | Amazon | <$1 |
+
+### MCU / Controller (ESP32-S3)
+| Qty | Item | Subsystem | Source | Cost |
+|---|---|---|---|---|
+| 1 | ESP32-S3-DevKitC-1-N16R8 (16 MB flash, 8 MB PSRAM) | MCU | Mouser / Digi-Key / Amazon | ~$14 |
+| 1 | USB-C receptacle, 16-pin, mid-mount | MCU | Digi-Key | ~$1 |
+| 1 | USBLC6-2SC6 ESD protection array | MCU | Digi-Key | ~$1 |
+| 2 | 5.1 kΩ 1% resistor (USB-C CC pull-down) | MCU | Amazon | <$1 |
+| 1 | 10 kΩ + 1 µC R/C pair (ESP32 reset) | MCU | Amazon | <$1 |
+| 2 | Tactile switch (BOOT, RST) | MCU | Amazon | ~$1 |
+
+### Actuator (panel tilt — DRV8871 U5a)
+| Qty | Item | Subsystem | Source | Cost |
+|---|---|---|---|---|
+| 1 | DRV8871 H-bridge motor driver (U5a) | Actuator | TI / Digi-Key | ~$3 |
+| 1 | 0.1 Ω current-sense shunt (1%, 1 W) | Actuator | Digi-Key | <$1 |
+| 1 | 100 nF + 10 µF cap pair (U5a supply decoupling) | Actuator | Amazon | <$1 |
+| 1 | 10 kΩ pull-up (U5a nFAULT) | Actuator | Amazon | <$1 |
+| 1 | 100 kΩ pull-up (U5a nSLEEP, tie to 3V3) | Actuator | Amazon | <$1 |
+| 3 | JST-XH 2-pin (U5a OUT1, OUT2, motor pigtail) | Actuator | Amazon | ~$1 |
+
+### Solenoid (water / latch — DRV8871 U5b)
+| Qty | Item | Subsystem | Source | Cost |
+|---|---|---|---|---|
+| 1 | DRV8871 H-bridge motor driver (U5b) | Solenoid | TI / Digi-Key | ~$3 |
+| 1 | 0.1 Ω current-sense shunt (1%, 1 W) | Solenoid | Digi-Key | <$1 |
+| 1 | 100 nF + 10 µF cap pair (U5b supply decoupling) | Solenoid | Amazon | <$1 |
+| 1 | 10 kΩ pull-up (U5b nFAULT) | Solenoid | Amazon | <$1 |
+| 1 | 100 kΩ pull-up (U5b nSLEEP, tie to 3V3) | Solenoid | Amazon | <$1 |
+| 1 | 12 V irrigation solenoid valve, ½" NPT, NC | Solenoid | Amazon | ~$10 |
+| 1 | ½" NPT brass fitting + Teflon tape | Solenoid | Home Depot | ~$5 |
+| 2 | JST-XH 2-pin (U5b OUT1, solenoid pigtail) | Solenoid | Amazon | ~$1 |
+
+### Sensors (DS18B20, soil moisture, INA219)
+| Qty | Item | Subsystem | Source | Cost |
+|---|---|---|---|---|
+| 3 | DS18B20 waterproof temp probe (1-Wire) | Sensors | Amazon | ~$10 |
+| 1 | 4.7 kΩ pull-up (1-Wire bus) | Sensors | Amazon | <$1 |
+| 1 | Capacitive soil moisture sensor (v1.2 or v2) | Sensors | Amazon | ~$4 |
+| 1 | 100 nF + 10 kΩ low-pass filter (soil AOUT) | Sensors | Amazon | <$1 |
+| 2 | INA219 I²C current/voltage sensor module | Sensors | Amazon | ~$6 |
+| 2 | 100k/10k resistor divider (battery V sense) | Sensors | Amazon | <$1 |
+| 4 | JST-XH 3-pin (sensor pigtails) | Sensors | Amazon | ~$2 |
+
+### HMI / Status
+| Qty | Item | Subsystem | Source | Cost |
+|---|---|---|---|---|
+| 1 | 3 mm LED, monochrome (status) | HMI / Status | Amazon | <$1 |
+| 1 | 330 Ω resistor (LED current limit) | HMI / Status | Amazon | <$1 |
+
+### Power components external to the PCB
+| Qty | Item | Subsystem | Source | Cost |
+|---|---|---|---|---|
+| 1 | Sunapex 10 A MPPT (mini) / Victron SmartSolar 75/15 (full-size) | Solar charging | Amazon / vendor | $40-$90 |
+| 1 | 12 V LiFePO4 battery, 50-100 Ah (mini: 10-20 Ah) | Solar charging | Amazon / LiTime | $90-$400 |
+| 1 | Solar panel, 100 W (mini) / 620 W bifacial (full-size) | Solar charging | Longi / ECO-WORTHY | $80-$200 |
+
+**Electronics total: ~$260-$330 (full-size, including solar charging components)**
+or **~$120-$170 (mini)** — see `bom_mini.md` for the mini-specific list.
+
+---
+
 ## Fasteners (all standard sizes)
 
 | Qty | Item | Use |
@@ -141,6 +221,9 @@ Length 72" is a standard Home Depot cut.
 | Clevis pin | $5 |
 | Fasteners | $30 |
 | **Total structural parts** | **~$290–$350** |
+| Electronics (PCB, drivers, sensors, MCU) | $80–$130 |
+| Solar charging (MPPT, battery, panel) | $210–$690 |
+| **Total with electronics** | **~$580–$1,170** |
 
 No welding required. No concrete. No 120V power tools beyond a drill + impact driver
 + circular saw (or a lumber yard can cut to length for you).

@@ -109,6 +109,14 @@
   .pin-empty { color: var(--muted); font-style: italic; }
   .pin-strap { font-family: 'JetBrains Mono', monospace; font-size: 11px; background: var(--bad-soft); color: var(--bad); padding: 1px 6px; border-radius: 4px; margin-left: 6px; font-weight: 500; }
 
+  .pin-sub { display: inline-block; padding: 1px 6px; margin-left: 6px; border-radius: 3px; font-size: 10px; font-weight: 600; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: 0.03em; vertical-align: middle; }
+  .pin-sub-power     { background: rgba(240, 194, 112, 0.14); color: #f0c270; }
+  .pin-sub-mcu       { background: rgba(230, 227, 220, 0.10); color: #e6e3dc; }
+  .pin-sub-actuator  { background: rgba(255, 154, 94, 0.16); color: #ff9a5e; }
+  .pin-sub-solenoid  { background: rgba(108, 200, 163, 0.16); color: #6cc8a3; }
+  .pin-sub-sensor    { background: rgba(90, 176, 201, 0.16); color: #5ab0c9; }
+  .pin-sub-hmi       { background: rgba(240, 194, 112, 0.14); color: #f0c270; }
+  .pin-sub-expand    { background: rgba(167, 139, 219, 0.16); color: #a78bdb; }
   .cmp { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
   .cmp-row { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1.3fr; align-items: center; padding: 12px 18px; border-bottom: 1px solid var(--line-soft); font-size: 13.5px; }
   .cmp-row:last-child { border-bottom: none; }
@@ -230,12 +238,12 @@
     </div>
 
     <div class="legend">
-      <div class="legend-item"><span class="dot" style="background: var(--c-motor)"></span>Motor H-bridge</div>
-      <div class="legend-item"><span class="dot" style="background: var(--c-solenoid)"></span>Solenoid H-bridge</div>
+      <div class="legend-item"><span class="dot" style="background: var(--c-motor)"></span>Actuator H-bridge (U5a) — panel tilt</div>
+      <div class="legend-item"><span class="dot" style="background: var(--c-solenoid)"></span>Solenoid H-bridge (U5b) — water / latch</div>
       <div class="legend-item"><span class="dot" style="background: var(--c-adc)"></span>Analog (ADC)</div>
       <div class="legend-item"><span class="dot" style="background: var(--c-i2c)"></span>I²C bus</div>
       <div class="legend-item"><span class="dot" style="background: var(--c-1wire)"></span>1-Wire (DS18B20)</div>
-      <div class="legend-item"><span class="dot" style="background: var(--c-input)"></span>Fault input</div>
+      <div class="legend-item"><span class="dot" style="background: var(--c-input)"></span>Fault input (nFAULT)</div>
       <div class="legend-item"><span class="dot" style="background: var(--c-led)"></span>Status LED</div>
       <div class="legend-item"><span class="dot" style="background: var(--c-free)"></span>Free</div>
     </div>
@@ -245,45 +253,45 @@
     <div class="board">
       <div>
         <div class="col-title">📐 Schematic (rev B, 2026-08-03)</div>
-        <div class="pin-row"><div class="pin-num">GPIO1</div><div class="pin-fn"><span class="dot" style="background: var(--c-motor)"></span>Motor H-bridge IN1</div></div>
-        <div class="pin-row"><div class="pin-num">GPIO2</div><div class="pin-fn"><span class="dot" style="background: var(--c-motor)"></span>Motor H-bridge IN2</div></div>
+        <div class="pin-row"><div class="pin-num">GPIO1</div><div class="pin-fn"><span class="dot" style="background: var(--c-motor)"></span>Actuator H-bridge IN1 (U5a) <span class="pin-sub pin-sub-actuator">Actuator</span></div></div>
+        <div class="pin-row"><div class="pin-num">GPIO2</div><div class="pin-fn"><span class="dot" style="background: var(--c-motor)"></span>Actuator H-bridge IN2 (U5a) <span class="pin-sub pin-sub-actuator">Actuator</span></div></div>
         <div class="pin-row"><div class="pin-num">GPIO3</div><div class="pin-fn"><span class="dot" style="background: var(--c-strap)"></span>Strapping pin, do not drive</div></div>
-        <div class="pin-row"><div class="pin-num">GPIO4</div><div class="pin-fn"><span class="dot" style="background: var(--c-adc)"></span>Motor IPROPI (current sense) <span class="fn-meta">ADC1_CH4</span></div></div>
-        <div class="pin-row"><div class="pin-num">GPIO5</div><div class="pin-fn"><span class="dot" style="background: var(--c-adc)"></span>Solenoid IPROPI (jam detect) <span class="fn-meta">ADC1_CH5</span></div></div>
-        <div class="pin-row"><div class="pin-num">GPIO6</div><div class="pin-fn"><span class="dot" style="background: var(--c-adc)"></span>Soil moisture AOUT <span class="fn-meta">ADC1_CH6</span></div></div>
-        <div class="pin-row"><div class="pin-num">GPIO7</div><div class="pin-fn"><span class="dot" style="background: var(--c-adc)"></span>Battery V ADC <span class="fn-meta">ADC1_CH7</span></div></div>
-        <div class="pin-row"><div class="pin-num">GPIO8</div><div class="pin-fn"><span class="dot" style="background: var(--c-i2c)"></span>I²C SDA <span class="fn-meta">4.7 k pull-up</span></div></div>
-        <div class="pin-row"><div class="pin-num">GPIO10</div><div class="pin-fn"><span class="dot" style="background: var(--c-solenoid)"></span>Solenoid H-bridge IN1</div></div>
+        <div class="pin-row"><div class="pin-num">GPIO4</div><div class="pin-fn"><span class="dot" style="background: var(--c-adc)"></span>Actuator IPROPI (current sense) <span class="fn-meta">ADC1_CH4</span> <span class="pin-sub pin-sub-actuator">Actuator</span></div></div>
+        <div class="pin-row"><div class="pin-num">GPIO5</div><div class="pin-fn"><span class="dot" style="background: var(--c-adc)"></span>Solenoid IPROPI (jam detect) <span class="fn-meta">ADC1_CH5</span> <span class="pin-sub pin-sub-solenoid">Solenoid</span></div></div>
+        <div class="pin-row"><div class="pin-num">GPIO6</div><div class="pin-fn"><span class="dot" style="background: var(--c-adc)"></span>Soil moisture AOUT <span class="fn-meta">ADC1_CH6</span> <span class="pin-sub pin-sub-sensor">Sensors</span></div></div>
+        <div class="pin-row"><div class="pin-num">GPIO7</div><div class="pin-fn"><span class="dot" style="background: var(--c-adc)"></span>Battery V ADC <span class="fn-meta">ADC1_CH7</span> <span class="pin-sub pin-sub-power">Power tree</span></div></div>
+        <div class="pin-row"><div class="pin-num">GPIO8</div><div class="pin-fn"><span class="dot" style="background: var(--c-i2c)"></span>I²C SDA <span class="fn-meta">4.7 k pull-up</span> <span class="pin-sub pin-sub-sensor">Sensors / Expansion</span></div></div>
+        <div class="pin-row"><div class="pin-num">GPIO10</div><div class="pin-fn"><span class="dot" style="background: var(--c-solenoid)"></span>Solenoid H-bridge IN1 (U5b) <span class="pin-sub pin-sub-solenoid">Solenoid</span></div></div>
         <div class="pin-row"><div class="pin-num">GPIO11</div><div class="pin-fn"><span class="dot" style="background: var(--c-free)"></span>free</div></div>
         <div class="pin-row"><div class="pin-num">GPIO12</div><div class="pin-fn"><span class="dot" style="background: var(--c-free)"></span>free</div></div>
-        <div class="pin-row"><div class="pin-num">GPIO13</div><div class="pin-fn"><span class="dot" style="background: var(--c-input)"></span>Solenoid nFAULT</div></div>
+        <div class="pin-row"><div class="pin-num">GPIO13</div><div class="pin-fn"><span class="dot" style="background: var(--c-input)"></span>Solenoid nFAULT (U5b) <span class="pin-sub pin-sub-solenoid">Solenoid</span></div></div>
         <div class="pin-row"><div class="pin-num">GPIO14</div><div class="pin-fn"><span class="dot" style="background: var(--c-free)"></span>free</div></div>
         <div class="pin-row"><div class="pin-num">GPIO15</div><div class="pin-fn"><span class="dot" style="background: var(--c-free)"></span>free</div></div>
-        <div class="pin-row"><div class="pin-num">GPIO16</div><div class="pin-fn"><span class="dot" style="background: var(--c-1wire)"></span>DS18B20 DQ (1-Wire bus)</div></div>
-        <div class="pin-row"><div class="pin-num">GPIO18</div><div class="pin-fn"><span class="dot" style="background: var(--c-i2c)"></span>I²C SCL <span class="fn-meta">4.7 k pull-up</span></div></div>
-        <div class="pin-row"><div class="pin-num">GPIO21</div><div class="pin-fn"><span class="dot" style="background: var(--c-input)"></span>Motor nFAULT</div></div>
+        <div class="pin-row"><div class="pin-num">GPIO16</div><div class="pin-fn"><span class="dot" style="background: var(--c-1wire)"></span>DS18B20 DQ (1-Wire bus) <span class="pin-sub pin-sub-sensor">Sensors</span></div></div>
+        <div class="pin-row"><div class="pin-num">GPIO18</div><div class="pin-fn"><span class="dot" style="background: var(--c-i2c)"></span>I²C SCL <span class="fn-meta">4.7 k pull-up</span> <span class="pin-sub pin-sub-sensor">Sensors / Expansion</span></div></div>
+        <div class="pin-row"><div class="pin-num">GPIO21</div><div class="pin-fn"><span class="dot" style="background: var(--c-input)"></span>Actuator nFAULT (U5a) <span class="pin-sub pin-sub-actuator">Actuator</span></div></div>
         <div class="pin-row"><div class="pin-num">GPIO45</div><div class="pin-fn"><span class="dot" style="background: var(--c-strap)"></span>Strapping pin (VDD_SPI)</div></div>
       </div>
 
       <div>
         <div class="col-title">⚙️ wattplot.yaml v3.1</div>
-        <div class="pin-row"><div class="pin-num">GPIO1</div><div class="pin-fn"><span class="dot" style="background: var(--c-motor)"></span>H-bridge IN1</div></div>
-        <div class="pin-row"><div class="pin-num">GPIO2</div><div class="pin-fn"><span class="dot" style="background: var(--c-motor)"></span>H-bridge IN2</div></div>
-        <div class="pin-row"><div class="pin-num">GPIO4</div><div class="pin-fn"><span class="dot" style="background: var(--c-adc)"></span>Motor IPROPI (NEW)</div></div>
-        <div class="pin-row"><div class="pin-num">GPIO5</div><div class="pin-fn"><span class="dot" style="background: var(--c-adc)"></span>Solenoid IPROPI (NEW)</div></div>
-        <div class="pin-row"><div class="pin-num">GPIO6</div><div class="pin-fn"><span class="dot" style="background: var(--c-adc)"></span>Soil moisture</div></div>
-        <div class="pin-row"><div class="pin-num">GPIO7</div><div class="pin-fn"><span class="dot" style="background: var(--c-adc)"></span>Battery V ADC</div></div>
-        <div class="pin-row"><div class="pin-num">GPIO8</div><div class="pin-fn"><span class="dot" style="background: var(--c-i2c)"></span>I²C SDA</div></div>
-        <div class="pin-row"><div class="pin-num">GPIO10</div><div class="pin-fn"><span class="dot" style="background: var(--c-solenoid)"></span>Solenoid IN1</div></div>
-        <div class="pin-row"><div class="pin-num">GPIO11</div><div class="pin-fn"><span class="dot" style="background: var(--c-led)"></span>H-bridge EN (compat)</div></div>
-        <div class="pin-row"><div class="pin-num">GPIO12</div><div class="pin-fn"><span class="dot" style="background: var(--c-solenoid)"></span>Solenoid IN2 (compat)</div></div>
-        <div class="pin-row"><div class="pin-num">GPIO13</div><div class="pin-fn"><span class="dot" style="background: var(--c-input)"></span>Solenoid nFAULT</div></div>
+        <div class="pin-row"><div class="pin-num">GPIO1</div><div class="pin-fn"><span class="dot" style="background: var(--c-motor)"></span>Actuator H-bridge IN1 (U5a) <span class="pin-sub pin-sub-actuator">Actuator</span></div></div>
+        <div class="pin-row"><div class="pin-num">GPIO2</div><div class="pin-fn"><span class="dot" style="background: var(--c-motor)"></span>Actuator H-bridge IN2 (U5a) <span class="pin-sub pin-sub-actuator">Actuator</span></div></div>
+        <div class="pin-row"><div class="pin-num">GPIO4</div><div class="pin-fn"><span class="dot" style="background: var(--c-adc)"></span>Actuator IPROPI (NEW, U5a) <span class="pin-sub pin-sub-actuator">Actuator</span></div></div>
+        <div class="pin-row"><div class="pin-num">GPIO5</div><div class="pin-fn"><span class="dot" style="background: var(--c-adc)"></span>Solenoid IPROPI (NEW, U5b) <span class="pin-sub pin-sub-solenoid">Solenoid</span></div></div>
+        <div class="pin-row"><div class="pin-num">GPIO6</div><div class="pin-fn"><span class="dot" style="background: var(--c-adc)"></span>Soil moisture <span class="pin-sub pin-sub-sensor">Sensors</span></div></div>
+        <div class="pin-row"><div class="pin-num">GPIO7</div><div class="pin-fn"><span class="dot" style="background: var(--c-adc)"></span>Battery V ADC <span class="pin-sub pin-sub-power">Power tree</span></div></div>
+        <div class="pin-row"><div class="pin-num">GPIO8</div><div class="pin-fn"><span class="dot" style="background: var(--c-i2c)"></span>I²C SDA <span class="pin-sub pin-sub-sensor">Sensors / Expansion</span></div></div>
+        <div class="pin-row"><div class="pin-num">GPIO10</div><div class="pin-fn"><span class="dot" style="background: var(--c-solenoid)"></span>Solenoid H-bridge IN1 (U5b) <span class="pin-sub pin-sub-solenoid">Solenoid</span></div></div>
+        <div class="pin-row"><div class="pin-num">GPIO11</div><div class="pin-fn"><span class="dot" style="background: var(--c-led)"></span>H-bridge EN (compat) <span class="pin-sub pin-sub-actuator">Actuator (compat)</span></div></div>
+        <div class="pin-row"><div class="pin-num">GPIO12</div><div class="pin-fn"><span class="dot" style="background: var(--c-solenoid)"></span>Solenoid IN2 (compat) <span class="pin-sub pin-sub-solenoid">Solenoid (compat)</span></div></div>
+        <div class="pin-row"><div class="pin-num">GPIO13</div><div class="pin-fn"><span class="dot" style="background: var(--c-input)"></span>Solenoid nFAULT (U5b) <span class="pin-sub pin-sub-solenoid">Solenoid</span></div></div>
         <div class="pin-row"><div class="pin-num">GPIO14</div><div class="pin-fn"><span class="dot" style="background: var(--c-free)"></span>free</div></div>
         <div class="pin-row"><div class="pin-num">GPIO15</div><div class="pin-fn"><span class="dot" style="background: var(--c-free)"></span>free</div></div>
-        <div class="pin-row"><div class="pin-num">GPIO16</div><div class="pin-fn"><span class="dot" style="background: var(--c-1wire)"></span>OneWire (DS18B20)</div></div>
-        <div class="pin-row"><div class="pin-num">GPIO17</div><div class="pin-fn"><span class="dot" style="background: var(--c-led)"></span>Status LED (compat)</div></div>
-        <div class="pin-row"><div class="pin-num">GPIO18</div><div class="pin-fn"><span class="dot" style="background: var(--c-i2c)"></span>I²C SCL</div></div>
-        <div class="pin-row"><div class="pin-num">GPIO21</div><div class="pin-fn"><span class="dot" style="background: var(--c-input)"></span>Motor nFAULT</div></div>
+        <div class="pin-row"><div class="pin-num">GPIO16</div><div class="pin-fn"><span class="dot" style="background: var(--c-1wire)"></span>OneWire (DS18B20) <span class="pin-sub pin-sub-sensor">Sensors</span></div></div>
+        <div class="pin-row"><div class="pin-num">GPIO17</div><div class="pin-fn"><span class="dot" style="background: var(--c-led)"></span>Status LED (compat) <span class="pin-sub pin-sub-hmi">HMI / Status (compat)</span></div></div>
+        <div class="pin-row"><div class="pin-num">GPIO18</div><div class="pin-fn"><span class="dot" style="background: var(--c-i2c)"></span>I²C SCL <span class="pin-sub pin-sub-sensor">Sensors / Expansion</span></div></div>
+        <div class="pin-row"><div class="pin-num">GPIO21</div><div class="pin-fn"><span class="dot" style="background: var(--c-input)"></span>Actuator nFAULT (U5a) <span class="pin-sub pin-sub-actuator">Actuator</span></div></div>
       </div>
     </div>
 
@@ -294,32 +302,32 @@
         <div>Component</div><div>Schematic</div><div>YAML v3.1</div><div>Status</div>
       </div>
       <div class="cmp-row match">
-        <div class="comp-name">Motor H-bridge IN1 / IN2</div>
+        <div class="comp-name">Actuator H-bridge IN1 / IN2 <span class="pin-sub pin-sub-actuator">Actuator (U5a)</span></div>
         <div class="comp-sch">GPIO1, GPIO2</div><div class="comp-yaml">GPIO1, GPIO2</div>
         <div class="comp-status">✓ match</div>
       </div>
       <div class="cmp-row match">
-        <div class="comp-name">Motor IPROPI</div>
+        <div class="comp-name">Actuator IPROPI (current sense) <span class="pin-sub pin-sub-actuator">Actuator (U5a)</span></div>
         <div class="comp-sch">GPIO4</div><div class="comp-yaml">GPIO4</div>
         <div class="comp-status">✓ match (NEW)</div>
       </div>
       <div class="cmp-row match">
-        <div class="comp-name">Solenoid IN1</div>
+        <div class="comp-name">Solenoid H-bridge IN1 <span class="pin-sub pin-sub-solenoid">Solenoid (U5b)</span></div>
         <div class="comp-sch">GPIO10</div><div class="comp-yaml">GPIO10</div>
         <div class="comp-status">✓ match</div>
       </div>
       <div class="cmp-row match">
-        <div class="comp-name">Solenoid IPROPI</div>
+        <div class="comp-name">Solenoid IPROPI (jam detect) <span class="pin-sub pin-sub-solenoid">Solenoid (U5b)</span></div>
         <div class="comp-sch">GPIO5</div><div class="comp-yaml">GPIO5</div>
         <div class="comp-status">✓ match (NEW)</div>
       </div>
       <div class="cmp-row match">
-        <div class="comp-name">Soil moisture</div>
+        <div class="comp-name">Soil moisture <span class="pin-sub pin-sub-sensor">Sensors</span></div>
         <div class="comp-sch">GPIO6</div><div class="comp-yaml">GPIO6</div>
         <div class="comp-status">✓ match</div>
       </div>
       <div class="cmp-row match">
-        <div class="comp-name">Battery V ADC</div>
+        <div class="comp-name">Battery V ADC <span class="pin-sub pin-sub-power">Power tree</span></div>
         <div class="comp-sch">GPIO7</div><div class="comp-yaml">GPIO7</div>
         <div class="comp-status">✓ match</div>
       </div>
@@ -334,12 +342,12 @@
         <div class="comp-status">✓ match</div>
       </div>
       <div class="cmp-row match">
-        <div class="comp-name">Motor nFAULT</div>
+        <div class="comp-name">Actuator nFAULT <span class="pin-sub pin-sub-actuator">Actuator (U5a)</span></div>
         <div class="comp-sch">GPIO21 (direct)</div><div class="comp-yaml">GPIO21</div>
         <div class="comp-status">✓ match</div>
       </div>
       <div class="cmp-row match">
-        <div class="comp-name">Solenoid nFAULT</div>
+        <div class="comp-name">Solenoid nFAULT <span class="pin-sub pin-sub-solenoid">Solenoid (U5b)</span></div>
         <div class="comp-sch">GPIO13 (direct)</div><div class="comp-yaml">GPIO13</div>
         <div class="comp-status">✓ match</div>
       </div>
@@ -349,17 +357,17 @@
         <div class="comp-status">✓ match (both removed)</div>
       </div>
       <div class="cmp-row mismatch">
-        <div class="comp-name">H-bridge EN</div>
+        <div class="comp-name">Actuator H-bridge EN <span class="pin-sub pin-sub-actuator">Actuator (compat)</span></div>
         <div class="comp-sch">tied to +3V3</div><div class="comp-yaml">GPIO11 (compat)</div>
         <div class="comp-status">compat — board doesn't wire EN</div>
       </div>
       <div class="cmp-row mismatch">
-        <div class="comp-name">Solenoid IN2</div>
+        <div class="comp-name">Solenoid IN2 <span class="pin-sub pin-sub-solenoid">Solenoid (compat)</span></div>
         <div class="comp-sch">tied to GND</div><div class="comp-yaml">GPIO12 (compat)</div>
         <div class="comp-status">compat — board doesn't wire IN2</div>
       </div>
       <div class="cmp-row mismatch">
-        <div class="comp-name">Status LED</div>
+        <div class="comp-name">Status LED <span class="pin-sub pin-sub-hmi">HMI / Status (compat)</span></div>
         <div class="comp-sch">removed</div><div class="comp-yaml">GPIO17 (compat)</div>
         <div class="comp-status">compat — board doesn't wire LED</div>
       </div>

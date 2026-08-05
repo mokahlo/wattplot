@@ -17,22 +17,26 @@
 #     based homing (see hardware/wattplot_schematic.png Section 9).
 #
 # Pin map (final, after v3 migration):
-#   GPIO  1: H-bridge IN1 (U5a actuator)              [schematic]
-#   GPIO  2: H-bridge IN2 (U5a actuator)              [schematic]
-#   GPIO  4: Motor IPROPI (ADC1_CH4, current sense)   [schematic, NEW]
-#   GPIO  5: Solenoid IPROPI (ADC1_CH5, jam detect)   [schematic, NEW]
-#   GPIO  6: Soil moisture (ADC1_CH6)                 [schematic; was GPIO3]
-#   GPIO  7: Battery V ADC (ADC1_CH7)                 [schematic; was GPIO4]
-#   GPIO  8: I2C SDA                                  [schematic; was GPIO5]
-#   GPIO 10: Solenoid DRV8871 (U5b) IN1               [schematic; was GPIO7]
-#   GPIO 11: H-bridge EN (preserved, schematic free)  [was GPIO2]
-#   GPIO 12: Solenoid IN2 (preserved, schematic free) [was GPIO9]
-#   GPIO 13: Solenoid nFAULT (direct GPIO)            [schematic; was MCP.1]
-#   GPIO 14: Limit 0° switch (preserved, free pin)    [was GPIO10]
-#   GPIO 15: Limit 35° switch (preserved, free pin)   [was GPIO21]
-#   GPIO 16: DS18B20 1-Wire data                      [schematic; was GPIO15]
-#   GPIO 17: Status LED (preserved)                   [was GPIO8]
-#   GPIO 18: I2C SCL                                  [schematic; was GPIO6]
+#
+# Subsystem tags: [Actuator] = panel tilt, [Solenoid] = water/latch,
+#                 [Power] = power tree, [Sensor] = sensors, [HMI] = status.
+#
+#   GPIO  1: Actuator H-bridge IN1 (U5a)             [schematic, Actuator]
+#   GPIO  2: Actuator H-bridge IN2 (U5a)             [schematic, Actuator]
+#   GPIO  4: Actuator IPROPI (ADC1_CH4, current sense) [schematic, NEW, Actuator]
+#   GPIO  5: Solenoid IPROPI (ADC1_CH5, jam detect)   [schematic, NEW, Solenoid]
+#   GPIO  6: Soil moisture (ADC1_CH6)                 [schematic, Sensor; was GPIO3]
+#   GPIO  7: Battery V ADC (ADC1_CH7)                 [schematic, Power; was GPIO4]
+#   GPIO  8: I2C SDA                                  [schematic, Sensor; was GPIO5]
+#   GPIO 10: Solenoid H-bridge IN1 (U5b)              [schematic, Solenoid; was GPIO7]
+#   GPIO 11: Actuator H-bridge EN (preserved, free)   [compat, Actuator; was GPIO2]
+#   GPIO 12: Solenoid IN2 (preserved, schematic free) [compat, Solenoid; was GPIO9]
+#   GPIO 13: Solenoid nFAULT (direct GPIO)            [schematic, Solenoid; was MCP.1]
+#   GPIO 14: Limit 0° switch (preserved, free pin)    [compat; was GPIO10]
+#   GPIO 15: Limit 35° switch (preserved, free pin)   [compat; was GPIO21]
+#   GPIO 16: DS18B20 1-Wire data                      [schematic, Sensor; was GPIO15]
+#   GPIO 17: Status LED (preserved)                   [compat, HMI; was GPIO8]
+#   GPIO 18: I2C SCL                                  [schematic, Sensor; was GPIO6]
 #   GPIO 21: Motor nFAULT (direct GPIO)               [schematic; was MCP.0]
 #
 # Free GPIOs (per schematic): 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 17, 18, 21 used.
@@ -237,7 +241,7 @@ one_wire:
 # UART pins). On the full-size build, these will likely be reused for
 # RS-485 to a Victron/EPEver MPPT, or VE.Direct to a Victron SmartSolar.
 
-# ===== H-bridge outputs (DRV8871) =====
+# ===== Actuator H-bridge outputs (DRV8871, U5a — panel tilt) =====
 # ===== Status LED PWM (C3 DevKitM-1 on-board LED on GPIO 8) =====
 # C3 port: replaced WS2812B with single-color on-board LED driven via LEDC.
 # GPIO 8 on the DevKitM-1 is wired to a transistor that drives the on-board
@@ -245,16 +249,19 @@ one_wire:
 # parameters are ignored on a monochromatic light).
 output:
   # v3: pin numbers migrated to schematic rev B. See header for full map.
+  # These three outputs drive the ACTUATOR H-bridge (U5a) only - the linear
+  # actuator that tilts the panel. The SOLENOID H-bridge (U5b) is defined
+  # separately below. Don't confuse them.
   - platform: gpio
-    id: hb_in1_out
+    id: hb_in1_out    # Actuator H-bridge IN1 (U5a)
     pin: GPIO1
   - platform: gpio
-    id: hb_in2_out
+    id: hb_in2_out    # Actuator H-bridge IN2 (U5a)
     pin: GPIO2
   - platform: gpio
     # Schematic ties EN to 3V3 (always on); preserved here for state-machine
     # compatibility. Reassigned to a schematic "free" pin (GPIO11).
-    id: hb_en_out
+    id: hb_en_out     # Actuator H-bridge EN (U5a, preserved for state-machine compat)
     pin: GPIO11
   # Solenoid driver (v3) — second DRV8871 (U5b) in single-direction H-bridge mode.
   # IN1=HIGH/IN2=LOW drives the solenoid forward; both LOW = coast (off).
@@ -752,15 +759,17 @@ binary_sensor:
     lambda: |-
       return id(g_solenoid_alarm);
 
-# ===== Solenoid (U5b DRV8871) + H-bridge as switches =====
+# ===== Solenoid (U5b DRV8871 — water / latch subsystem) =====
 # K1=A evolved to U5b: a second DRV8871 in single-direction H-bridge mode
 # drives the 12V irrigation solenoid (IN1=GPIO7, IN2=GPIO9, nSLEEP tied
-# high on the board via 100kΩ — always enabled). The H-bridge switches
-# below are for the actuator U5a only; they remain independent manual-
-# control / diagnostic switches and do NOT touch the solenoid.
+# high on the board via 100kΩ — always enabled). The actuator H-bridge
+# switches (U5a) defined below are for the panel-tilt actuator only; they
+# remain independent manual-control / diagnostic switches and do NOT
+# touch the solenoid.
 # See hardware/BOM.md §7.
 switch:
   - platform: template
+    # ---- Solenoid (U5b) ----
     # U5b DRV8871: drives IN1+IN2 atomically so the solenoid can never
     # be left in an invalid state (e.g. IN1=IN2=HIGH is brake, fine, but
     # we keep it simple: ON = IN1 H / IN2 L; OFF = both L = coast).
@@ -792,15 +801,15 @@ switch:
 
   - platform: output
     id: hb_in1_sw
-    name: "H-bridge IN1"
+    name: "Actuator H-bridge IN1 (U5a)"
     output: hb_in1_out
   - platform: output
     id: hb_in2_sw
-    name: "H-bridge IN2"
+    name: "Actuator H-bridge IN2 (U5a)"
     output: hb_in2_out
   - platform: output
     id: hb_en_sw
-    name: "H-bridge EN"
+    name: "Actuator H-bridge EN (U5a)"
     output: hb_en_out
 
 # ===== Globals (persistent state) =====

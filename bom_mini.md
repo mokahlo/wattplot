@@ -117,22 +117,57 @@ mini doesn't need that.
 
 **Total fasteners: ~$8**
 
-### Electronics (same as full-size, minus PCB)
+### Electronics (same as full-size, breadboard build)
 
+The mini uses the **same schematic rev B controller** as the full-size, but
+on a breadboard / perfboard instead of a custom PCB. Components grouped
+by **subsystem** so you know what each part is for. See `docs/schematic.html`
+for the full schematic and `bom.md` (full-size) for the PCB build of these.
+
+#### Power tree (battery → 5 V → 3.3 V)
 | Qty | Item | Source | Cost |
 |---|---|---|---|
 | 1 | **Sunapex 10A MPPT charge controller** (10 A, 12 V, MPPT, IP67, LiFePO4-aware, SAE connectors) | Amazon | **$25** (need to order) |
-| 1 | ESP32-C3 PRO Mini dev board (or any ESP32) | Mouser | **$5** (already ordered) |
-| 1 | BMI160 IMU breakout | Mouser | **$2** |
-| 1 | INA219 current sensor breakout | Mouser | **$2** |
-| 3 | DS18B20 waterproof temperature sensors (panel, soil, battery) | Amazon | **$11** (5-pack) |
-| 1 | Capacitive soil moisture sensor V1.2 (5-pack for spares) | Amazon | **$9** |
 | 1 | 12V 7Ah LiFePO4 battery (with BMS) | Amazon | **$25** (already ordered) |
-| 1 | Breadboard or perfboard (for prototyping) | Amazon | **$5** |
-| ~30 | Jumper wires (M-F, M-M, F-F) | Amazon | **$3** |
+| 1 | 5 V buck module (MP1584 or equiv) | Amazon | ~$3 |
+| 1 | 3.3 V LDO module (AMS1117 or equiv) | Amazon | ~$1 |
+
+#### MCU / Controller
+| Qty | Item | Source | Cost |
+|---|---|---|---|
+| 1 | ESP32-S3-DevKitC-1-N16R8 (matches full-size schematic rev B) | Mouser / Digi-Key | ~$10 |
 | 1 | USB-C cable (for ESP32 programming) | Amazon | **$3** |
 
-**Total electronics: ~$61 new + $50 already ordered = $111**
+#### Actuator (panel tilt)
+| Qty | Item | Source | Cost |
+|---|---|---|---|
+| 1 | 100 mm 12 V kickstand linear actuator (rated for the panel weight) | Amazon / AliExpress | **$12** (already ordered) |
+| 1 | DRV8871 breakout board (U5a role) | Amazon / Pololu | ~$5 |
+| 1 | 0.1 Ω current-sense shunt (for IPROPI) | Digi-Key | <$1 |
+
+#### Solenoid (water / latch)
+| Qty | Item | Source | Cost |
+|---|---|---|---|
+| 1 | 12 V solenoid valve, ¼" barb, NC | Amazon | **$10-12** (counted in Watering below) |
+| 1 | DRV8871 breakout board (U5b role) | Amazon / Pololu | ~$5 |
+| 1 | 0.1 Ω current-sense shunt (for IPROPI jam detect) | Digi-Key | <$1 |
+
+#### Sensors
+| Qty | Item | Source | Cost |
+|---|---|---|---|
+| 3 | DS18B20 waterproof temp sensors (panel, soil, battery) | Amazon | **$11** (5-pack) |
+| 1 | 4.7 kΩ pull-up (1-Wire bus) | Amazon | <$1 |
+| 1 | Capacitive soil moisture sensor V1.2 (5-pack for spares) | Amazon | **$9** |
+| 1 | INA219 current sensor breakout (I²C) | Mouser | **$2** |
+| 1 | BMI160 IMU breakout (panel angle, optional) | Mouser | **$2** |
+
+#### Prototyping hardware
+| Qty | Item | Source | Cost |
+|---|---|---|---|
+| 1 | Breadboard or perfboard | Amazon | **$5** |
+| ~30 | Jumper wires (M-F, M-M, F-F) | Amazon | **$3** |
+
+**Total electronics (subsystems): ~$116 new + $50 already ordered = $166**
 
 ### Watering system (v2.4 — solenoid on tap water)
 
@@ -175,16 +210,16 @@ file (daily rotation, 30-day retention by default, ~30 MB total).
 | Panel + clamps | $33 | — | $33 |
 | Kickstand actuator + pins | $17 | already ordered | $17 |
 | Fasteners | $8 | — | $8 |
-| Electronics (Sunapex MPPT, sensors, breadboard) | $61 | $50 (battery + ESP32) | $111 |
+| Electronics (MPPT, sensors, drivers, breadboard) | $116 | $50 (battery + ESP32) | $166 |
 | Watering system (solenoid + tee + drip) | $46 | — | $46 |
-| **Total** | **$193** | **$50** | **~$243** |
+| **Total** | **$248** | **$50** | **~$298** |
 
 **v2.4 adds ~$46 (solenoid watering) on top of v2.2 — full smart planter.**
 v2.4 swaps the v2.3 pump + 5-gal bucket for a 12V solenoid on tap water:
 cheaper to run, no reservoir to refill, no pump priming, fail-safe closed
 when de-energized.
 
-(The full-size build is ~$1,400; the mini v2.4 is ~17% of that.)
+(The full-size build is ~$1,400; the mini v2.4 is ~21% of that.)
 
 ---
 
