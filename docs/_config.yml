@@ -2,8 +2,8 @@
 # See https://jekyllrb.com/docs/configuration/options/
 
 title: Wattplot
-description: A planter with a hinged, ballast-mounted solar canopy.
-tagline: Open-source hardware &amp; software
+description: A raised bed whose canopy is a working solar panel. The symbiosis of energy production and agriculture.
+tagline: Give an old solar panel a second life.
 url: https://mokahlo.github.io
 baseurl: /wattplot
 lang: en_US

@@ -1,6 +1,12 @@
-# Wattplot — Concept Brief
+# Wattplot - Concept Brief
 
-A DIY, open-source 4x8 ft planter that grows a tomato crop on top while generating solar electricity underneath, in a mutually beneficial arrangement.
+**Give an old solar panel a second life.**
+
+A DIY, open-source 4×8 ft planter whose canopy is a working solar panel.
+The same square foot grows tomatoes *and* generates electricity — not
+because the panel was designed for the bed, but because the bed and the
+panel need the same thing: a frame, an angle, and a reason to be in
+the sun. **Symbiosis of energy production and agriculture.**
 
 ## Problem
 
@@ -13,10 +19,13 @@ Standard solutions force a trade-off: solar panel OR garden bed, not both.
 
 ## Core Idea
 
-A 4x8 ft raised planter where:
-- The **top surface is a tilted, semi-transparent solar canopy** acting as both PV array and partial shade / rain shelter for the crop
+A 4×8 ft raised planter where:
+- The **canopy is a working solar panel** — same orientation, same hardware, same grid tie as a rooftop install
 - The **bed below grows tomatoes** (and compatible companions) in soil
-- The **symbiosis** is engineered: filtered light, reduced heat stress, less evaporation, rain diversion to roots — while electricity offsets pump, irrigation, lighting, or grid use
+- The **symbiosis** is engineered: filtered afternoon shade where the crop needs it most, less evaporation, rain diversion to roots, and electricity that offsets the pump, irrigation, solenoid, and any grid load — all from the same structure
+
+The panel isn't a roof over a garden. The garden isn't a basement under
+a solar array. They're the same object.
 
 ## Target User
 

@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wattplot — Data dashboard</title>
+<meta name="description" content="Browse all Wattplot data: energy production, watering events, panel tilt, motor current, soil and panel temperature. Customizable charts, time ranges, CSV import.">
+<link rel="canonical" href="https://mokahlo.github.io/wattplot/data.html">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0d1117; --surface: #161b22; --elev: #1f2530;
+    --border: #2a313c; --border-2: #3a414e; --line-soft: #20262f;
+    --ink: #e6e3dc; --ink-2: #a8a59c; --muted: #6e6c66;
+    --accent: #ff9a5e; --accent-2: #ffb27a; --accent-soft: rgba(255, 154, 94, 0.10);
+    --good: #6cc8a3; --bad: #e8a5a8; --warn: #f0c270;
+    --c-power: #f0c270;
+    --c-solar: #f0c270;
+    --c-battery: #6cc8a3;
+    --c-soil: #a78bdb;
+    --c-temp: #5ab0c9;
+    --c-water: #5ab0c9;
+    --c-tilt: #ff9a5e;
+    --c-motor: #ff9a5e;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+    font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; transition: color 0.15s; }
+  a:hover { color: var(--accent-2); }
+  h1, h2, h3 { color: var(--ink); letter-spacing: -0.005em; margin: 0 0 0.5em; }
+  h1 { font-family: 'DM Serif Display', serif; font-weight: 400; font-size: 36px; line-height: 1.15; }
+  h2 { font-size: 22px; font-weight: 600; margin: 0 0 16px; }
+  h3 { font-size: 16px; font-weight: 600; margin: 0 0 6px; }
+  p { margin: 0 0 1em; }
+  code { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; background: var(--surface); border: 1px solid var(--border); padding: 1px 6px; border-radius: 4px; }
+  .wrap { max-width: 1400px; margin: 0 auto; padding: 0 28px; }
+  @media (max-width: 720px) { .wrap { padding: 0 18px; } }
+
+  /* Top nav */
+  .topnav { position: sticky; top: 0; z-index: 100; background: rgba(13, 17, 23, 0.85); backdrop-filter: saturate(180%) blur(12px); border-bottom: 1px solid var(--border); }
+  .topnav-inner { display: flex; align-items: center; gap: 22px; padding: 12px 28px; max-width: 1400px; margin: 0 auto; }
+  .topnav .brand { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--ink); text-decoration: none; font-weight: 400; display: flex; align-items: center; gap: 8px; }
+  .topnav .brand img { width: 24px; height: 24px; }
+  .topnav .brand:hover { color: var(--accent); }
+  .topnav nav { display: flex; gap: 18px; flex-wrap: wrap; flex: 1; }
+  .topnav nav a { color: var(--ink-2); font-size: 13.5px; font-weight: 500; }
+  .topnav nav a:hover, .topnav nav a.active { color: var(--accent); }
+  .topnav nav a.has-caret::after { content: " ▾"; color: var(--muted); font-size: 10px; margin-left: 2px; }
+  .topnav .gh { background: var(--ink); color: var(--bg); padding: 7px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; flex-shrink: 0; }
+  .topnav .gh:hover { background: var(--accent); color: var(--bg); }
+  .dropdown { position: relative; }
+  .dropdown .menu { position: absolute; top: 100%; left: -8px; background: var(--surface); border: 1px solid var(--border-2); border-radius: 10px; box-shadow: 0 12px 32px rgba(0,0,0,0.5); min-width: 220px; padding: 6px; margin-top: 0; padding-top: 18px; display: none; z-index: 200; }
+  .dropdown .menu::before { content: ''; position: absolute; top: -6px; left: 0; right: 0; height: 18px; background: transparent; pointer-events: auto; }
+  .dropdown:hover .menu, .dropdown:focus-within .menu, .dropdown.is-open .menu { display: block; }
+  .dropdown .menu a { display: block; padding: 8px 12px; border-radius: 6px; color: var(--ink-2); font-size: 13.5px; }
+  .dropdown .menu a:hover { background: var(--accent-soft); color: var(--accent); }
+  .dropdown > a.has-caret { cursor: pointer; user-select: none; }
+
+  main { padding: 40px 0 80px; }
+  .lede { color: var(--ink-2); font-size: 16px; max-width: 760px; margin: 0 0 32px; }
+  .lede strong { color: var(--ink); }
+
+  /* Toolbar */
+  .toolbar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 18px; margin-bottom: 24px;
+  }
+  .toolbar .lbl { color: var(--muted); font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; margin-right: 4px; }
+  .toolbar .seg { display: inline-flex; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .toolbar .seg button { background: transparent; color: var(--ink-2); border: 0; padding: 7px 14px; font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+  .toolbar .seg button:hover { color: var(--ink); background: var(--elev); }
+  .toolbar .seg button.active { background: var(--accent); color: var(--bg); }
+  .toolbar .spacer { flex: 1; }
+  .toolbar .file-btn { background: var(--ink); color: var(--bg); border: 0; padding: 8px 14px; border-radius: 8px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+  .toolbar .file-btn:hover { background: var(--accent); }
+  .toolbar .file-btn input { display: none; }
+  .toolbar .src { font-size: 12.5px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+  .toolbar .src.live { color: var(--good); }
+  .toolbar .src.csv { color: var(--accent); }
+
+  /* Chart grid */
+  .charts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+  @media (max-width: 1100px) { .charts { grid-template-columns: 1fr; } }
+  .chart-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column;
+  }
+  .chart-card .hd { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .chart-card .hd h3 { margin: 0; flex: 1; }
+  .chart-card .hd .stats { font-size: 12px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+  .chart-card .hd .stats span { color: var(--ink-2); }
+  .chart-card .controls { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+  .chart-card .controls .type { display: inline-flex; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .chart-card .controls .type button { background: transparent; color: var(--muted); border: 0; padding: 4px 10px; font: inherit; font-size: 11.5px; font-weight: 500; cursor: pointer; }
+  .chart-card .controls .type button:hover { color: var(--ink); }
+  .chart-card .controls .type button.active { background: var(--ink); color: var(--bg); }
+  .chart-card .series { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chart-card .series .tag {
+    display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 999px;
+    font-size: 11.5px; color: var(--ink-2); cursor: pointer; user-select: none;
+  }
+  .chart-card .series .tag.off { opacity: 0.4; }
+  .chart-card .series .tag .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .chart-card .canvas-wrap { position: relative; flex: 1; min-height: 220px; }
+  .chart-card canvas { width: 100% !important; height: 240px !important; }
+
+  /* Stats summary */
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+  @media (max-width: 720px) { .kpis { grid-template-columns: repeat(2, 1fr); } }
+  .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .kpi .v { font-family: 'DM Serif Display', serif; font-size: 26px; line-height: 1; margin: 0 0 4px; color: var(--accent); }
+  .kpi .l { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .kpi .s { font-size: 11.5px; color: var(--ink-2); margin-top: 4px; }
+
+  /* Help / empty state */
+  .empty { background: var(--surface); border: 1px dashed var(--border-2); border-radius: 14px; padding: 32px; text-align: center; color: var(--ink-2); margin: 12px 0; }
+  .empty h2 { color: var(--ink); margin: 0 0 8px; }
+
+  footer { border-top: 1px solid var(--border); padding: 28px 0; color: var(--muted); font-size: 13px; margin-top: 40px; }
+  footer .row { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+  footer a { color: var(--ink-2); }
+  footer a:hover { color: var(--accent); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topnav">
+  <div class="topnav-inner">
+    <a href="./" class="brand"><img src="favicon.svg" alt="">Wattplot</a>
+    <nav>
+      <div class="dropdown">
+        <a class="has-caret">View</a>
+        <div class="menu">
+          <a href="3d.html">3D model</a>
+          <a href="gallery.html">Gallery</a>
+          <a href="pinmap.html">Pin map</a>
+          <a href="schematic.html">Schematic</a>
+          <a href="diagrams.html">Diagrams</a>
+        </div>
+      </div>
+      <div class="dropdown">
+        <a class="has-caret">Build</a>
+        <div class="menu">
+          <a href="build_basic.html">Basic overview</a>
+          <a href="build_guide.html">Full-size guide</a>
+          <a href="build_guide_mini.html">Mini guide</a>
+          <a href="build_longi_620W.html">Longi 620 W</a>
+          <a href="build_my_craigslist_panel.html">Salvage build</a>
+          <a href="build_residential_60cell.html">60-cell residential</a>
+          <a href="upcycling.html">Upcycling</a>
+        </div>
+      </div>
+      <div class="dropdown">
+        <a class="has-caret">Hardware</a>
+        <div class="menu">
+          <a href="wiring">Wiring</a>
+          <a href="pcb_design">PCB design</a>
+          <a href="schematic.html">Schematic</a>
+          <a href="sensor_placement">Sensor placement</a>
+        </div>
+      </div>
+      <div class="dropdown">
+        <a class="has-caret">Software</a>
+        <div class="menu">
+          <a href="control_law">Control law</a>
+          <a href="watering">Watering</a>
+          <a href="logging">Logging</a>
+          <a href="test_checklist">Test checklist</a>
+          <a href="data.html" class="active">Data dashboard</a>
+        </div>
+      </div>
+      <div class="dropdown">
+        <a class="has-caret">Booth</a>
+        <div class="menu">
+          <a href="one_pager">One-pager</a>
+          <a href="faq">FAQ</a>
+          <a href="application">Application</a>
+          <a href="demo_script">Demo script</a>
+          <a href="sim.html">Simulator</a>
+          <a href="booth/index.html">3D booth viewer</a>
+        </div>
+      </div>
+      <div class="dropdown">
+        <a class="has-caret">About</a>
+        <div class="menu">
+          <a href="disclaimers.html">Disclaimers &amp; license</a>
+        </div>
+      </div>
+    </nav>
+    <a class="gh" href="https://github.com/mokahlo/wattplot">GitHub ↗</a>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <h1>Data dashboard</h1>
+    <p class="lede">
+      Every number the Wattplot controller publishes, in one place.
+      <strong>Energy production, watering, panel tilt, motor current, soil &amp; panel temperature</strong> &mdash;
+      pick a time range, toggle the series you care about, change chart types.
+      Drop in a CSV from your own logger to replace the synthetic sample data below.
+    </p>
+
+    <div class="toolbar">
+      <span class="lbl">Range</span>
+      <div class="seg" id="range-seg">
+        <button data-range="3600000">1 h</button>
+        <button data-range="21600000">6 h</button>
+        <button data-range="86400000" class="active">24 h</button>
+        <button data-range="604800000">7 d</button>
+        <button data-range="2592000000">30 d</button>
+        <button data-range="0">All</button>
+      </div>
+      <div class="spacer"></div>
+      <span class="src" id="src-indicator">synthetic sample data</span>
+      <label class="file-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Load CSV
+        <input type="file" id="csv-input" accept=".csv,.txt">
+      </label>
+    </div>
+
+    <div class="kpis" id="kpis">
+      <div class="kpi"><div class="v" id="kpi-energy">—</div><div class="l">Energy</div><div class="s" id="kpi-energy-sub">in range</div></div>
+      <div class="kpi"><div class="v" id="kpi-water">—</div><div class="l">Water delivered</div><div class="s" id="kpi-water-sub">in range</div></div>
+      <div class="kpi"><div class="v" id="kpi-tilt">—</div><div class="l">Avg tilt</div><div class="s" id="kpi-tilt-sub">in range</div></div>
+      <div class="kpi"><div class="v" id="kpi-soc">—</div><div class="l">Battery SOC</div><div class="s" id="kpi-soc-sub">end of range</div></div>
+    </div>
+
+    <div class="charts" id="charts">
+      <!-- Chart cards are injected by JS -->
+    </div>
+
+    <p class="lede" style="margin-top: 40px; font-size: 14px;">
+      <strong>Data format:</strong> a CSV with a header row. Required column: <code>timestamp</code> (ISO 8601 or unix ms).
+      Optional columns: <code>panel_w</code>, <code>battery_v</code>, <code>battery_soc</code>, <code>solar_w</code>,
+      <code>load_w</code>, <code>soil_pct</code>, <code>panel_temp_c</code>, <code>soil_temp_c</code>,
+      <code>battery_temp_c</code>, <code>water_event</code> (0/1), <code>tilt_deg</code>, <code>motor_a</code>, <code>wind_mps</code>.
+      Unknown columns are ignored. The Wattplot firmware's MQTT log topic
+      (<code>wattplot/&lt;id&gt;/state</code> with HA sensor attributes) maps to this format &mdash; export from
+      Home Assistant's <em>Developer Tools &rarr; Statistics</em> or pipe
+      <code>tools/log_subscriber.py</code> through a small CSV converter.
+    </p>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="row">
+      <span>Wattplot · open-source hardware &amp; software · MIT license</span>
+      <span>·</span>
+      <a href="https://github.com/mokahlo/wattplot">github.com/mokahlo/wattplot</a>
+      <span>·</span>
+      <a href="disclaimers.html">Disclaimers</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ===================== Sample data generator =====================
+// Generates 30 days of realistic synthetic data for a full-size Wattplot.
+// Deterministic seed so the sample looks the same on every load.
+
+function mulberry32(seed) {
+  return function() {
+    let t = seed += 0x6D2B79F5;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function gauss(rng) {
+  // Box-Muller; clamped to keep it sane
+  let u = 0, v = 0;
+  while (u === 0) u = rng();
+  while (v === 0) v = rng();
+  const n = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+  return Math.max(-4, Math.min(4, n));
+}
+
+function generateSampleData() {
+  const rng = mulberry32(0xC0FFEE);
+  const start = Date.now() - 30 * 86400 * 1000;
+  const stepMs = 60 * 1000; // 1-minute resolution
+  const points = 30 * 24 * 60;
+
+  const rows = [];
+  let batteryV = 13.2;
+  let tiltDeg = 0;
+  let motorA = 0;
+  let soilPct = 0.45 + rng() * 0.2;
+  let lastWaterMs = 0;
+
+  for (let i = 0; i < points; i++) {
+    const t = start + i * stepMs;
+    const dayFrac = ((t / 86400000) % 1);
+    const hour = dayFrac * 24;
+    // Phoenix-style sun: peaks at ~13:00, zero before 6 and after 19
+    const sun = Math.max(0, Math.cos((hour - 13) / 24 * 2 * Math.PI));
+    const cloud = 0.55 + 0.45 * (1 - Math.abs(gauss(rng)) * 0.5);
+    const panelW = Math.max(0, sun * 620 * cloud + gauss(rng) * 8);
+    // Battery dynamics
+    const drawW = 4 + 1.5 * (rng() - 0.3) + (motorA > 1 ? 12 : 0) + (solenoidOn > 0 ? 6 : 0);
+    const netW = panelW - drawW;
+    batteryV += netW * stepMs / 1000 / 3600 / 50;  // very rough integration
+    batteryV = Math.max(11.8, Math.min(14.4, batteryV + gauss(rng) * 0.005));
+    const soc = Math.max(0, Math.min(1, (batteryV - 11.8) / (14.4 - 11.8)));
+    // Solar W: separate from panel output
+    const solarW = Math.max(0, panelW * 0.92);
+    // Soil
+    soilPct -= 0.00006 * sun * (1 + gauss(rng) * 0.1);
+    if (soilPct < 0.22) {
+      // Watering event
+      soilPct = Math.min(0.6, soilPct + 0.22);
+      lastWaterMs = t;
+    }
+    // Tilt: sun-following w/ small noise + occasional folds
+    const targetTilt = 10 + 30 * sun + gauss(rng) * 1.5;
+    if (Math.abs(targetTilt - tiltDeg) > 0.5) {
+      motorA = 1.2 + Math.abs(gauss(rng)) * 0.3;
+      tiltDeg += (targetTilt - tiltDeg) * 0.4;
+    } else {
+      motorA = 0;
+    }
+    // Solenoid is "on" briefly when watering
+    const solenoidOn = (t - lastWaterMs < 30000) ? 1 : 0;
+    // Temperatures: panel hot, soil cooler, battery warm
+    const panelTempC = 25 + 40 * sun + gauss(rng) * 1.2;
+    const soilTempC = 18 + 10 * sun + gauss(rng) * 0.8;
+    const batteryTempC = 22 + 8 * sun + gauss(rng) * 0.5;
+    // Wind
+    const windMps = 2 + 2.5 * Math.abs(gauss(rng)) + (rng() < 0.02 ? 8 : 0);
+
+    rows.push({
+      timestamp: t,
+      panel_w: +panelW.toFixed(1),
+      solar_w: +solarW.toFixed(1),
+      load_w: +drawW.toFixed(1),
+      battery_v: +batteryV.toFixed(2),
+      battery_soc: +soc.toFixed(3),
+      soil_pct: +soilPct.toFixed(3),
+      panel_temp_c: +panelTempC.toFixed(1),
+      soil_temp_c: +soilTempC.toFixed(1),
+      battery_temp_c: +batteryTempC.toFixed(1),
+      water_event: solenoidOn,
+      tilt_deg: +tiltDeg.toFixed(1),
+      motor_a: +motorA.toFixed(2),
+      wind_mps: +windMps.toFixed(1),
+    });
+  }
+  return rows;
+}
+
+// ===================== CSV parsing =====================
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cells = lines[i].split(',');
+    if (cells.length !== headers.length) continue;
+    const r = {};
+    headers.forEach((h, j) => {
+      const v = cells[j].trim();
+      if (h === 'timestamp') {
+        r.timestamp = /^\d+$/.test(v) ? parseInt(v, 10) : Date.parse(v);
+      } else {
+        const n = parseFloat(v);
+        r[h] = isNaN(n) ? 0 : n;
+      }
+    });
+    if (typeof r.timestamp === 'number' && !isNaN(r.timestamp)) rows.push(r);
+  }
+  rows.sort((a, b) => a.timestamp - b.timestamp);
+  return rows;
+}
+
+// ===================== Chart config =====================
+// Color palette for series
+const COLORS = {
+  panel_w: '#f0c270',
+  solar_w: '#ff9a5e',
+  load_w: '#5ab0c9',
+  battery_v: '#6cc8a3',
+  battery_soc: '#6cc8a3',
+  soil_pct: '#a78bdb',
+  panel_temp_c: '#e8a5a8',
+  soil_temp_c: '#5ab0c9',
+  battery_temp_c: '#f0c270',
+  water_event: '#5ab0c9',
+  tilt_deg: '#ff9a5e',
+  motor_a: '#a78bdb',
+  wind_mps: '#a8a59c',
+};
+
+const CHART_DEFS = [
+  {
+    id: 'energy',
+    title: 'Energy',
+    unit: 'W',
+    type: 'line',
+    series: [
+      { key: 'panel_w',  label: 'Panel W',   color: COLORS.panel_w,  default: true },
+      { key: 'solar_w',  label: 'Solar W',   color: COLORS.solar_w,  default: true },
+      { key: 'load_w',   label: 'Load W',    color: COLORS.load_w,   default: true },
+    ],
+  },
+  {
+    id: 'battery',
+    title: 'Battery',
+    unit: 'V / %',
+    type: 'line',
+    series: [
+      { key: 'battery_v',  label: 'Voltage (V)', color: COLORS.battery_v,   default: true,  yAxis: 'left' },
+      { key: 'battery_soc', label: 'SOC (%)',     color: COLORS.battery_soc, default: true,  yAxis: 'right', scale: 'pct' },
+    ],
+    dualAxis: true,
+  },
+  {
+    id: 'soil',
+    title: 'Watering / soil moisture',
+    unit: '%',
+    type: 'line',
+    series: [
+      { key: 'soil_pct',     label: 'Soil moisture (%)', color: COLORS.soil_pct,      default: true, scale: 'pct' },
+      { key: 'water_event',  label: 'Watering event',    color: COLORS.water_event,   default: true, kind: 'bars' },
+    ],
+    overlay: true,
+  },
+  {
+    id: 'temp',
+    title: 'Temperature',
+    unit: '°C',
+    type: 'line',
+    series: [
+      { key: 'panel_temp_c',   label: 'Panel',   color: COLORS.panel_temp_c,   default: true },
+      { key: 'soil_temp_c',    label: 'Soil',    color: COLORS.soil_temp_c,    default: true },
+      { key: 'battery_temp_c', label: 'Battery', color: COLORS.battery_temp_c, default: true },
+    ],
+  },
+  {
+    id: 'tilt',
+    title: 'Panel tilt & motor',
+    unit: '° / A',
+    type: 'line',
+    series: [
+      { key: 'tilt_deg',  label: 'Tilt (°)',     color: COLORS.tilt_deg, default: true,  yAxis: 'left' },
+      { key: 'motor_a',   label: 'Motor (A)',    color: COLORS.motor_a,  default: true,  yAxis: 'right' },
+    ],
+    dualAxis: true,
+  },
+  {
+    id: 'wind',
+    title: 'Wind speed',
+    unit: 'm/s',
+    type: 'line',
+    series: [
+      { key: 'wind_mps', label: 'Wind (m/s)', color: COLORS.wind_mps, default: true },
+    ],
+  },
+];
+
+// ===================== State =====================
+const state = {
+  data: generateSampleData(),
+  rangeMs: 86400000,
+  source: 'synthetic',
+  seriesEnabled: {},
+  chartTypes: {},
+  charts: {},
+};
+
+CHART_DEFS.forEach(d => {
+  d.series.forEach(s => { state.seriesEnabled[s.key] = s.default; });
+  state.chartTypes[d.id] = d.type;
+});
+
+// ===================== Chart.js defaults =====================
+Chart.defaults.color = '#a8a59c';
+Chart.defaults.font.family = "'Outfit', system-ui, sans-serif";
+Chart.defaults.font.size = 11.5;
+Chart.defaults.borderColor = '#2a313c';
+Chart.defaults.animation.duration = 250;
+
+function makeChartConfig(def, filtered, type) {
+  // Build a single Chart.js config for a card.
+  const labels = filtered.map(r => r.timestamp);
+  const enabled = def.series.filter(s => state.seriesEnabled[s.key]);
+
+  if (def.dualAxis) {
+    // Two y-axes, two colors per series assigned to L or R
+    const leftKey = enabled.find(s => (s.yAxis || 'left') === 'left')?.key;
+    const rightKey = enabled.find(s => (s.yAxis || 'left') === 'right')?.key;
+    const datasets = [];
+    if (leftKey) {
+      const s = def.series.find(x => x.key === leftKey);
+      datasets.push(makeDataset(s, filtered, type));
+    }
+    if (rightKey) {
+      const s = def.series.find(x => x.key === rightKey);
+      datasets.push(makeDataset(s, filtered, type, 'right'));
+    }
+    return {
+      type: type === 'area' ? 'line' : type,
+      data: { labels, datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: { backgroundColor: '#0d1117', borderColor: '#2a313c', borderWidth: 1 },
+        },
+        scales: {
+          x: { type: 'time', time: { tooltipFormat: 'MMM d, HH:mm' }, grid: { color: '#20262f' }, ticks: { maxRotation: 0, autoSkipPadding: 24 } },
+          yLeft:  { type: 'linear', position: 'left',  grid: { color: '#20262f' }, display: !!leftKey,  title: { display: true, text: leftKey ? def.series.find(s=>s.key===leftKey).label : '' } },
+          yRight: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, display: !!rightKey, title: { display: true, text: rightKey ? def.series.find(s=>s.key===rightKey).label : '' }, max: rightKey && def.series.find(s=>s.key===rightKey).scale === 'pct' ? 1 : undefined },
+        },
+      },
+    };
+  }
+
+  const datasets = enabled.map(s => makeDataset(s, filtered, type));
+  return {
+    type: type === 'area' ? 'line' : type,
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor: '#0d1117', borderColor: '#2a313c', borderWidth: 1 },
+      },
+      scales: {
+        x: { type: 'time', time: { tooltipFormat: 'MMM d, HH:mm' }, grid: { color: '#20262f' }, ticks: { maxRotation: 0, autoSkipPadding: 24 } },
+        y: { grid: { color: '#20262f' }, beginAtZero: def.id === 'energy' || def.id === 'wind' || def.id === 'soil', max: def.series.find(s => s.scale === 'pct') ? 1 : undefined, ticks: { callback: function(v) { return v; } } },
+      },
+    },
+  };
+}
+
+function makeDataset(s, rows, type, axis) {
+  const color = s.color;
+  const data = rows.map(r => s.kind === 'bars' ? r[s.key] * 100 : (r[s.key] ?? null));
+  const base = {
+    label: s.label,
+    data,
+    borderColor: color,
+    backgroundColor: type === 'bar' ? color + 'cc' : (type === 'area' ? color + '33' : color + '11'),
+    borderWidth: 1.5,
+    pointRadius: 0,
+    pointHoverRadius: 4,
+    tension: 0.25,
+    fill: type === 'area',
+    yAxisID: axis === 'right' ? 'yRight' : 'yLeft',
+  };
+  if (type === 'bar') {
+    base.type = 'bar';
+    base.borderWidth = 0;
+    base.borderRadius = 2;
+  }
+  return base;
+}
+
+// ===================== Filter + render =====================
+function filterByRange() {
+  const all = state.data;
+  if (state.rangeMs === 0) return all;
+  const last = all[all.length - 1].timestamp;
+  return all.filter(r => r.timestamp >= last - state.rangeMs);
+}
+
+function refreshAll() {
+  const filtered = filterByRange();
+  CHART_DEFS.forEach(def => {
+    const chart = state.charts[def.id];
+    if (!chart) return;
+    const type = state.chartTypes[def.id];
+    const cfg = makeChartConfig(def, filtered, type);
+    chart.config = cfg;
+    chart.update();
+  });
+  updateKPIs(filtered);
+}
+
+function updateKPIs(rows) {
+  if (!rows.length) {
+    document.getElementById('kpi-energy').textContent = '—';
+    document.getElementById('kpi-water').textContent = '—';
+    document.getElementById('kpi-tilt').textContent = '—';
+    document.getElementById('kpi-soc').textContent = '—';
+    return;
+  }
+  // Energy: sum panel_w * stepHours
+  const stepH = (rows[1]?.timestamp - rows[0]?.timestamp || 60000) / 3600000;
+  const energyKWh = rows.reduce((s, r) => s + (r.panel_w || 0) * stepH, 0) / 1000;
+  document.getElementById('kpi-energy').textContent = energyKWh.toFixed(2) + ' kWh';
+  document.getElementById('kpi-energy-sub').textContent = energyKWh < 1 ? (energyKWh * 1000).toFixed(0) + ' Wh' : 'in range';
+  // Water: count of watering events × ~250 mL (solenoid at 1 GPM for 4 s)
+  const events = rows.reduce((s, r) => s + (r.water_event || 0), 0);
+  const ml = Math.round(events * 250);
+  document.getElementById('kpi-water').textContent = ml > 1000 ? (ml/1000).toFixed(1) + ' L' : ml + ' mL';
+  document.getElementById('kpi-water-sub').textContent = events + ' event' + (events===1?'':'s');
+  // Tilt avg
+  const tiltVals = rows.map(r => r.tilt_deg).filter(v => v != null);
+  const avgTilt = tiltVals.length ? tiltVals.reduce((s,v)=>s+v,0)/tiltVals.length : 0;
+  document.getElementById('kpi-tilt').textContent = avgTilt.toFixed(0) + '°';
+  document.getElementById('kpi-tilt-sub').textContent = 'avg over ' + rows.length + ' samples';
+  // SOC at end of range
+  const last = rows[rows.length - 1];
+  document.getElementById('kpi-soc').textContent = ((last.battery_soc || 0) * 100).toFixed(0) + '%';
+  document.getElementById('kpi-soc-sub').textContent = (last.battery_v || 0).toFixed(2) + ' V';
+}
+
+// ===================== Build the chart cards =====================
+function buildCards() {
+  const root = document.getElementById('charts');
+  root.innerHTML = '';
+  CHART_DEFS.forEach(def => {
+    const card = document.createElement('div');
+    card.className = 'chart-card';
+    card.innerHTML = `
+      <div class="hd">
+        <h3>${def.title}</h3>
+        <span class="stats">${def.unit}</span>
+      </div>
+      <div class="controls">
+        <div class="type" data-chart="${def.id}">
+          <button data-type="line" class="${def.type==='line'?'active':''}">Line</button>
+          <button data-type="area" class="${def.type==='area'?'active':''}">Area</button>
+          <button data-type="bar"  class="${def.type==='bar' ?'active':''}">Bar</button>
+        </div>
+        <div class="series"></div>
+      </div>
+      <div class="canvas-wrap"><canvas id="canvas-${def.id}"></canvas></div>
+    `;
+    root.appendChild(card);
+
+    // Series tags
+    const seriesEl = card.querySelector('.series');
+    def.series.forEach(s => {
+      const tag = document.createElement('span');
+      tag.className = 'tag' + (state.seriesEnabled[s.key] ? '' : ' off');
+      tag.dataset.key = s.key;
+      tag.innerHTML = `<span class="dot" style="background:${s.color}"></span>${s.label}`;
+      tag.addEventListener('click', () => {
+        state.seriesEnabled[s.key] = !state.seriesEnabled[s.key];
+        tag.classList.toggle('off');
+        refreshAll();
+      });
+      seriesEl.appendChild(tag);
+    });
+
+    // Type buttons
+    card.querySelectorAll('.type button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const t = btn.dataset.type;
+        state.chartTypes[def.id] = t;
+        card.querySelectorAll('.type button').forEach(b => b.classList.toggle('active', b === btn));
+        refreshAll();
+      });
+    });
+
+    // Build chart
+    const ctx = card.querySelector('canvas').getContext('2d');
+    const filtered = filterByRange();
+    const cfg = makeChartConfig(def, filtered, def.type);
+    state.charts[def.id] = new Chart(ctx, cfg);
+  });
+  updateKPIs(filtered);
+}
+
+// ===================== Toolbar =====================
+document.getElementById('range-seg').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  state.rangeMs = parseInt(b.dataset.range, 10);
+  document.querySelectorAll('#range-seg button').forEach(x => x.classList.toggle('active', x === b));
+  refreshAll();
+});
+
+document.getElementById('csv-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const rows = parseCSV(ev.target.result);
+      if (rows.length < 2) throw new Error('CSV needs at least a header row and one data row');
+      state.data = rows;
+      state.source = file.name;
+      const ind = document.getElementById('src-indicator');
+      ind.textContent = file.name + ' (' + rows.length + ' rows)';
+      ind.classList.add('csv');
+      refreshAll();
+    } catch (err) {
+      alert('CSV parse failed: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+});
+
+// ===================== Dropdown hover delay =====================
+// (Same as the rest of the site — keeps the menu open a beat after the cursor leaves.)
+(function() {
+  document.querySelectorAll('.dropdown').forEach(function(dd) {
+    var hideTimer = null;
+    dd.addEventListener('mouseleave', function() { hideTimer = setTimeout(function() { dd.classList.remove('is-open'); }, 200); });
+    dd.addEventListener('mouseenter', function() { if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; } });
+    var trigger = dd.querySelector(':scope > a.has-caret');
+    if (trigger) {
+      trigger.setAttribute('tabindex', '0');
+      trigger.setAttribute('role', 'button');
+      trigger.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); dd.classList.toggle('is-open'); }
+        else if (e.key === 'Escape') { dd.classList.remove('is-open'); trigger.blur(); }
+      });
+    }
+  });
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.dropdown')) {
+      document.querySelectorAll('.dropdown.is-open').forEach(function(d) { d.classList.remove('is-open'); });
+    }
+  });
+})();
+
+// ===================== Boot =====================
+// Need a date adapter for Chart.js time scale
+function loadChartJsDateAdapter() {
+  return new Promise((resolve, reject) => {
+    if (window['chartjs-adapter-date-fns']) return resolve();
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js';
+    s.onload = resolve; s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+loadChartJsDateAdapter().then(() => {
+  buildCards();
+});
+</script>
+</body>
+</html>

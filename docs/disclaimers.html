@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -47,8 +47,13 @@
   .topnav .gh { background: var(--ink); color: var(--bg); padding: 7px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; flex-shrink: 0; }
   .topnav .gh:hover { background: var(--accent); color: var(--bg); }
   .dropdown { position: relative; }
-  .dropdown .menu { position: absolute; top: 100%; left: -8px; background: var(--surface); border: 1px solid var(--border-2); border-radius: 10px; box-shadow: 0 12px 32px rgba(0,0,0,0.5); min-width: 220px; padding: 6px; margin-top: 8px; display: none; z-index: 200; }
-  .dropdown:hover .menu, .dropdown:focus-within .menu { display: block; }
+  .dropdown .menu { position: absolute; top: 100%; left: -8px; background: var(--surface); border: 1px solid var(--border-2); border-radius: 10px; box-shadow: 0 12px 32px rgba(0,0,0,0.5); min-width: 220px; padding: 6px; margin-top: 0;
+    padding-top: 18px; display: none; z-index: 200; }
+  .dropdown .menu::before {
+    content: ''; position: absolute; top: -6px; left: 0; right: 0; height: 18px;
+    background: transparent; pointer-events: auto;
+  }
+  .dropdown:hover .menu, .dropdown:focus-within .menu, .dropdown.is-open .menu { display: block; }
   .dropdown .menu a { display: block; padding: 8px 12px; border-radius: 6px; color: var(--ink-2); font-size: 13.5px; }
   .dropdown .menu a:hover { background: var(--accent-soft); color: var(--accent); }
 
@@ -147,6 +152,7 @@
           <a href="watering">Watering</a>
           <a href="logging">Logging</a>
           <a href="test_checklist">Test checklist</a>
+          <a href="data.html">Data dashboard</a>
         </div>
       </div>
       <div class="dropdown">
@@ -332,5 +338,44 @@
   </div>
 </footer>
 
+
+<script>
+  // Dropdown hover delay - close the menu 200ms after the cursor leaves, so
+  // a small cursor wobble across the trigger/menu gap doesn't snap it shut.
+  // Open behavior is unchanged (instant on hover/focus).
+  (function() {
+    document.querySelectorAll('.dropdown').forEach(function(dd) {
+      var hideTimer = null;
+      dd.addEventListener('mouseleave', function() {
+        hideTimer = setTimeout(function() { dd.classList.remove('is-open'); }, 200);
+      });
+      dd.addEventListener('mouseenter', function() {
+        if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+      });
+      // Keyboard: caret is now tabindex=0 (via role+tabindex in the markup).
+      // Toggle on Enter/Space, close on Escape or click outside.
+      var trigger = dd.querySelector(':scope > a.has-caret');
+      if (trigger) {
+        trigger.setAttribute('tabindex', '0');
+        trigger.setAttribute('role', 'button');
+        trigger.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            dd.classList.toggle('is-open');
+          } else if (e.key === 'Escape') {
+            dd.classList.remove('is-open');
+            trigger.blur();
+          }
+        });
+      }
+    });
+    // Click outside closes all open dropdowns
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.dropdown')) {
+        document.querySelectorAll('.dropdown.is-open').forEach(function(d) { d.classList.remove('is-open'); });
+      }
+    });
+  })();
+</script>
 </body>
 </html>

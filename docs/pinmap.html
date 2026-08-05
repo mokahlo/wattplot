@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wattplot — ESP32-S3 Pin Map</title>
-<meta name="description" content="Pin map for the Wattplot controller on ESP32-S3-DevKitC-1-N16R8. Schematic rev B vs firmware v3.1. Every wire, every pin.">
+<meta name="description" content="Pin map for the Wattplot controller on ESP32-S3-DevKitC-1-N16R8. Every wire, every pin, tagged by subsystem.">
 <link rel="canonical" href="https://mokahlo.github.io/wattplot/pinmap.html">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
@@ -70,9 +70,14 @@
     position: absolute; top: 100%; left: -8px;
     background: var(--surface); border: 1px solid var(--border-2);
     border-radius: 10px; box-shadow: 0 12px 32px rgba(0,0,0,0.5);
-    min-width: 220px; padding: 6px; margin-top: 8px; display: none; z-index: 200;
+    min-width: 220px; padding: 6px; margin-top: 0;
+    padding-top: 18px; display: none; z-index: 200;
   }
-  .dropdown:hover .menu, .dropdown:focus-within .menu { display: block; }
+  .dropdown .menu::before {
+    content: ''; position: absolute; top: -6px; left: 0; right: 0; height: 18px;
+    background: transparent; pointer-events: auto;
+  }
+  .dropdown:hover .menu, .dropdown:focus-within .menu, .dropdown.is-open .menu { display: block; }
   .dropdown .menu a { display: block; padding: 8px 12px; border-radius: 6px; color: var(--ink-2); font-size: 13.5px; }
   .dropdown .menu a:hover { background: var(--accent-soft); color: var(--accent); }
 
@@ -130,6 +135,13 @@
   .cmp-row.mismatch .comp-status { color: var(--bad); }
   @media (max-width: 768px) { .cmp-row { grid-template-columns: 1fr; gap: 4px; } .cmp-row.head { display: none; } }
 
+  .history-note { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 18px; margin-bottom: 24px; font-size: 13px; color: var(--ink-2); }
+  .history-note summary { cursor: pointer; font-weight: 500; color: var(--ink); font-size: 12.5px; user-select: none; }
+  .history-note summary:hover { color: var(--accent); }
+  .history-note[open] summary { margin-bottom: 8px; }
+  .history-note p { margin: 0; line-height: 1.5; }
+  .history-note code { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+  .history-note a { color: var(--accent); }
   .note { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px; margin-top: 32px; font-size: 14px; color: var(--ink-2); }
   .note strong { color: var(--ink); }
 
@@ -185,6 +197,7 @@
           <a href="watering">Watering</a>
           <a href="logging">Logging</a>
           <a href="test_checklist">Test checklist</a>
+          <a href="data.html">Data dashboard</a>
         </div>
       </div>
       <div class="dropdown">
@@ -212,20 +225,12 @@
 <main>
   <div class="wrap">
     <h1>ESP32-S3 Pin Map</h1>
-    <p class="sub">ESP32-S3-DevKitC-1-N16R8 · schematic rev B (2026-08-03) · firmware v3.1</p>
-
-    <div class="alert">
-      <h3>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        The schematic and the firmware used to disagree
-      </h3>
-      <p>Earlier in this project, <code>wattplot.yaml</code> was compiled from an older C3-era pinout, while the schematic had moved on. <strong>v3</strong> brings the firmware into line with the schematic. <strong>v3.1</strong> removes the limit switches entirely and uses motor-current-spike detection via IPROPI for endstops.</p>
-    </div>
+    <p class="sub">ESP32-S3-DevKitC-1-N16R8 · schematic rev B</p>
 
     <div class="stats">
       <div class="stat good">
         <div class="v">14</div>
-        <div class="l">pins aligned with schematic rev B</div>
+        <div class="l">pins assigned by schematic</div>
       </div>
       <div class="stat">
         <div class="v">3</div>
@@ -233,9 +238,14 @@
       </div>
       <div class="stat">
         <div class="v">17</div>
-        <div class="l">total pins assigned</div>
+        <div class="l">total pins</div>
       </div>
     </div>
+
+    <details class="history-note">
+      <summary>History: how the pin map evolved</summary>
+      <p>Earlier revisions of this project used an ESP32-C3-era pinout in <code>wattplot.yaml</code> while the schematic had moved to ESP32-S3. That mismatch is now resolved. Limit switches (GPIO14, GPIO15) were removed in favor of current-based homing via the actuator H-bridge's IPROPI pin (GPIO4). Three schematic-removed components (H-bridge EN, Solenoid IN2, Status LED) remain defined in the firmware as compat entries on schematic-free pins, so existing state-machine scripts resolve without rewriting. <a href="https://github.com/mokahlo/wattplot/commits/master/firmware/wattplot.yaml">Full changelog →</a></p>
+    </details>
 
     <div class="legend">
       <div class="legend-item"><span class="dot" style="background: var(--c-motor)"></span>Actuator H-bridge (U5a) — panel tilt</div>
@@ -249,7 +259,7 @@
     </div>
 
     <h2>Pin map</h2>
-    <p class="sub">Schematic rev B (the source of truth) vs firmware v3.1.</p>
+    <p class="sub">Schematic (the source of truth) vs firmware.</p>
     <div class="board">
       <div>
         <div class="col-title">📐 Schematic (rev B, 2026-08-03)</div>
@@ -274,7 +284,7 @@
       </div>
 
       <div>
-        <div class="col-title">⚙️ wattplot.yaml v3.1</div>
+        <div class="col-title">⚙️ wattplot.yaml</div>
         <div class="pin-row"><div class="pin-num">GPIO1</div><div class="pin-fn"><span class="dot" style="background: var(--c-motor)"></span>Actuator H-bridge IN1 (U5a) <span class="pin-sub pin-sub-actuator">Actuator</span></div></div>
         <div class="pin-row"><div class="pin-num">GPIO2</div><div class="pin-fn"><span class="dot" style="background: var(--c-motor)"></span>Actuator H-bridge IN2 (U5a) <span class="pin-sub pin-sub-actuator">Actuator</span></div></div>
         <div class="pin-row"><div class="pin-num">GPIO4</div><div class="pin-fn"><span class="dot" style="background: var(--c-adc)"></span>Actuator IPROPI (NEW, U5a) <span class="pin-sub pin-sub-actuator">Actuator</span></div></div>
@@ -299,7 +309,7 @@
     <p class="sub">What each component is wired to, in each design.</p>
     <div class="cmp">
       <div class="cmp-row head">
-        <div>Component</div><div>Schematic</div><div>YAML v3.1</div><div>Status</div>
+        <div>Component</div><div>Schematic</div><div>YAML</div><div>Status</div>
       </div>
       <div class="cmp-row match">
         <div class="comp-name">Actuator H-bridge IN1 / IN2 <span class="pin-sub pin-sub-actuator">Actuator (U5a)</span></div>
@@ -309,7 +319,7 @@
       <div class="cmp-row match">
         <div class="comp-name">Actuator IPROPI (current sense) <span class="pin-sub pin-sub-actuator">Actuator (U5a)</span></div>
         <div class="comp-sch">GPIO4</div><div class="comp-yaml">GPIO4</div>
-        <div class="comp-status">✓ match (NEW)</div>
+        <div class="comp-status">✓ match</div>
       </div>
       <div class="cmp-row match">
         <div class="comp-name">Solenoid H-bridge IN1 <span class="pin-sub pin-sub-solenoid">Solenoid (U5b)</span></div>
@@ -319,7 +329,7 @@
       <div class="cmp-row match">
         <div class="comp-name">Solenoid IPROPI (jam detect) <span class="pin-sub pin-sub-solenoid">Solenoid (U5b)</span></div>
         <div class="comp-sch">GPIO5</div><div class="comp-yaml">GPIO5</div>
-        <div class="comp-status">✓ match (NEW)</div>
+        <div class="comp-status">✓ match</div>
       </div>
       <div class="cmp-row match">
         <div class="comp-name">Soil moisture <span class="pin-sub pin-sub-sensor">Sensors</span></div>
@@ -351,11 +361,6 @@
         <div class="comp-sch">GPIO13 (direct)</div><div class="comp-yaml">GPIO13</div>
         <div class="comp-status">✓ match</div>
       </div>
-      <div class="cmp-row match">
-        <div class="comp-name">Limit switches</div>
-        <div class="comp-sch">removed in v3.1</div><div class="comp-yaml">removed in v3.1</div>
-        <div class="comp-status">✓ match (both removed)</div>
-      </div>
       <div class="cmp-row mismatch">
         <div class="comp-name">Actuator H-bridge EN <span class="pin-sub pin-sub-actuator">Actuator (compat)</span></div>
         <div class="comp-sch">tied to +3V3</div><div class="comp-yaml">GPIO11 (compat)</div>
@@ -374,7 +379,7 @@
     </div>
 
     <p class="note">
-      <strong>Why "compat" entries remain:</strong> the state machine in <code>wattplot.yaml</code> still references <code>id(hb_en_sw)</code>, <code>id(solenoid_in2_out)</code>, and <code>id(status_led)</code> in scripts. v3 keeps these IDs in the firmware but reassigned to schematic "free" pins. Their actions have no physical effect (the board doesn't wire them), but the <code>script.execute</code> calls keep working without rewriting the control law.
+      <strong>Why "compat" entries remain:</strong> the state machine in <code>wattplot.yaml</code> references <code>id(hb_en_sw)</code>, <code>id(solenoid_in2_out)</code>, and <code>id(status_led)</code> in scripts. The schematic no longer wires these pins, but the firmware still defines the IDs on schematic-free pins so existing <code>script.execute</code> calls keep working without rewriting the control law.
     </p>
   </div>
 </main>
@@ -390,5 +395,44 @@
   </div>
 </footer>
 
+
+<script>
+  // Dropdown hover delay - close the menu 200ms after the cursor leaves, so
+  // a small cursor wobble across the trigger/menu gap doesn't snap it shut.
+  // Open behavior is unchanged (instant on hover/focus).
+  (function() {
+    document.querySelectorAll('.dropdown').forEach(function(dd) {
+      var hideTimer = null;
+      dd.addEventListener('mouseleave', function() {
+        hideTimer = setTimeout(function() { dd.classList.remove('is-open'); }, 200);
+      });
+      dd.addEventListener('mouseenter', function() {
+        if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+      });
+      // Keyboard: caret is now tabindex=0 (via role+tabindex in the markup).
+      // Toggle on Enter/Space, close on Escape or click outside.
+      var trigger = dd.querySelector(':scope > a.has-caret');
+      if (trigger) {
+        trigger.setAttribute('tabindex', '0');
+        trigger.setAttribute('role', 'button');
+        trigger.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            dd.classList.toggle('is-open');
+          } else if (e.key === 'Escape') {
+            dd.classList.remove('is-open');
+            trigger.blur();
+          }
+        });
+      }
+    });
+    // Click outside closes all open dropdowns
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.dropdown')) {
+        document.querySelectorAll('.dropdown.is-open').forEach(function(d) { d.classList.remove('is-open'); });
+      }
+    });
+  })();
+</script>
 </body>
 </html>

@@ -18,5 +18,5 @@
   <line x1="22" y1="98" x2="140" y2="98" stroke="#e6e3dc" stroke-width="2.4"/>
   <circle cx="22" cy="73" r="3.8" fill="#a8a59c"/>
   <circle cx="22" cy="124" r="3.8" fill="#a8a59c"/>
-  <path d="M 11 141 L 169 141 L 152 168 L 28 168 Z" fill="#2f6f5e"/>
+  <path d="M 11 141 L 169 141 L 169 168 L 11 168 Z" fill="#2f6f5e"/>
 </svg>

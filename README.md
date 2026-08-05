@@ -69,10 +69,18 @@ A single Wattplot planter is bounded by **8-ft lumber stock**: 8 ft
 long, 5 ft wide. The bed is sized to the panel (with up to 0.5"
 overhang per side), and the cut list is derived from the bed.
 
-The primary use case is **upcycling decommissioned panels that
-would otherwise be landfilled**. A 12-year-old 250 W residential
-panel is still a 235 W panel, perfect for shade + some power, and
-you delay recycling by 10-20 years.
+A Wattplot is, at heart, an example of **symbiosis between energy
+production and agriculture**: the same square foot grows tomatoes
+*and* generates electricity, because the panel that shades the crop
+is the panel that powers the irrigation. The structure would be
+lumber either way; the panel is what turns a planter into a power
+plant.
+
+A natural fit is to use **decommissioned rooftop panels that
+would otherwise be landfilled** — a 12-year-old 250 W residential
+panel is still a 235 W panel, perfectly useful for shade plus some
+power, and you delay recycling by 10–20 years. The design supports
+both new and salvaged panels; "bring your own."
 
 Five validated panel presets are in `wattplot_params.py`:
 

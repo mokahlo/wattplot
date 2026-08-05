@@ -32,8 +32,8 @@
   <circle cx="8" cy="26" r="1.4" fill="#a8a59c"/>
   <circle cx="8" cy="44" r="1.4" fill="#a8a59c"/>
 
-  <!-- Planter (trapezoid) -->
-  <path d="M 4 50 L 60 50 L 54 60 L 10 60 Z" fill="#2f6f5e"/>
+  <!-- Planter (rectangular) -->
+  <path d="M 4 50 L 60 50 L 60 60 L 4 60 Z" fill="#2f6f5e"/>
   <!-- Soil line -->
   <line x1="9"  y1="53" x2="55" y2="53" stroke="#0d1117" stroke-width="0.8" opacity="0.4"/>
 </svg>

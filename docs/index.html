@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Wattplot — Solar canopy planter</title>
-<meta name="description" content="A planter with a hinged, ballast-mounted solar canopy. Tilt follows the sun, folds for wind, verticalizes for rain. Open-source parametric 3D model + ESPHome controller.">
+<title>Wattplot — Give an old solar panel a second life</title>
+<meta name="description" content="A raised bed whose canopy is a working solar panel. The symbiosis of energy production and agriculture — open-source, ESPHome-controlled, MIT-licensed.">
 <link rel="canonical" href="https://mokahlo.github.io/wattplot/">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
@@ -93,11 +93,16 @@
     border-radius: 10px;
     box-shadow: 0 12px 32px rgba(0,0,0,0.5);
     min-width: 220px; padding: 6px;
-    margin-top: 8px;
+    margin-top: 0;
+    padding-top: 18px;
     display: none;
     z-index: 200;
   }
-  .dropdown:hover .menu, .dropdown:focus-within .menu { display: block; }
+  .dropdown .menu::before {
+    content: ''; position: absolute; top: -6px; left: 0; right: 0; height: 18px;
+    background: transparent; pointer-events: auto;
+  }
+  .dropdown:hover .menu, .dropdown:focus-within .menu, .dropdown.is-open .menu { display: block; }
   .dropdown .menu a {
     display: block; padding: 8px 12px; border-radius: 6px;
     color: var(--ink-2); font-size: 13.5px; font-weight: 500;
@@ -259,6 +264,7 @@
           <a href="watering">Watering</a>
           <a href="logging">Logging</a>
           <a href="test_checklist">Test checklist</a>
+          <a href="data.html">Data dashboard</a>
         </div>
       </div>
       <div class="dropdown">
@@ -286,17 +292,18 @@
 <section class="hero">
   <div class="wrap">
     <div class="pills">
-      <span class="pill">DIY planter + solar canopy</span>
-      <span class="pill">Bifacial 620 W @ 35° tilt</span>
+      <span class="pill">Energy + agriculture, in one bed</span>
+      <span class="pill">Tomato-shade canopy, 35° tilt</span>
       <span class="pill">Open-source ESPHome</span>
       <span class="pill">ESP32-S3 controller</span>
     </div>
     <h1>Give an old solar panel a second life.</h1>
     <p class="lede">
-      Shade + food + power, in one raised bed. A planter up to 8&nbsp;ft × 5&nbsp;ft
-      with a hinged, ballast-mounted solar canopy that follows the sun, folds for
-      wind, and verticalizes for rain — all driven by a single parameter file and
-      a $30 ESP32-S3.
+      A Wattplot is a raised bed whose canopy is a working solar panel. The plants
+      get filtered afternoon shade where they need it most; the panel gets to
+      keep generating on a structure that would have been lumber anyway. The
+      two outputs &mdash; tomatoes and kilowatt-hours &mdash; come off the same square
+      footage, and the panel doesn't displace the garden, it completes it.
     </p>
     <div class="cta">
       <a class="btn btn-primary" href="build_guide_mini">Start with the mini</a>
@@ -330,6 +337,31 @@
   </div>
 </section>
 
+<section class="sec" style="background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+  <div class="wrap">
+    <h2>Why a Wattplot works</h2>
+    <p class="sec-sub">A solar panel and a vegetable bed don't compete for the same square foot. They share it. The panel protects the crop from the worst of the afternoon sun; the crop returns the favor by making the structure a garden instead of an empty frame. The result is more useful output &mdash; tomatoes and kilowatt-hours &mdash; per square foot than either one alone.</p>
+
+    <div class="grid grid-3 symbiosis">
+      <div class="card symb-card">
+        <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></div>
+        <h3>Shade where it counts</h3>
+        <p>Tomato leaves stop photosynthesizing above ~95&deg;F. A panel canopy gives the crop filtered afternoon shade during the worst hours, when unshaded plants are cooking but the sun is still strong enough to push a real current.</p>
+      </div>
+      <div class="card symb-card">
+        <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg></div>
+        <h3>Water that closes the loop</h3>
+        <p>The irrigation solenoid runs off the panel's own battery. Off-grid watering with no extension cord. Soil-moisture sensing decides when to open the valve; a battery floor and a max-on-time watchdog decide when to stop.</p>
+      </div>
+      <div class="card symb-card">
+        <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+        <h3>Energy that earns its frame</h3>
+        <p>A 620 W bifacial in full sun produces more kWh than the bed's pump + solenoid + controller consume. The frame would be lumber either way &mdash; the panel is what turns the structure from a planter into a power plant.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section class="sec">
   <div class="wrap">
     <h2>See it first</h2>
@@ -357,7 +389,7 @@
         </div>
         <h3>ESP32-S3 pin map</h3>
         <p>Every wire, every pin. Visual diff between the schematic and the firmware. S3-DevKitC-1, 16 MB flash, 8 MB PSRAM.</p>
-        <span class="tag">schematic rev B · v3.1</span>
+        <span class="tag">schematic rev B</span>
       </a>
     </div>
   </div>
@@ -525,5 +557,44 @@
   </div>
 </footer>
 
+
+<script>
+  // Dropdown hover delay - close the menu 200ms after the cursor leaves, so
+  // a small cursor wobble across the trigger/menu gap doesn't snap it shut.
+  // Open behavior is unchanged (instant on hover/focus).
+  (function() {
+    document.querySelectorAll('.dropdown').forEach(function(dd) {
+      var hideTimer = null;
+      dd.addEventListener('mouseleave', function() {
+        hideTimer = setTimeout(function() { dd.classList.remove('is-open'); }, 200);
+      });
+      dd.addEventListener('mouseenter', function() {
+        if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+      });
+      // Keyboard: caret is now tabindex=0 (via role+tabindex in the markup).
+      // Toggle on Enter/Space, close on Escape or click outside.
+      var trigger = dd.querySelector(':scope > a.has-caret');
+      if (trigger) {
+        trigger.setAttribute('tabindex', '0');
+        trigger.setAttribute('role', 'button');
+        trigger.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            dd.classList.toggle('is-open');
+          } else if (e.key === 'Escape') {
+            dd.classList.remove('is-open');
+            trigger.blur();
+          }
+        });
+      }
+    });
+    // Click outside closes all open dropdowns
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.dropdown')) {
+        document.querySelectorAll('.dropdown.is-open').forEach(function(d) { d.classList.remove('is-open'); });
+      }
+    });
+  })();
+</script>
 </body>
 </html>
