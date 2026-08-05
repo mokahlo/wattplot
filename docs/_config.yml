@@ -39,6 +39,7 @@ exclude:
   - "booth/*.bak"
   - "booth/*.stl.bak"
   - "gallery/**/*.tmp"
+  - "_internal/"        # Coexistence + rename plan (maintainer-only, not public)
 
 # Plugins (none needed; we don't use jekyll-feed, jekyll-seo-tag, etc.
 # We just need the default markdown renderer.)
