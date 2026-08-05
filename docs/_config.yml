@@ -45,4 +45,4 @@ exclude:
 plugins: []
 
 # Permalinks — keep the .html extensions so existing links don't break
-permalink: /:basename/
+permalink: /:basename.html
