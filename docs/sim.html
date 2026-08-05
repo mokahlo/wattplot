@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Wattplot — Live Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: rgba(20, 26, 34, 0.92);
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --solar: #ffb74d;
+    --sky: #4dd0e1;
+    --good: #7ee787;
+    --warn: #ff7043;
+    --bad: #ef5350;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; min-height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif; }
+  body { background: linear-gradient(180deg, #0a0d12 0%, #0d1117 100%); }
+
+  .app { display: grid; grid-template-rows: auto 1fr auto auto; min-height: 100vh; padding: 16px; gap: 12px; }
+
+  header { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  header h1 { margin: 0; font-size: 22px; color: var(--solar); letter-spacing: 0.02em; }
+  header .sub { color: var(--muted); font-size: 13px; }
+  header .right { display: flex; align-items: center; gap: 12px; }
+  header .clock { font-variant-numeric: tabular-nums; font-size: 18px; color: var(--sky); }
+
+  .pill {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    border: 1px solid transparent;
+  }
+  .pill.live   { background: rgba(126, 231, 135, 0.15); color: var(--good); border-color: var(--good); }
+  .pill.stale  { background: rgba(255, 183, 77, 0.15); color: var(--solar); border-color: var(--solar); }
+  .pill.sim    { background: #1a1f25; color: var(--muted); border-color: var(--border); }
+  .pill.off    { background: rgba(239, 83, 80, 0.15); color: var(--bad); border-color: var(--bad); }
+  .pill::before { content: "●"; margin-right: 4px; font-size: 8px; }
+
+  .stage { display: grid; grid-template-columns: 1.4fr 1fr; gap: 12px; min-height: 0; }
+  @media (max-width: 900px) { .stage { grid-template-columns: 1fr; } }
+
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  .card h2 { margin: 0 0 8px 0; font-size: 13px; color: var(--muted); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+  .card .big { font-size: 56px; font-weight: 700; color: var(--solar); line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .card .unit { font-size: 18px; color: var(--muted); font-weight: 400; margin-left: 4px; }
+  .card .sub2 { color: var(--muted); font-size: 12px; margin-top: 6px; }
+  .card .pin { display: inline-block; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 10px; color: var(--sky); background: #1a1f25; border: 1px solid var(--border); padding: 1px 6px; border-radius: 4px; margin-right: 6px; letter-spacing: 0.02em; text-transform: none; font-weight: 500; vertical-align: 1px; }
+  .card .live-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--good); margin-left: 6px; vertical-align: 2px; opacity: 0; transition: opacity 0.3s; }
+  .card .live-dot.on { opacity: 1; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .grid2 .big { font-size: 40px; }
+  .grid2 .unit { font-size: 14px; }
+
+  .meter { height: 10px; background: #1a1f25; border-radius: 6px; overflow: hidden; margin-top: 8px; }
+  .meter > span { display: block; height: 100%; border-radius: 6px; transition: width 0.6s ease; }
+  .meter .fill-good { background: linear-gradient(90deg, #66bb6a, var(--good)); }
+  .meter .fill-warn { background: linear-gradient(90deg, var(--warn), #ffab40); }
+  .meter .fill-bad { background: var(--bad); }
+  .meter .fill-sky { background: linear-gradient(90deg, #29b6f6, var(--sky)); }
+  .meter .fill-solar { background: linear-gradient(90deg, #ff8a65, var(--solar)); }
+
+  .spark { width: 100%; height: 22px; margin-top: 6px; display: block; }
+  .spark path { fill: none; stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
+  .spark.soil  path { stroke: var(--good); }
+  .spark.batt  path { stroke: var(--sky); }
+  .spark.temp  path { stroke: var(--warn); }
+  .spark.kwh   path { stroke: var(--solar); }
+
+  .row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .row .v { color: var(--text); font-weight: 600; }
+
+  .scenebox { display: flex; flex-direction: column; gap: 8px; min-height: 380px; }
+  .scenebox svg { width: 100%; flex: 1; min-height: 280px; }
+
+  .reason { font-size: 12px; color: var(--sky); margin-top: 6px; min-height: 16px; }
+  .reason b { color: var(--solar); }
+
+  /* Solenoid card */
+  .solenoid-card { display: flex; flex-direction: column; gap: 6px; }
+  .solenoid-state { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+  .solenoid-state .led { width: 12px; height: 12px; border-radius: 50%; background: var(--muted); box-shadow: 0 0 8px transparent; transition: all 0.3s; }
+
+  /* WiFi card */
+  .wifi-card { display: flex; flex-direction: column; gap: 6px; }
+  .wifi-state { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+  .wifi-bars { font-family: monospace; font-size: 18px; letter-spacing: 1px; color: var(--muted); transition: color 0.3s; }
+  .wifi-bars.good { color: var(--solar); }
+  .wifi-bars.warn { color: #f59e0b; }
+  .wifi-bars.bad  { color: #ef4444; }
+  .solenoid-state .led.on { background: var(--good); box-shadow: 0 0 12px var(--good); }
+  .solenoid-state .led.off { background: var(--bad); box-shadow: 0 0 6px rgba(239, 83, 80, 0.4); }
+  .solenoid-state .label { font-weight: 600; }
+  .solenoid-state .label.on { color: var(--good); }
+  .solenoid-state .label.off { color: var(--muted); }
+  .solenoid-meta { font-size: 11px; color: var(--muted); font-family: ui-monospace, monospace; }
+
+  /* Action log */
+  .log-card { padding: 12px 16px; max-height: 180px; display: flex; flex-direction: column; }
+  .log-card h2 { margin-bottom: 6px; }
+  .log-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12px;
+    overflow-y: auto;
+    max-height: 130px;
+    scrollbar-width: thin;
+  }
+  .log-list::-webkit-scrollbar { width: 6px; }
+  .log-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .log-list li {
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(48, 54, 61, 0.25);
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    line-height: 1.4;
+  }
+  .log-list li:last-child { border-bottom: none; }
+  .log-list .ts  { color: var(--muted); flex: 0 0 62px; }
+  .log-list .src { flex: 0 0 90px; font-weight: 600; }
+  .log-list .msg { color: var(--text); flex: 1; word-break: break-word; }
+  .log-info  .src { color: var(--sky); }
+  .log-warn  .src { color: var(--solar); }
+  .log-warn  .msg { color: var(--solar); }
+  .log-error .src { color: var(--bad); }
+  .log-error .msg { color: var(--bad); }
+  .log-state .src { color: var(--good); }
+  .log-empty { color: var(--muted); font-style: italic; padding: 8px 0; }
+
+  footer { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  footer .scrubber { flex: 1; display: flex; align-items: center; gap: 10px; }
+  footer input[type=range] { flex: 1; accent-color: var(--solar); }
+  footer button { background: #21262d; color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 8px 14px; font-size: 13px; cursor: pointer; }
+  footer button:hover { background: #2d333b; }
+  footer button.primary { background: var(--solar); color: #1a1a1a; border-color: var(--solar); font-weight: 600; }
+  footer button.primary:hover { background: #ffc066; }
+  footer .speed { color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Wattplot — Live Dashboard</h1>
+      <div class="sub">Phoenix, AZ · 2026-07-23 · 35° base tilt · Sunapex 10A MPPT</div>
+    </div>
+    <div class="right">
+      <span id="live-pill" class="pill sim">SIM</span>
+      <span id="device-pill" class="pill off">OFFLINE</span>
+      <div class="clock" id="clock">--:--:--</div>
+    </div>
+  </header>
+
+  <div class="stage">
+    <div class="card scenebox">
+      <h2>Side View · <span id="scene-source">sim</span></h2>
+      <svg id="scene" viewBox="0 0 600 320" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <linearGradient id="sky" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stop-color="#0d1117"/>
+            <stop offset="60%" stop-color="#1a2330"/>
+            <stop offset="100%" stop-color="#2d3a4d"/>
+          </linearGradient>
+          <linearGradient id="bedfill" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stop-color="#5d4037"/>
+            <stop offset="100%" stop-color="#3e2723"/>
+          </linearGradient>
+          <radialGradient id="sungrad" cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0%" stop-color="#fff1c2"/>
+            <stop offset="50%" stop-color="#ffb74d"/>
+            <stop offset="100%" stop-color="#ffb74d" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <rect width="600" height="320" fill="url(#sky)"/>
+        <rect x="0" y="300" width="600" height="20" fill="#1a1f25"/>
+        <line x1="0" y1="300" x2="600" y2="300" stroke="#30363d" stroke-width="1"/>
+        <g id="bed">
+          <rect x="100" y="270" width="400" height="30" fill="#5d4037" stroke="#3e2723" stroke-width="2" rx="2"/>
+          <rect x="105" y="275" width="390" height="20" fill="url(#bedfill)"/>
+        </g>
+        <polygon id="bedshadow" points="100,270 500,270 500,300 100,300" fill="#000" opacity="0.5"/>
+        <circle id="sun-disc" cx="450" cy="80" r="30" fill="url(#sungrad)"/>
+        <line id="sun-ray" x1="450" y1="80" x2="300" y2="270" stroke="#ffb74d" stroke-width="2" stroke-dasharray="6,4" opacity="0.5"/>
+        <g id="plants" opacity="0.9">
+          <circle cx="180" cy="270" r="5" fill="#43a047"/>
+          <circle cx="240" cy="270" r="6" fill="#43a047"/>
+          <circle cx="320" cy="270" r="5" fill="#43a047"/>
+          <circle cx="380" cy="270" r="6" fill="#43a047"/>
+        </g>
+        <!-- Mount post: back-LEFT of bed, holds the panel hinge above the bed -->
+        <g id="mount">
+          <rect x="92" y="170" width="8" height="100" fill="#6d4c41" stroke="#3e2723" stroke-width="1"/>
+          <line x1="92" y1="170" x2="100" y2="170" stroke="#8d6e63" stroke-width="2"/>
+        </g>
+        <!-- Panel: side-profile bezel, FULL BED WIDTH (400u long), 12u side thickness.
+             Pivots at (100, 170) — top of the post.
+             Visual rotation CLAMPED to 22° max to keep the panel in viewBox.
+             The real angle (0-90°) is shown in the tilt gauge below.
+             Total height when vertical (tilt=90) would be ~11ft, so the clamp is necessary. -->
+        <g id="frame" transform="rotate(0 100 170)">
+          <!-- Bezel: top + bottom frame strips -->
+          <rect x="100" y="164" width="400" height="2" fill="#8d6e63"/>
+          <rect x="100" y="174" width="400" height="2" fill="#8d6e63"/>
+          <!-- Cell area (subtle glass tint) -->
+          <rect x="100" y="166" width="400" height="8" fill="rgba(20,40,80,0.18)"/>
+          <!-- Cell column dividers (19 across, every 20u, suggesting the cell array) -->
+          <g stroke="#5d4037" stroke-width="0.4" opacity="0.6">
+            <line x1="120" y1="166" x2="120" y2="174"/>
+            <line x1="140" y1="166" x2="140" y2="174"/>
+            <line x1="160" y1="166" x2="160" y2="174"/>
+            <line x1="180" y1="166" x2="180" y2="174"/>
+            <line x1="200" y1="166" x2="200" y2="174"/>
+            <line x1="220" y1="166" x2="220" y2="174"/>
+            <line x1="240" y1="166" x2="240" y2="174"/>
+            <line x1="260" y1="166" x2="260" y2="174"/>
+            <line x1="280" y1="166" x2="280" y2="174"/>
+            <line x1="300" y1="166" x2="300" y2="174"/>
+            <line x1="320" y1="166" x2="320" y2="174"/>
+            <line x1="340" y1="166" x2="340" y2="174"/>
+            <line x1="360" y1="166" x2="360" y2="174"/>
+            <line x1="380" y1="166" x2="380" y2="174"/>
+            <line x1="400" y1="166" x2="400" y2="174"/>
+            <line x1="420" y1="166" x2="420" y2="174"/>
+            <line x1="440" y1="166" x2="440" y2="174"/>
+            <line x1="460" y1="166" x2="460" y2="174"/>
+            <line x1="480" y1="166" x2="480" y2="174"/>
+          </g>
+        </g>
+        <!-- Tilt gauge: shows the REAL panel angle (0-90°).
+             Sits in the swing area below the panel, to the right of the post.
+             Center (130, 220), radius 22, arc from 0° (right) to 90° (up). -->
+        <g id="tilt-gauge" opacity="0.85">
+          <!-- Background arc, 0° to 90° in upper-right quadrant -->
+          <path d="M 152 220 A 22 22 0 0 0 130 198" fill="none" stroke="#90a4ae" stroke-width="1.2" stroke-dasharray="2,2"/>
+          <!-- Tick at 0° (horizontal) -->
+          <line x1="152" y1="220" x2="157" y2="220" stroke="#cfd8dc" stroke-width="1"/>
+          <!-- Tick at 45° -->
+          <line x1="145.6" y1="204.4" x2="149.1" y2="200.9" stroke="#cfd8dc" stroke-width="1"/>
+          <!-- Tick at 90° (vertical) -->
+          <line x1="130" y1="198" x2="130" y2="193" stroke="#cfd8dc" stroke-width="1"/>
+          <!-- Center dot -->
+          <circle cx="130" cy="220" r="1.5" fill="#cfd8dc"/>
+          <!-- Needle: rotates with REAL angle (0 = horizontal, 90 = up) -->
+          <line id="tilt-needle" x1="130" y1="220" x2="152" y2="220" stroke="#ff9800" stroke-width="1.6" stroke-linecap="round"/>
+          <!-- Labels -->
+          <text x="160" y="223" font-size="7" fill="#90a4ae" font-family="ui-monospace,monospace">0°</text>
+          <text x="133" y="190" font-size="7" fill="#90a4ae" font-family="ui-monospace,monospace">90°</text>
+          <text x="130" y="252" font-size="8" fill="#90a4ae" text-anchor="middle">tilt</text>
+          <text id="tilt-value" x="130" y="264" font-size="10" fill="#ff9800" text-anchor="middle" font-family="ui-monospace,monospace" font-weight="600">0°</text>
+        </g>
+      </svg>
+      <div class="reason" id="reason">Decision: <b>--</b></div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:12px; min-width:0;">
+      <div class="card">
+        <h2>Today's Energy<span class="live-dot" id="dot-kwh"></span></h2>
+        <div><span class="big" id="kwh">0.00</span><span class="unit">kWh</span></div>
+        <div class="sub2">out of <span id="kwh-target">4.2</span> kWh possible today</div>
+        <div class="meter"><span id="kwh-meter" class="fill-solar" style="width:0%"></span></div>
+        <div class="row"><span>Peak irradiance</span><span class="v" id="poa">0 W/m²</span></div>
+        <svg class="spark kwh" id="kwh-spark" viewBox="0 0 100 22" preserveAspectRatio="none"><path d=""/></svg>
+      </div>
+
+      <div class="card">
+        <h2>Bed Light (DLI)<span class="live-dot" id="dot-dli"></span></h2>
+        <div><span class="big" id="dli">0.0</span><span class="unit">mol/m²/day</span></div>
+        <div class="sub2">target 12-18 for tomatoes · <span id="dli-pct">0%</span></div>
+        <div class="meter"><span id="dli-meter" class="fill-good" style="width:0%"></span></div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <h2>Panel Tilt<span class="live-dot" id="dot-tilt"></span></h2>
+          <div><span class="big" id="tilt">0</span><span class="unit">°</span></div>
+          <div class="sub2" id="tilt-mode">storm</div>
+        </div>
+        <div class="card">
+          <h2>Wind</h2>
+          <div><span class="big" id="wind">0</span><span class="unit">mph</span></div>
+          <div class="sub2" id="wind-state">calm</div>
+          <div class="meter"><span id="wind-meter" class="fill-sky" style="width:0%"></span></div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <h2>Panel Temp<span class="live-dot" id="dot-temp"></span></h2>
+          <div><span class="big" id="panel-temp">--</span><span class="unit">°C</span></div>
+          <div class="sub2"><span class="pin">GPIO 20</span>1-Wire · DS18B20</div>
+          <div class="sub2" id="panel-temp-delta">ambient -- · +0 solar</div>
+          <div class="meter"><span id="panel-temp-meter" class="fill-warn" style="width:0%"></span></div>
+          <svg class="spark temp" id="temp-spark" viewBox="0 0 100 22" preserveAspectRatio="none"><path d=""/></svg>
+        </div>
+        <div class="card">
+          <h2>Ambient</h2>
+          <div><span class="big" id="ambient-temp">--</span><span class="unit">°C</span></div>
+          <div class="sub2" id="ambient-state">--</div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <h2>Soil Moisture<span class="live-dot" id="dot-soil"></span></h2>
+          <div><span class="big" id="soil">75</span><span class="unit">%</span></div>
+          <div class="sub2"><span class="pin">GPIO 3</span>ADC1_CH3</div>
+          <div class="sub2" id="soil-state">moist</div>
+          <div class="meter"><span id="soil-meter" class="fill-good" style="width:75%"></span></div>
+          <svg class="spark soil" id="soil-spark" viewBox="0 0 100 22" preserveAspectRatio="none"><path d=""/></svg>
+        </div>
+        <div class="card">
+          <h2>Battery<span class="live-dot" id="dot-batt"></span></h2>
+          <div><span class="big" id="batt">100</span><span class="unit">%</span></div>
+          <div class="sub2"><span class="pin">GPIO 4</span>ADC1_CH4 · 100k/10k ÷</div>
+          <div class="sub2" id="batt-state">full · MPPT float</div>
+          <div class="meter"><span id="batt-meter" class="fill-good" style="width:100%"></span></div>
+          <svg class="spark batt" id="batt-spark" viewBox="0 0 100 22" preserveAspectRatio="none"><path d=""/></svg>
+        </div>
+      </div>
+
+      <div class="card solenoid-card">
+        <h2>Solenoid Valve<span class="live-dot" id="dot-solenoid"></span></h2>
+        <div class="solenoid-state">
+          <span class="led off" id="solenoid-led"></span>
+          <span class="label off" id="solenoid-label">OFF</span>
+          <span class="solenoid-meta" id="solenoid-meta">IN1=0  IN2=0</span>
+        </div>
+        <div class="sub2">Mode: <span id="solenoid-mode">--</span> · Auto threshold 35%</div>
+      </div>
+
+      <div class="card wifi-card">
+        <h2>WiFi<span class="live-dot" id="dot-wifi"></span></h2>
+        <div class="wifi-state">
+          <span class="wifi-bars" id="wifi-bars">▁▁▁▁</span>
+          <span class="label" id="wifi-rssi">-- dBm</span>
+        </div>
+        <div class="sub2"><span id="wifi-quality">--</span> · SSID: <span id="wifi-ssid">Asad</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card log-card">
+    <h2>Action Log</h2>
+    <ol class="log-list" id="log-list">
+      <li class="log-empty">Waiting for events…</li>
+    </ol>
+  </div>
+
+  <footer>
+    <button id="play" class="primary" onclick="togglePlay()">▶ Play 24h</button>
+    <button onclick="reset()">Reset</button>
+    <div class="scrubber">
+      <span class="speed">00:00</span>
+      <input id="time" type="range" min="0" max="1439" value="420" step="1" oninput="onScrub(this.value)"/>
+      <span class="speed">24:00</span>
+    </div>
+    <div class="speed" id="phase">morning</div>
+  </footer>
+</div>
+
+<script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
+<script>
+// =============================================================================
+// Wattplot — Live Dashboard
+// Stand-alone HTML. Subscribes to MQTT via WebSockets (broker port 9001) and
+// overlays live device data on a 24h sim that doubles as a booth demo.
+// Falls back to sim when no live data is fresh (< 30s).
+//
+// URL params (all optional):
+//   ?live=1                    enable MQTT (default: sim/demo only)
+//   ?broker=host:port          WebSocket broker (default: ws://192.168.68.72:9001)
+//   ?user=name                 MQTT username
+//   ?pass=password             MQTT password
+//   ?prefix=wattplot           MQTT topic prefix
+// =============================================================================
+
+// ---- MQTT broker config ----
+const _qs = new URLSearchParams(location.search);
+const LIVE_MODE     = _qs.has('live');
+const BROKER_WS     = _qs.get('broker') || 'ws://192.168.68.72:9001';
+const BROKER_AUTH   = {
+  username: _qs.get('user') || 'wattplot',
+  password: _qs.get('pass') || 'wattplot_mqtt_2026',
+};
+const TOPIC_PREFIX  = _qs.get('prefix') || 'wattplot';
+const LIVE_FRESH_MS = 30000;  // 30s — after this, sim takes over for that field
+
+// ---- Constants (mirror wattplot_params.py) ----
+const LAT = 33.45 * Math.PI / 180;
+const TILT_BASE = 35;
+const I_SAFE = 2.5;
+const PANEL_AREA_M2 = 4.43;
+const PANEL_WP = 620;
+const DERATE = 0.85;
+const BIFACIAL = 1.10;
+const BATT_CAPACITY_WH = 7 * 12;
+const HOUSE_LOAD_W = 1.5;
+
+// ---- Sim state ----
+const sim = {
+  paused: true,
+  speed: 60,
+  minuteOfDay: 420,
+  kwh: 0,
+  dli: 0,
+  soil: 0.75,
+  wind: 2,
+  windGust: 5,
+  batt: 1.0,
+  tilt: 0,
+  tiltMode: 'storm',
+  reason: 'waiting for sun',
+  panelC: 25,
+  ambientC: 25,
+  rainToday: false,
+  windSpikeHour: -1,
+};
+
+// ---- Live state ----
+//   values:    raw values keyed by short name (e.g. 'panel_temperature')
+//   lastSeen:  Date.now() of last update for that field
+//   connected: MQTT broker connection state
+//   deviceOnline: from LWT topic
+const live = {
+  values: {},
+  lastSeen: {},
+  connected: false,
+  deviceOnline: false,
+  retain: {},  // last retained values, for late UI updates
+};
+
+// ---- Sparkline buffers (60 points, ~10min at 10s) ----
+const SPARK_LEN = 60;
+const spark = { soil: [], batt: [], temp: [], kwh: [] };
+
+// ---- Helpers ----
+function liveVal(name) {
+  if (live.values[name] === undefined) return undefined;
+  if (Date.now() - (live.lastSeen[name] || 0) > LIVE_FRESH_MS) return undefined;
+  return live.values[name];
+}
+function fmt(n, d=1) { return Number(n).toFixed(d); }
+function pad2(n) { return String(n).padStart(2, '0'); }
+function nowStr() {
+  const t = new Date();
+  return pad2(t.getHours()) + ':' + pad2(t.getMinutes()) + ':' + pad2(t.getSeconds());
+}
+
+// ---- Solar position (simplified NOAA) ----
+function dayOfYear() { return 205; }
+function realMinOfDay() {
+  const t = new Date();
+  return t.getHours() * 60 + t.getMinutes() + t.getSeconds() / 60;
+}
+function solarPos(minuteOfDay) {
+  const hour = minuteOfDay / 60;
+  const decl = 23.45 * Math.sin(2 * Math.PI * (dayOfYear() - 81) / 365) * Math.PI / 180;
+  const ha = (hour - 12) * 15 * Math.PI / 180;
+  const sinAlt = Math.sin(LAT) * Math.sin(decl) + Math.cos(LAT) * Math.cos(decl) * Math.cos(ha);
+  const alt = Math.asin(sinAlt);
+  const cosAz = (Math.sin(decl) - Math.sin(alt) * Math.sin(LAT)) / (Math.cos(alt) * Math.cos(LAT));
+  let az = Math.acos(Math.max(-1, Math.min(1, cosAz)));
+  if (ha > 0) az = 2 * Math.PI - az;
+  return { alt, az, sinAlt };
+}
+function poaIrradiance(tiltDeg, minuteOfDay) {
+  const { alt, sinAlt } = solarPos(minuteOfDay);
+  if (alt <= 0) return 0;
+  const tilt = tiltDeg * Math.PI / 180;
+  const sunDotPanel = Math.cos(alt - tilt);
+  const dni = 900 * sinAlt;
+  const dhi = 100;
+  const poa = dni * Math.max(0, sunDotPanel) + dhi * (1 + Math.cos(tilt)) / 2;
+  return Math.max(0, poa);
+}
+function bedDliContribution(tiltDeg, minuteOfDay) {
+  const { alt } = solarPos(minuteOfDay);
+  if (alt <= 0) return 0;
+  const panelHorizonAlt = 90 - tiltDeg;
+  const sinAlt = Math.sin(alt);
+  if (alt * 180/Math.PI > panelHorizonAlt) return 0;
+  const parWm2 = sinAlt * 800 * 0.45;
+  return parWm2 * 4.57;
+}
+function windAt(minuteOfDay) {
+  const hour = minuteOfDay / 60;
+  const base = 4 + 6 * Math.max(0, Math.sin((hour - 9) * Math.PI / 12));
+  const gust = (Math.random() < 0.04) ? 8 + Math.random() * 12 : 0;
+  return { sustained: base, gust: gust };
+}
+function tempsAt(tiltDeg, minuteOfDay) {
+  const hour = minuteOfDay / 60;
+  const ambient = 25 + 13 * Math.max(0, Math.sin((hour - 9) * Math.PI / 12));
+  const poa = poaIrradiance(tiltDeg, minuteOfDay);
+  const solarHeat = 30 * Math.min(1, poa / 1000);
+  const wind = windAt(minuteOfDay).sustained;
+  const windCool = 0.5 * Math.min(1, wind / 15);
+  const panel = ambient + solarHeat * (1 - windCool);
+  return { ambient, panel };
+}
+function decideTilt() {
+  const hour = sim.minuteOfDay / 60;
+  const { sustained: wind } = windAt(sim.minuteOfDay);
+  if (wind > 35) return { tilt: 0,  mode: 'storm fold', reason: `wind ${wind.toFixed(0)} mph > 35 → fold to 0°` };
+  if (wind > 22) return { tilt: 15, mode: 'preemptive', reason: `wind ${wind.toFixed(0)} mph > 22 → preemptive 15°` };
+  if (sim.soil > 0.85) return { tilt: 90, mode: 'wring out', reason: `soil ${(sim.soil*100).toFixed(0)}% saturated → wring out at 90°` };
+  if (sim.soil < 0.30) return { tilt: 35, mode: 'conserve', reason: `soil ${(sim.soil*100).toFixed(0)}% dry → conserve at 35°` };
+  if (hour < 7)  return { tilt: 0,  mode: 'pre-dawn',   reason: 'before sunrise' };
+  if (hour > 19) return { tilt: 0,  mode: 'night',      reason: 'after sunset' };
+  if (hour < 9)  return { tilt: 20, mode: 'morning',    reason: 'low sun, panel rises to catch' };
+  if (hour < 16) return { tilt: TILT_BASE, mode: 'power', reason: 'midday, hold optimal power tilt' };
+  if (hour < 18) return { tilt: 55, mode: 'afternoon',  reason: 'sun setting, panel rises to bed side' };
+  return { tilt: 75, mode: 'evening', reason: 'low sun, verticalize for bed light' };
+}
+
+// ---- Sim step (runs every 250ms when not paused) ----
+function simStep() {
+  const dtMin = sim.speed * (250/1000) * 60;
+  const d = decideTilt();
+  const ramp = 5 * (dtMin / 60);
+  if (Math.abs(d.tilt - sim.tilt) < ramp) sim.tilt = d.tilt;
+  else sim.tilt += Math.sign(d.tilt - sim.tilt) * ramp;
+  sim.tiltMode = d.mode;
+  sim.reason = d.reason;
+
+  const poa = poaIrradiance(sim.tilt, sim.minuteOfDay);
+  const powerW = PANEL_WP * DERATE * BIFACIAL * (poa / 1000) * 0.5;
+  const energyWh = powerW * (dtMin / 60);
+  sim.kwh += energyWh / 1000;
+  sim.batt = Math.max(0, Math.min(1, sim.batt + (energyWh - HOUSE_LOAD * (dtMin/60)) / BATT_CAPACITY_WH));
+
+  const { alt } = solarPos(sim.minuteOfDay);
+  if (alt > 0.1) {
+    sim.soil -= 0.0008 * (dtMin / 60) * (sim.tilt < 50 ? 1.5 : 0.7);
+  } else {
+    sim.soil = Math.min(0.95, sim.soil + 0.0003 * (dtMin / 60));
+  }
+  if (sim.soil < 0.30) sim.soil = 0.30;
+
+  const parNow = bedDliContribution(sim.tilt, sim.minuteOfDay);
+  sim.dli += parNow * (dtMin * 60) / 1e6;
+
+  const t = tempsAt(sim.tilt, sim.minuteOfDay);
+  sim.ambientC = t.ambient;
+  sim.panelC = t.panel;
+
+  sim.minuteOfDay += dtMin;
+  if (sim.minuteOfDay >= 1440) sim.minuteOfDay = 0;
+}
+
+// ---- Render ----
+function render() {
+  // Time source: real time if sim paused, else sim time
+  const useSim = !sim.paused;
+  const minOfDay = useSim ? sim.minuteOfDay : realMinOfDay();
+
+  // Clock (real time always, for clarity)
+  const real = new Date();
+  document.getElementById('clock').textContent =
+    pad2(real.getHours()) + ':' + pad2(real.getMinutes()) + ':' + pad2(real.getSeconds());
+
+  // Phase
+  const h = Math.floor(minOfDay / 60);
+  let phase = 'night';
+  if (h >= 5 && h < 8) phase = 'dawn';
+  else if (h >= 8 && h < 11) phase = 'morning';
+  else if (h >= 11 && h < 14) phase = 'midday';
+  else if (h >= 14 && h < 17) phase = 'afternoon';
+  else if (h >= 17 && h < 20) phase = 'evening';
+  document.getElementById('phase').textContent = phase;
+
+  // Sun
+  const { alt, az } = solarPos(minOfDay);
+  const cx = 300 + Math.cos(az - Math.PI/2) * Math.max(50, 200 * Math.cos(alt));
+  const cy = 240 - Math.max(0, 200 * Math.sin(alt)) * 1.4;
+  const sunEl = document.getElementById('sun-disc');
+  sunEl.setAttribute('cx', cx);
+  sunEl.setAttribute('cy', cy);
+  sunEl.setAttribute('opacity', alt > 0 ? 1 : 0.2);
+  const rayEl = document.getElementById('sun-ray');
+  rayEl.setAttribute('x1', cx);
+  rayEl.setAttribute('y1', cy);
+  rayEl.setAttribute('x2', 300);
+  rayEl.setAttribute('y2', 220);
+  rayEl.setAttribute('opacity', alt > 0 ? 0.5 : 0);
+
+  // Bed shadow
+  const shadowEl = document.getElementById('bedshadow');
+  if (alt > 0) {
+    const panelH = 400;
+    const shadowLen = panelH / Math.max(0.05, Math.tan(alt));
+    const sw = Math.min(500 - 100, Math.abs(shadowLen) * 0.5);
+    if (az > Math.PI) {
+      shadowEl.setAttribute('points', `${100},270 ${100 + sw},270 ${100 + sw},300 ${100},300`);
+    } else {
+      shadowEl.setAttribute('points', `${500 - sw},270 ${500},270 ${500},300 ${500 - sw},300`);
+    }
+    shadowEl.setAttribute('opacity', 0.4);
+  } else {
+    shadowEl.setAttribute('opacity', 0);
+  }
+
+  // Frame rotation
+  // Pivot at (100, 170) — top of mount post (back-LEFT of bed).
+  // Panel extends to the RIGHT of the pivot at tilt=0 (lying flat over the bed).
+  // Positive rotation (CCW) lifts the right end → panel face tilts toward the sun (right).
+  // Visual rotation is CLAMPED to 22° to keep the panel inside the viewBox;
+  // the real angle is shown in the tilt gauge below.
+  const TILT_VISUAL_MAX = 22;
+  const tiltReal = liveVal('panel_tilt') !== undefined ? liveVal('panel_tilt') : sim.tilt;
+  const tiltVisual = Math.max(0, Math.min(TILT_VISUAL_MAX, tiltReal));
+  const frame = document.getElementById('frame');
+  frame.setAttribute('transform', `rotate(${-tiltVisual} 100 170)`);
+
+  // Tilt gauge needle — shows REAL angle 0-90°
+  const needle = document.getElementById('tilt-needle');
+  if (needle) {
+    // Clamp needle to gauge range 0-90° so it doesn't wrap past the arc
+    const needleAngle = Math.max(0, Math.min(90, tiltReal));
+    needle.setAttribute('transform', `rotate(${-needleAngle} 130 220)`);
+  }
+  const tiltVal = document.getElementById('tilt-value');
+  if (tiltVal) {
+    tiltVal.textContent = fmt(tiltReal, 0) + '°';
+  }
+
+  // ---- Numbers (live overrides sim) ----
+  // kWh today
+  const kwhLive = liveVal('energy_today');
+  const kwh = (kwhLive !== undefined) ? kwhLive : sim.kwh;
+  document.getElementById('kwh').textContent = fmt(kwh, 2);
+  document.getElementById('kwh-target').textContent = fmt(7.5, 1);
+  document.getElementById('kwh-meter').style.width = Math.min(100, kwh / 7.5 * 100) + '%';
+  const poa = poaIrradiance(tiltReal, minOfDay);
+  document.getElementById('poa').textContent = fmt(poa, 0) + ' W/m²';
+  setLiveDot('dot-kwh', kwhLive);
+
+  // DLI
+  const dli = liveVal('panel_efficiency') ? null : sim.dli;  // panel_efficiency isn't DLI; DLI is computed
+  // (no live DLI source — keep sim-derived DLI)
+  document.getElementById('dli').textContent = fmt(sim.dli, 1);
+  document.getElementById('dli-pct').textContent = fmt((sim.dli / 14) * 100, 0) + '%';
+  document.getElementById('dli-meter').style.width = Math.min(100, sim.dli / 14 * 100) + '%';
+  setLiveDot('dot-dli', undefined);  // DLI has no live source — always sim
+
+  // Tilt
+  const tiltLive = liveVal('panel_tilt');
+  const tilt = (tiltLive !== undefined) ? tiltLive : sim.tilt;
+  document.getElementById('tilt').textContent = Math.round(tilt);
+  document.getElementById('tilt-mode').textContent = (tiltLive !== undefined) ? 'live' : sim.tiltMode;
+  setLiveDot('dot-tilt', tiltLive);
+
+  // Wind (no live source — sim only)
+  const { sustained, gust } = windAt(minOfDay);
+  const wind = gust > sustained ? gust : sustained;
+  document.getElementById('wind').textContent = Math.round(wind);
+  document.getElementById('wind-state').textContent = gust > sustained ? `gust ${gust.toFixed(0)} mph` : 'sustained';
+  document.getElementById('wind-meter').style.width = Math.min(100, wind / 50 * 100) + '%';
+
+  // Panel temp
+  const panelCLive = liveVal('panel_temperature');
+  const panelC = (panelCLive !== undefined) ? panelCLive : sim.panelC;
+  const ambientC = sim.ambientC;  // no live ambient sensor
+  const panelDelta = panelC - ambientC;
+  document.getElementById('panel-temp').textContent = Math.round(panelC);
+  document.getElementById('panel-temp-delta').textContent =
+    `ambient ${Math.round(ambientC)}°C · +${panelDelta.toFixed(0)}°C solar`;
+  document.getElementById('panel-temp-meter').style.width =
+    Math.max(0, Math.min(100, (panelDelta / 30) * 100)) + '%';
+  document.getElementById('panel-temp-meter').className = 'fill-' + (panelDelta < 10 ? 'good' : panelDelta < 20 ? 'warn' : 'bad');
+  document.getElementById('ambient-temp').textContent = Math.round(ambientC);
+  document.getElementById('ambient-state').textContent =
+    ambientC > 35 ? 'hot' : ambientC > 28 ? 'warm' : ambientC > 22 ? 'mild' : 'cool';
+  setLiveDot('dot-temp', panelCLive);
+
+  // Soil
+  const soilLive = liveVal('soil_moisture');
+  const soil = (soilLive !== undefined) ? soilLive : sim.soil * 100;
+  document.getElementById('soil').textContent = Math.round(soil);
+  document.getElementById('soil-state').textContent = soil > 60 ? 'moist' : soil > 40 ? 'drying' : 'dry';
+  document.getElementById('soil-meter').style.width = Math.min(100, soil) + '%';
+  document.getElementById('soil-meter').className = 'fill-' + (soil > 50 ? 'good' : soil > 30 ? 'warn' : 'bad');
+  setLiveDot('dot-soil', soilLive);
+
+  // Battery
+  const battV = liveVal('battery_voltage');
+  const battSocLive = liveVal('battery_soc');
+  // Display: SOC if available, else derived from voltage (rough), else sim
+  let battPct;
+  if (battSocLive !== undefined) {
+    battPct = battSocLive;
+    document.getElementById('batt-state').textContent = battPct > 90 ? 'full · float' : battPct > 50 ? 'MPPT bulk' : 'low · discharge';
+  } else if (battV !== undefined) {
+    // LiFePO4 12V: 10.5V=0%, 13.6V=100% → linear (rough)
+    battPct = Math.max(0, Math.min(100, ((battV - 10.5) / (13.6 - 10.5)) * 100));
+    document.getElementById('batt-state').textContent = `${fmt(battV, 2)} V (est.)`;
+  } else {
+    battPct = sim.batt * 100;
+    document.getElementById('batt-state').textContent = sim.batt > 0.9 ? 'full · float' : sim.batt > 0.5 ? 'MPPT bulk' : 'low · discharge';
+  }
+  document.getElementById('batt').textContent = Math.round(battPct);
+  document.getElementById('batt-meter').style.width = Math.min(100, Math.max(0, battPct)) + '%';
+  document.getElementById('batt-meter').className = 'fill-' + (battPct > 50 ? 'good' : battPct > 20 ? 'warn' : 'bad');
+  setLiveDot('dot-batt', battSocLive !== undefined ? battSocLive : battV);
+
+  // Solenoid
+  const solState = liveVal('solenoid_valve');
+  const in1 = liveVal('hb_in1');
+  const in2 = liveVal('hb_in2');
+  const solMode = liveVal('solenoid_mode');
+  const isOn = solState === 'ON' || (in1 === 'ON' && in2 === 'OFF');
+  const led = document.getElementById('solenoid-led');
+  const label = document.getElementById('solenoid-label');
+  led.className = 'led ' + (isOn ? 'on' : 'off');
+  label.className = 'label ' + (isOn ? 'on' : 'off');
+  label.textContent = isOn ? 'OPEN' : 'CLOSED';
+  document.getElementById('solenoid-meta').textContent =
+    `IN1=${(in1==='ON')?1:0}  IN2=${(in2==='ON')?1:0}`;
+  document.getElementById('solenoid-mode').textContent = solMode || '--';
+  setLiveDot('dot-solenoid', solState !== undefined ? solState : in1);
+
+  // WiFi (RSSI in dBm; -50=excellent, -60=good, -70=usable, <-80=weak)
+  const rssi = liveVal('wifi_signal');
+  if (rssi !== undefined) {
+    document.getElementById('wifi-rssi').textContent = `${rssi} dBm`;
+    let bars, quality, klass;
+    if      (rssi >= -55) { bars = '▁▃▅█'; quality = 'excellent'; klass = 'good'; }
+    else if (rssi >= -65) { bars = '▁▃▅▁'; quality = 'good';      klass = 'good'; }
+    else if (rssi >= -75) { bars = '▁▃▁▁'; quality = 'fair';      klass = 'warn'; }
+    else if (rssi >= -85) { bars = '▁▁▁▁'; quality = 'weak';      klass = 'bad';  }
+    else                  { bars = '▁▁▁▁'; quality = 'unreliable'; klass = 'bad';  }
+    const wb = document.getElementById('wifi-bars');
+    wb.textContent = bars;
+    wb.className = 'wifi-bars ' + klass;
+    document.getElementById('wifi-quality').textContent = quality;
+  }
+  setLiveDot('dot-wifi', rssi !== undefined);
+
+  // Decision reason (only sim can populate this; live has no equivalent topic)
+  document.getElementById('reason').innerHTML = 'Decision: <b>' + sim.reason + '</b>';
+
+  // Scene source label
+  const anyLive = ['panel_temperature','soil_moisture','battery_voltage','panel_tilt','energy_today']
+    .some(k => liveVal(k) !== undefined);
+  document.getElementById('scene-source').textContent = anyLive ? 'live' : 'sim';
+
+  // Pills
+  updatePills();
+}
+
+// ---- Live indicator dots ----
+//   setLiveDot(id, value): lights the dot only if value is a real, usable
+//   live value (defined + not NaN). A topic publishing "nan" should NOT
+//   light the dot — that's a broken live feed, not a real one.
+function setLiveDot(id, value) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const live = value !== undefined && value !== null
+            && !(typeof value === 'number' && Number.isNaN(value));
+  el.classList.toggle('on', live);
+}
+
+// ---- Pills (LIVE / device status) ----
+function updatePills() {
+  const livePill = document.getElementById('live-pill');
+  if (!live.connected) {
+    livePill.className = 'pill sim';
+    livePill.textContent = 'SIM';
+  } else {
+    // Connected — is data fresh?
+    const hasFresh = ['panel_temperature','soil_moisture','battery_voltage','panel_tilt','energy_today']
+      .some(k => liveVal(k) !== undefined);
+    if (hasFresh) {
+      livePill.className = 'pill live';
+      livePill.textContent = 'LIVE';
+    } else {
+      livePill.className = 'pill stale';
+      livePill.textContent = 'NO DATA';
+    }
+  }
+  const devPill = document.getElementById('device-pill');
+  if (!live.connected) {
+    devPill.className = 'pill sim';
+    devPill.textContent = LIVE_MODE ? 'MQTT' : 'DEMO';
+  } else if (live.deviceOnline) {
+    devPill.className = 'pill live';
+    devPill.textContent = 'ONLINE';
+  } else {
+    devPill.className = 'pill off';
+    devPill.textContent = 'OFFLINE';
+  }
+}
+
+// ---- Sparklines ----
+function pushSpark(name, v) {
+  if (typeof v !== 'number' || !isFinite(v)) return;
+  if (!spark[name]) spark[name] = [];
+  spark[name].push(v);
+  if (spark[name].length > SPARK_LEN) spark[name].shift();
+  drawSpark(name);
+}
+function drawSpark(name) {
+  const data = spark[name];
+  const el = document.getElementById(name + '-spark');
+  if (!el || data.length < 2) return;
+  const w = 100, h = 22;
+  let min = Infinity, max = -Infinity;
+  for (const v of data) { if (v < min) min = v; if (v > max) max = v; }
+  if (max - min < 0.01) { max = min + 0.01; }  // avoid div/0
+  const step = w / (data.length - 1);
+  let path = '';
+  for (let i = 0; i < data.length; i++) {
+    const x = (i * step).toFixed(2);
+    const y = (h - ((data[i] - min) / (max - min)) * (h - 2) - 1).toFixed(2);
+    path += (i === 0 ? 'M' : 'L') + x + ',' + y + ' ';
+  }
+  el.querySelector('path').setAttribute('d', path);
+}
+
+// ---- Action log ----
+const logList = document.getElementById('log-list');
+const LOG_MAX = 20;
+let logCount = 0;
+function addLog(level, source, message) {
+  // Remove empty placeholder
+  const empty = logList.querySelector('.log-empty');
+  if (empty) empty.remove();
+  const li = document.createElement('li');
+  li.className = 'log-' + level;
+  li.innerHTML = `<span class="ts">${nowStr()}</span><span class="src">${source}</span><span class="msg">${escapeHtml(message)}</span>`;
+  logList.prepend(li);
+  logCount++;
+  while (logList.children.length > LOG_MAX) {
+    logList.lastChild.remove();
+  }
+}
+function clearLog() {
+  logList.innerHTML = '<li class="log-empty">No events yet</li>';
+  logCount = 0;
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+// ---- MQTT message routing ----
+// Map MQTT topic → live.values key
+const TOPIC_TO_KEY = {
+  [`${TOPIC_PREFIX}/sensor/panel_temperature/state`]:        'panel_temperature',
+  [`${TOPIC_PREFIX}/sensor/panel_temperature/state`]:        'panel_temperature',
+  [`${TOPIC_PREFIX}/sensor/soil_moisture/state`]:            'soil_moisture',
+  [`${TOPIC_PREFIX}/sensor/soil_moisture__raw_v_/state`]:    'soil_moisture_raw',
+  [`${TOPIC_PREFIX}/sensor/battery_voltage/state`]:          'battery_voltage',
+  [`${TOPIC_PREFIX}/sensor/battery_voltage__raw_v_/state`]:  'battery_voltage_raw',
+  [`${TOPIC_PREFIX}/sensor/panel_power/state`]:              'panel_power',
+  [`${TOPIC_PREFIX}/sensor/battery_soc/state`]:              'battery_soc',
+  [`${TOPIC_PREFIX}/sensor/poa_irradiance/state`]:           'poa_irradiance',
+  [`${TOPIC_PREFIX}/sensor/panel_efficiency/state`]:         'panel_efficiency',
+  [`${TOPIC_PREFIX}/sensor/energy_total/state`]:            'energy_total',
+  [`${TOPIC_PREFIX}/sensor/energy_today/state`]:             'energy_today',
+  [`${TOPIC_PREFIX}/sensor/panel_tilt/state`]:               'panel_tilt',
+  [`${TOPIC_PREFIX}/sensor/wifi_signal/state`]:              'wifi_signal',
+  [`${TOPIC_PREFIX}/switch/solenoid_valve/state`]:           'solenoid_valve',
+  [`${TOPIC_PREFIX}/switch/h-bridge_in1/state`]:             'hb_in1',
+  [`${TOPIC_PREFIX}/switch/h-bridge_in2/state`]:             'hb_in2',
+  [`${TOPIC_PREFIX}/switch/h-bridge_en/state`]:              'hb_en',
+  [`${TOPIC_PREFIX}/select/controller_state/state`]:         'controller_state',
+  [`${TOPIC_PREFIX}/select/controller_mode/state`]:          'controller_mode',
+  [`${TOPIC_PREFIX}/select/solenoid_mode/state`]:           'solenoid_mode',
+};
+
+const PREV = {};  // track previous values for state-change detection
+
+function handleMqttMessage(topic, payloadStr) {
+  const val = payloadStr;
+  if (topic === `${TOPIC_PREFIX}/status`) {
+    // LWT: 'online' or 'offline'
+    const wasOnline = live.deviceOnline;
+    live.deviceOnline = (val === 'online');
+    if (wasOnline !== live.deviceOnline) {
+      addLog(live.deviceOnline ? 'state' : 'warn', 'device', val === 'online' ? 'device online' : 'device offline (LWT)');
+    }
+    return;
+  }
+  if (topic === `${TOPIC_PREFIX}/log`) {
+    // ESPHome log: filter to interesting lines
+    if (val.includes('alive')) return;  // too noisy
+    if (val.includes('[D]')) return;     // skip debug
+    if (val.startsWith('[I][app')) return; // skip boot banner
+    // Only log if it looks like a state change or interesting event
+    if (/>>/.test(val) || /limit|fault|error|nack|fail/i.test(val)) {
+      const m = val.match(/\[[IWE]\](\[[^\]]+\]:)?\s*(.*)/);
+      const msg = m ? m[2] : val;
+      const src = m && m[1] ? m[1].slice(1, -1).split(':')[0] : 'log';
+      const level = val.startsWith('[E]') ? 'error' : val.startsWith('[W]') ? 'warn' : 'info';
+      addLog(level, src, msg.slice(0, 200));
+    }
+    return;
+  }
+  // Sensor / switch / select
+  const key = TOPIC_TO_KEY[topic];
+  if (key) {
+    const num = parseFloat(val);
+    const isNum = !isNaN(num) && isFinite(num);
+    live.values[key] = isNum ? num : val;
+    live.lastSeen[key] = Date.now();
+    // Any data from the device means it's online (covers the case where we
+    // missed the initial 'online' LWT because we subscribed after connect).
+    if (!live.deviceOnline) {
+      live.deviceOnline = true;
+      addLog('state', 'device', 'device online (data seen)');
+    }
+    // State-change log for switches/selects
+    if (key === 'solenoid_valve' || key === 'solenoid_mode' || key === 'controller_state' || key === 'controller_mode' || key === 'hb_in1' || key === 'hb_in2' || key === 'hb_en') {
+      if (PREV[key] !== val) {
+        addLog('state', key, `${PREV[key] || '?'} → ${val}`);
+        PREV[key] = val;
+      }
+    }
+    // Sparkline updates on key metrics
+    if (key === 'soil_moisture') pushSpark('soil', num);
+    if (key === 'battery_soc') pushSpark('batt', num);
+    else if (key === 'battery_voltage') pushSpark('batt', num);
+    if (key === 'panel_temperature') pushSpark('temp', num);
+    if (key === 'energy_today') pushSpark('kwh', num);
+  }
+}
+
+// ---- MQTT client ----
+let mqttClient = null;
+function connectMqtt() {
+  if (!LIVE_MODE) {
+    addLog('info', 'mqtt', 'sim mode (add ?live=1 to URL to enable MQTT)');
+    return;
+  }
+  if (typeof mqtt === 'undefined') {
+    addLog('warn', 'mqtt', 'mqtt.js failed to load; running in SIM mode only');
+    return;
+  }
+  mqttClient = mqtt.connect(BROKER_WS, {
+    ...BROKER_AUTH,
+    clientId: 'wattplot-dash-' + Math.random().toString(36).slice(2, 8),
+    reconnectPeriod: 5000,
+    clean: true,
+  });
+  mqttClient.on('connect', () => {
+    live.connected = true;
+    addLog('state', 'mqtt', `connected to ${BROKER_WS}`);
+    mqttClient.subscribe(`${TOPIC_PREFIX}/#`);
+  });
+  mqttClient.on('reconnect', () => {
+    addLog('info', 'mqtt', 'reconnecting…');
+  });
+  mqttClient.on('close', () => {
+    live.connected = false;
+    addLog('warn', 'mqtt', 'disconnected');
+  });
+  mqttClient.on('error', (err) => {
+    addLog('error', 'mqtt', err.message || 'error');
+  });
+  mqttClient.on('message', handleMqttMessage);
+}
+
+// ---- Sim play/pause/scrub/reset ----
+let timer = null;
+function togglePlay() {
+  if (sim.paused) {
+    sim.paused = false;
+    document.getElementById('play').textContent = '⏸ Pause';
+    if (!timer) timer = setInterval(() => { simStep(); render(); }, 250);
+  } else {
+    sim.paused = true;
+    document.getElementById('play').textContent = '▶ Play 24h';
+    if (timer) { clearInterval(timer); timer = null; }
+  }
+}
+function reset() {
+  if (timer) { clearInterval(timer); timer = null; }
+  sim.paused = true;
+  sim.minuteOfDay = 420;
+  sim.kwh = 0; sim.dli = 0; sim.soil = 0.75; sim.batt = 1.0; sim.tilt = 0;
+  document.getElementById('play').textContent = '▶ Play 24h';
+  render();
+}
+function onScrub(v) {
+  sim.minuteOfDay = parseInt(v, 10);
+  if (!sim.paused) togglePlay();
+  render();
+}
+window.togglePlay = togglePlay;
+window.reset = reset;
+window.onScrub = onScrub;
+
+// ---- Boot ----
+connectMqtt();
+// Render every 250ms even when paused (so live data updates + clock tick)
+setInterval(render, 250);
+render();
+addLog('info', 'boot', 'dashboard ready');
+</script>
+</body>
+</html>

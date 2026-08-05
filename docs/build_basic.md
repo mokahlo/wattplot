@@ -23,10 +23,11 @@ frame's north rail:
 - **Lock:** a ½" steel pin (same rod stock as the hinge pin) through
   the shoe and strut. One hole per tilt angle.
 
-Tilt stops: **0° (stowed flat), 15°, 25°, 35°, 45° (max)** — matching
+Tilt stops: **0° (stowed flat), 15°, 25°, 35° (max)** — matching
 the tilt schedule presets in the sun simulator, so the annual-yield
-numbers in the sim apply directly. 45° is the structural ceiling: the
-wind calc passes SF ≥ 2.0 only up to 45° at the design wind. Set it seasonally: steeper in winter, shallower
+numbers in the sim apply directly. 35° is the structural ceiling: with
+the panel up on 72" posts, the wind calc passes SF ≥ 2.0 only to 35° at
+the design wind. Set it seasonally: steeper in winter, shallower
 in summer, or just leave it at 25° year-round and lose only a few
 percent annually.
 
@@ -46,7 +47,7 @@ At 0° the panel carries essentially zero uplift and drag (see
 [`../analysis/wind_load_report.md`](../analysis/wind_load_report.md) —
 the 0° row is the whole story). Deployed, the structure is engineered
 for the ASCE 7-22 design wind (115 mph, Exposure C) with SF ≥ 2 up to
-45° tilt (~125 mph rated at 45°, ~165 mph at 35°, 20" soil fill) —
+35° tilt (~130 mph rated at 35°, 25.5" soil fill) —
 but stowing is free, takes two minutes, and turns a marginal night
 into a non-event. If a named storm is coming, stow.
 
@@ -54,7 +55,7 @@ into a non-event. If a named storm is coming, stow.
 
 The delta vs. the Smart BOM: subtract the actuator (~$40), electronics
 (~$40–80), and PCB. With a salvaged residential panel (often free to
-$50 on Craigslist), the Basic build lands in the **$250–450** range
+$50 on Craigslist), the Basic build lands in the **$400–650** range
 depending on lumber choice (PT pine vs. cedar). See [`../bom.md`](../bom.md).
 
 ## Upgrade path
