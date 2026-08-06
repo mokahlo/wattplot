@@ -1,0 +1,24 @@
+tools+docs: live control panel with solenoid toggle, tilt slider, calibrate
+
+Adds a local Python web server (tools/wattplot_control.py) that proxies
+to the wattplot's native API and serves a self-contained control panel
+(docs/control.html) on http://localhost:8765/.
+
+The panel has:
+  - Solenoid valve ON/OFF toggle (large pill buttons)
+  - Solenoid Mode selector (Auto / Manual / Off)
+  - Tilt slider (0-35 deg) with live Commanded Tilt display
+  - Controller State buttons (Normal / Fold / Lock)
+  - "Calibrate Actuator" button (triggers the v3.2 self-cal routine)
+  - "Water Now" button (triggers a 5 s one-off watering)
+  - Live status: IPROPI, nFAULT, Battery, Calibration, Power, Sensors
+  - Auto-refresh every 2 s
+
+Run:   python tools/wattplot_control.py
+Then open http://localhost:8765/ in a browser.
+
+The server is a thin aiohttp shim around aioesphomeapi. Generic
+endpoints /api/switch, /api/number, /api/select, /api/button accept
+{label, value/option/on} and dispatch to the right entity by name.
+Entity labels are stable strings (entity keys are looked up server-side
+from ENTITY_KEYS in the tool).

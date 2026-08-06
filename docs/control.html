@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Wattplot Control</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --elev: #1f2530;
+      --border: #2a313c;
+      --border-2: #3a414e;
+      --ink: #e6e3dc;
+      --ink-2: #a8a59c;
+      --muted: #6e6c66;
+      --accent: #ff9a5e;
+      --accent-2: #ffb27a;
+      --accent-soft: rgba(255, 154, 94, 0.10);
+      --good: #6cc8a3;
+      --bad: #e8a5a8;
+      --c-power: #f0c270;
+      --c-motor: #ff9a5e;
+      --c-solenoid: #6cc8a3;
+      --c-sensor: #5ab0c9;
+      --c-comms: #a78bdb;
+      --c-mcu: #e6e3dc;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'Outfit', system-ui, sans-serif;
+      min-height: 100vh;
+    }
+    body {
+      background: radial-gradient(ellipse at top, rgba(255,154,94,0.04) 0%, transparent 60%),
+                  var(--bg);
+    }
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 32px 24px 64px; }
+    header {
+      display: flex; align-items: baseline; justify-content: space-between;
+      padding-bottom: 24px; border-bottom: 1px solid var(--border);
+      margin-bottom: 32px; flex-wrap: wrap; gap: 16px;
+    }
+    h1 {
+      font-size: 1.6rem; font-weight: 700; margin: 0;
+      letter-spacing: -0.01em;
+    }
+    h1 .logo {
+      color: var(--accent); font-weight: 700;
+    }
+    .led {
+      display: inline-block; width: 10px; height: 10px;
+      border-radius: 50%; margin-right: 8px;
+      background: var(--muted);
+      transition: background 0.3s;
+    }
+    .led.live { background: var(--good); box-shadow: 0 0 8px var(--good); }
+    .led.error { background: var(--bad); }
+    .status-line { color: var(--ink-2); font-size: 0.9rem; }
+    .status-line .sep { color: var(--muted); margin: 0 6px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 22px;
+    }
+    .card h2 {
+      font-size: 0.78rem; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--ink-2);
+      margin: 0 0 16px; font-weight: 600;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .card h2 .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+    }
+    .card[data-subsystem="power"] h2 .dot     { background: var(--c-power); }
+    .card[data-subsystem="motor"] h2 .dot    { background: var(--c-motor); }
+    .card[data-subsystem="solenoid"] h2 .dot { background: var(--c-solenoid); }
+    .card[data-subsystem="sensor"] h2 .dot   { background: var(--c-sensor); }
+    .card[data-subsystem="comms"] h2 .dot    { background: var(--c-comms); }
+    .card[data-subsystem="mcu"] h2 .dot       { background: var(--c-mcu); }
+
+    .row { display: flex; justify-content: space-between; align-items: baseline;
+           padding: 6px 0; border-bottom: 1px dashed var(--border); }
+    .row:last-child { border-bottom: none; }
+    .row .label { color: var(--ink-2); font-size: 0.85rem; }
+    .row .value { font-family: 'JetBrains Mono', monospace;
+                  font-size: 0.92rem; color: var(--ink); font-weight: 500; }
+    .value.warn { color: var(--c-power); }
+    .value.bad { color: var(--bad); }
+    .value.good { color: var(--good); }
+    .value.muted { color: var(--muted); }
+
+    button {
+      font-family: inherit; cursor: pointer;
+      background: var(--elev); color: var(--ink);
+      border: 1px solid var(--border-2);
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 0.92rem; font-weight: 500;
+      transition: all 0.15s ease;
+    }
+    button:hover:not(:disabled) {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    button.primary {
+      background: var(--accent); color: #1a0f00; border-color: var(--accent);
+      font-weight: 600;
+    }
+    button.primary:hover:not(:disabled) {
+      background: var(--accent-2); border-color: var(--accent-2);
+    }
+    button.danger { border-color: var(--bad); color: var(--bad); }
+    button.danger:hover:not(:disabled) { background: rgba(232,165,168,0.10); }
+
+    .toggle {
+      display: flex; gap: 8px; align-items: center; margin: 12px 0 4px;
+    }
+    .toggle .pill {
+      flex: 1; text-align: center; padding: 12px 8px;
+      border-radius: 8px; border: 1px solid var(--border-2);
+      background: var(--elev); color: var(--ink-2);
+      cursor: pointer; user-select: none;
+      font-weight: 600; font-size: 0.95rem;
+      transition: all 0.15s ease;
+    }
+    .toggle .pill.active {
+      background: var(--c-solenoid); color: #042b1d; border-color: var(--c-solenoid);
+    }
+    .toggle .pill.off.active { background: var(--bad); color: #2a0708; border-color: var(--bad); }
+
+    .slider-row { display: flex; align-items: center; gap: 12px; margin: 8px 0 4px; }
+    .slider-row input[type=range] {
+      flex: 1; accent-color: var(--accent);
+    }
+    .slider-row .num {
+      font-family: 'JetBrains Mono', monospace;
+      min-width: 50px; text-align: right;
+      color: var(--ink); font-weight: 500;
+    }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+
+    .footer {
+      margin-top: 36px; padding-top: 18px; border-top: 1px solid var(--border);
+      color: var(--muted); font-size: 0.8rem; text-align: center;
+    }
+    .bigstat {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.8rem; font-weight: 500; color: var(--accent);
+      line-height: 1; margin: 4px 0;
+    }
+    .bigstat .unit { font-size: 0.9rem; color: var(--ink-2); margin-left: 4px; }
+    .calib-banner {
+      background: var(--accent-soft); border: 1px solid var(--accent);
+      color: var(--accent); padding: 8px 14px; border-radius: 8px;
+      font-weight: 500; text-align: center; margin-bottom: 18px;
+      display: none;
+    }
+    .calib-banner.show { display: block; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1><span class="logo">Wattplot</span> <span style="color: var(--ink-2); font-weight: 400;">control</span></h1>
+      <div class="status-line">
+        <span class="led" id="led"></span>
+        <span id="conn-status">connecting…</span>
+        <span class="sep">·</span>
+        <span id="refresh-ts">never</span>
+      </div>
+    </header>
+
+    <div class="calib-banner" id="calib-banner">
+      ⚙ Actuator self-calibration in progress… (≈30–45 s)
+    </div>
+
+    <div class="grid">
+
+      <div class="card" data-subsystem="solenoid">
+        <h2><span class="dot"></span>Solenoid (U5b DRV8871)</h2>
+        <div class="row"><span class="label">Mode</span><span class="value" id="sol-mode">—</span></div>
+        <div class="row"><span class="label">Valve</span><span class="value" id="sol-valve">—</span></div>
+        <div class="row"><span class="label">IPROPI</span><span class="value" id="sol-ipi">—</span></div>
+        <div class="row"><span class="label">nFAULT</span><span class="value" id="sol-nfault">—</span></div>
+        <div class="row"><span class="label">Fault Alarm</span><span class="value" id="sol-alarm">—</span></div>
+        <div class="row"><span class="label">On time</span><span class="value" id="sol-ontime">—</span></div>
+        <div class="row"><span class="label">Budget</span><span class="value" id="sol-budget">—</span></div>
+        <div class="row"><span class="label">Max on-time</span><span class="value" id="sol-maxontime">—</span></div>
+        <div class="toggle">
+          <div class="pill" id="btn-sol-off" onclick="setSolenoid(false)">OFF</div>
+          <div class="pill" id="btn-sol-on"  onclick="setSolenoid(true)">ON</div>
+        </div>
+        <div class="actions">
+          <button onclick="setSolenoidMode('Auto')">Auto</button>
+          <button onclick="setSolenoidMode('Manual')">Manual</button>
+          <button onclick="setSolenoidMode('Off')">Off</button>
+          <button onclick="waterNow()">Water Now (5 s)</button>
+        </div>
+      </div>
+
+      <div class="card" data-subsystem="motor">
+        <h2><span class="dot"></span>Actuator (U5a DRV8871)</h2>
+        <div class="row"><span class="label">Controller State</span><span class="value" id="ctl-state">—</span></div>
+        <div class="row"><span class="label">Mode</span><span class="value" id="ctl-mode">—</span></div>
+        <div class="row"><span class="label">Panel Tilt</span><span class="value" id="tilt-actual">—</span></div>
+        <div class="row"><span class="label">Commanded Tilt</span><span class="value" id="tilt-cmd">—</span></div>
+        <div class="row"><span class="label">Motor IPROPI</span><span class="value" id="mot-ipi">—</span></div>
+        <div class="row"><span class="label">Motor Current (INA219)</span><span class="value" id="mot-ina">—</span></div>
+        <div class="row"><span class="label">Actuator nFAULT</span><span class="value" id="mot-nfault">—</span></div>
+        <div class="row"><span class="label">Actuator Bus V</span><span class="value" id="mot-busv">—</span></div>
+        <div class="bigstat"><span id="tilt-big">—</span><span class="unit">°</span></div>
+        <div class="slider-row">
+          <input type="range" min="0" max="35" step="1" value="0" id="tilt-slider"
+                 oninput="document.getElementById('tilt-num').textContent=this.value"
+                 onchange="setTilt(this.value)">
+          <div class="num" id="tilt-num">0</div>
+        </div>
+        <div class="actions">
+          <button onclick="setMode('Normal')">Normal</button>
+          <button onclick="setMode('Folding')">Fold</button>
+          <button onclick="setMode('Locked')">Lock</button>
+          <button class="primary" onclick="calibrate()">Calibrate (≈30 s)</button>
+        </div>
+      </div>
+
+      <div class="card" data-subsystem="calib">
+        <h2><span class="dot"></span>Calibration status</h2>
+        <div class="row"><span class="label">In progress</span><span class="value" id="calib-run">—</span></div>
+        <div class="row"><span class="label">Last calibration</span><span class="value" id="calib-age">—</span></div>
+        <div class="row"><span class="label">Last MAX endstop</span><span class="value" id="calib-max">—</span></div>
+        <div class="row"><span class="label">Last ZERO endstop</span><span class="value" id="calib-zero">—</span></div>
+      </div>
+
+      <div class="card" data-subsystem="power">
+        <h2><span class="dot"></span>Power</h2>
+        <div class="bigstat"><span id="batt-big">—</span><span class="unit">V</span></div>
+        <div class="row"><span class="label">Battery Voltage</span><span class="value" id="batt-v">—</span></div>
+        <div class="row"><span class="label">Panel Power</span><span class="value" id="pwr">—</span></div>
+        <div class="row"><span class="label">Energy Today</span><span class="value" id="energy">—</span></div>
+      </div>
+
+      <div class="card" data-subsystem="sensor">
+        <h2><span class="dot"></span>Sensors</h2>
+        <div class="row"><span class="label">Soil Moisture</span><span class="value" id="soil">—</span></div>
+        <div class="row"><span class="label">WiFi Signal</span><span class="value" id="wifi">—</span></div>
+      </div>
+
+    </div>
+
+    <div class="footer">
+      Wattplot v2 · live control panel · auto-refreshes every 2 s
+    </div>
+  </div>
+
+  <script>
+    // ---- helpers ----
+    const $ = (id) => document.getElementById(id);
+
+    function setText(id, v, unit) {
+      const el = $(id); if (!el) return;
+      if (v === null || v === undefined || (typeof v === 'number' && isNaN(v))) {
+        el.textContent = '—';
+        el.className = 'value muted';
+        return;
+      }
+      if (typeof v === 'boolean') {
+        el.textContent = v ? 'TRUE' : 'false';
+        el.className = 'value ' + (v ? 'good' : '');
+      } else if (typeof v === 'number') {
+        el.textContent = v.toFixed(unit === 'V' ? 2 : unit === 'A' ? 3 : 1) + (unit ? ' ' + unit : '');
+        el.className = 'value';
+      } else {
+        el.textContent = v;
+        el.className = 'value';
+      }
+    }
+
+    function setBoolPill(id, active) {
+      const el = $(id);
+      if (el) el.classList.toggle('active', active);
+    }
+
+    function setConnection(ok) {
+      $('led').className = 'led ' + (ok ? 'live' : 'error');
+      $('conn-status').textContent = ok ? 'connected' : 'disconnected';
+    }
+
+    // ---- API calls ----
+    async function api(method, path, body) {
+      const opts = { method, headers: {} };
+      if (body) {
+        opts.headers['Content-Type'] = 'application/json';
+        opts.body = JSON.stringify(body);
+      }
+      const r = await fetch(path, opts);
+      if (!r.ok) throw new Error(`${method} ${path} -> ${r.status}`);
+      return r.json();
+    }
+
+    async function refresh() {
+      try {
+        const s = await api('GET', '/api/state');
+        setConnection(true);
+        $('refresh-ts').textContent = new Date().toLocaleTimeString();
+
+        // solenoid
+        setText('sol-mode', s['Solenoid Mode']);
+        setText('sol-valve', s['Solenoid Valve']);
+        setText('sol-ipi', s['Solenoid IPROPI Current'], 'A');
+        setText('sol-nfault', s['Solenoid nFAULT']);
+        setText('sol-alarm', s['Solenoid Fault Alarm']);
+        setText('sol-ontime', s['Solenoid On Time (s)'], 's');
+        setText('sol-budget', s['Solenoid Budget (s)'], 's');
+        setText('sol-maxontime', s['Solenoid Max On-Time (s)'], 's');
+        setBoolPill('btn-sol-on',  s['Solenoid Valve'] === true);
+        setBoolPill('btn-sol-off', s['Solenoid Valve'] === false);
+
+        // actuator
+        setText('ctl-state', s['Controller State']);
+        setText('ctl-mode',  s['Controller Mode']);
+        setText('tilt-actual', s['Panel Tilt'], '°');
+        setText('tilt-cmd',    s['Commanded Tilt (°)'], '°');
+        setText('mot-ipi',   s['Motor IPROPI Current'], 'A');
+        setText('mot-ina',   s['Motor Current'], 'A');
+        setText('mot-nfault', s['Actuator nFAULT']);
+        setText('mot-busv',  s['Actuator Bus V'], 'V');
+        $('tilt-big').textContent = (s['Panel Tilt'] ?? '—').toString();
+        if (typeof s['Commanded Tilt (°)'] === 'number') {
+          $('tilt-slider').value = s['Commanded Tilt (°)'];
+          $('tilt-num').textContent = s['Commanded Tilt (°)'].toFixed(0);
+        }
+
+        // calib
+        setText('calib-run', s['Calibration In Progress']);
+        setText('calib-age', s['Last Calibration (s)'] + ' s');
+        setText('calib-max', s['Last MAX Endstop Current'], 'A');
+        setText('calib-zero', s['Last ZERO Endstop Current'], 'A');
+        const calibOn = s['Calibration In Progress'] === true;
+        $('calib-banner').classList.toggle('show', calibOn);
+
+        // power
+        setText('batt-v', s['Battery Voltage'], 'V');
+        $('batt-big').textContent = (s['Battery Voltage'] ?? '—').toString();
+        setText('pwr', s['Panel Power'], 'W');
+        setText('energy', s['Energy Today'], 'kWh');
+
+        // sensors
+        setText('soil', s['Soil Moisture'], '%');
+        setText('wifi', s['WiFi Signal'], 'dBm');
+
+      } catch (e) {
+        setConnection(false);
+        $('conn-status').textContent = 'error: ' + e.message;
+      }
+    }
+
+    // ---- control actions ----
+    async function setSolenoid(on) {
+      try {
+        await api('POST', '/api/switch',
+                  { label: 'Solenoid Valve', on: !!on });
+        await refresh();
+      } catch (e) { alert('solenoid toggle failed: ' + e.message); }
+    }
+    async function setSolenoidMode(mode) {
+      try {
+        await api('POST', '/api/select',
+                  { label: 'Solenoid Mode', option: mode });
+        await refresh();
+      } catch (e) { alert('mode set failed: ' + e.message); }
+    }
+    async function setMode(mode) {
+      try {
+        await api('POST', '/api/select',
+                  { label: 'Controller State', option: mode });
+        await refresh();
+      } catch (e) { alert('mode set failed: ' + e.message); }
+    }
+    async function setTilt(deg) {
+      try {
+        await api('POST', '/api/number',
+                  { label: 'Commanded Tilt (°)', value: parseFloat(deg) });
+        await refresh();
+      } catch (e) { alert('tilt set failed: ' + e.message); }
+    }
+    async function calibrate() {
+      if (!confirm('Run actuator self-calibration? Takes 30–45 s. The actuator will move through its full range.')) return;
+      try {
+        await api('POST', '/api/button', { label: 'Calibrate Actuator' });
+      } catch (e) { alert('calibrate failed: ' + e.message); }
+    }
+    async function waterNow() {
+      if (!confirm('Open the solenoid for 5 seconds?')) return;
+      try {
+        await api('POST', '/api/button', { label: 'Water Now' });
+        await refresh();
+      } catch (e) { alert('water failed: ' + e.message); }
+    }
+
+    // ---- startup ----
+    setText('tilt-num', $('tilt-slider').value);
+    refresh();
+    setInterval(refresh, 2000);
+  </script>
+</body>
+</html>
