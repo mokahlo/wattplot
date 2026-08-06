@@ -62,6 +62,8 @@
   .dropdown:hover .menu, .dropdown:focus-within .menu, .dropdown.is-open .menu { display: block; }
   .dropdown .menu a { display: block; padding: 8px 12px; border-radius: 6px; color: var(--ink-2); font-size: 13.5px; }
   .dropdown .menu a:hover { background: var(--accent-soft); color: var(--accent); }
+  .topnav .livelink { color: var(--accent); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; font-size: 12px; padding: 6px 12px; border: 1px solid var(--accent); border-radius: 6px; margin-left: 8px; text-decoration: none; }
+  .topnav .livelink:hover { background: var(--accent-soft); color: var(--accent-2); border-color: var(--accent-2); }
   .dropdown > a.has-caret { cursor: pointer; user-select: none; }
 
   main { padding: 40px 0 80px; }
@@ -113,6 +115,37 @@
   .chart-card .series .tag .dot { width: 8px; height: 8px; border-radius: 50%; }
   .chart-card .canvas-wrap { position: relative; flex: 1; min-height: 220px; }
   .chart-card canvas { width: 100% !important; height: 240px !important; }
+
+  /* Live control CTA */
+  .live-cta {
+    display: grid; grid-template-columns: 1fr auto auto; gap: 16px;
+    align-items: center;
+    background: var(--accent-soft); border: 1px solid var(--accent);
+    border-radius: 12px; padding: 16px 20px; margin: 18px 0 24px;
+  }
+  .live-cta-text { color: var(--ink); font-size: 0.92rem; line-height: 1.5; }
+  .live-cta-text strong { color: var(--accent); }
+  .live-cta-text code {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.85em;
+    background: var(--bg); padding: 1px 6px; border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+  .live-cta-cmd {
+    margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem;
+    background: var(--bg); padding: 8px 12px; border-radius: 6px;
+    border: 1px solid var(--border); color: var(--ink-2);
+    white-space: nowrap;
+  }
+  .live-cta-cmd code { background: transparent; padding: 0; border: 0; }
+  .live-cta-btn {
+    background: var(--accent); color: #1a0f00; font-weight: 600;
+    padding: 9px 18px; border-radius: 6px; text-decoration: none;
+    font-size: 0.9rem; white-space: nowrap;
+  }
+  .live-cta-btn:hover { background: var(--accent-2); }
+  @media (max-width: 900px) {
+    .live-cta { grid-template-columns: 1fr; }
+  }
 
   /* Stats summary */
   .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
@@ -201,7 +234,9 @@
         </div>
       </div>
     </nav>
-    <a class="gh" href="https://github.com/mokahlo/wattplot">GitHub ↗</a>
+    <a 
+    <a class='livelink' href='control.html' title='Live control panel (local server)'>Live</a>
+    class="gh" href="https://github.com/mokahlo/wattplot">GitHub ↗</a>
   </div>
 </header>
 
@@ -214,6 +249,16 @@
       pick a time range, toggle the series you care about, change chart types.
       Drop in a CSV from your own logger to replace the synthetic sample data below.
     </p>
+
+    <div class="live-cta">
+      <div class="live-cta-text">
+        <strong>Live control panel</strong> &mdash; toggle the solenoid, set the tilt, run a self-calibration,
+        and read every sensor in real time over the wattplot's native API.
+        Run a small Python server on the booth laptop and the panel is at <code>http://localhost:8765/</code>.
+      </div>
+      <pre class="live-cta-cmd"><code>python tools/wattplot_control.py</code></pre>
+      <a class="live-cta-btn" href="control.html" target="_blank" rel="noopener">Open panel &rarr;</a>
+    </div>
 
     <div class="toolbar">
       <span class="lbl">Range</span>

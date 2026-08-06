@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="{{ page.lang | default: 'en' }}">
 <head>
   <meta charset="UTF-8">
@@ -82,6 +82,8 @@
     .dropdown:hover .menu, .dropdown:focus-within .menu, .dropdown.is-open .menu { display: block; }
     .dropdown .menu a { display: block; padding: 8px 12px; border-radius: 6px; color: var(--ink-2); font-size: 13.5px; }
     .dropdown .menu a:hover { background: var(--accent-soft); color: var(--accent); }
+  .topnav .livelink { color: var(--accent); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; font-size: 12px; padding: 6px 12px; border: 1px solid var(--accent); border-radius: 6px; margin-left: 8px; text-decoration: none; }
+  .topnav .livelink:hover { background: var(--accent-soft); color: var(--accent-2); border-color: var(--accent-2); }
 
     main { padding: 48px 0 80px; }
 
@@ -151,7 +153,9 @@
         </div>
       </div>
     </nav>
-    <a class="gh" href="https://github.com/mokahlo/wattplot">GitHub ↗</a>
+    <a 
+    <a class='livelink' href='control.html' title='Live control panel (local server)'>Live</a>
+    class="gh" href="https://github.com/mokahlo/wattplot">GitHub ↗</a>
   </div>
 </header>
 

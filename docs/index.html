@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -108,6 +108,8 @@
     color: var(--ink-2); font-size: 13.5px; font-weight: 500;
   }
   .dropdown .menu a:hover { background: var(--accent-soft); color: var(--accent); }
+  .topnav .livelink { color: var(--accent); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; font-size: 12px; padding: 6px 12px; border: 1px solid var(--accent); border-radius: 6px; margin-left: 8px; text-decoration: none; }
+  .topnav .livelink:hover { background: var(--accent-soft); color: var(--accent-2); border-color: var(--accent-2); }
 
   /* Hero */
   .hero { padding: 88px 0 64px; }
@@ -285,7 +287,9 @@
         </div>
       </div>
     </nav>
-    <a class="gh" href="https://github.com/mokahlo/wattplot">GitHub ↗</a>
+    <a 
+    <a class='livelink' href='control.html' title='Live control panel (local server)'>Live</a>
+    class="gh" href="https://github.com/mokahlo/wattplot">GitHub ↗</a>
   </div>
 </header>
 

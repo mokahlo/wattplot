@@ -1,0 +1,18 @@
+docs: add "Live" link to top nav + live control CTA on data dashboard
+
+Wires the new docs/control.html into the site so it's discoverable:
+
+  - Top nav of all 9 HTML pages (index, data, gallery, pinmap,
+    schematic, diagrams, sim, disclaimers, _layouts/default) gets a
+    "Live" link with accent-colored border styling, pointing to
+    control.html.
+  - data.html gets a prominent CTA banner near the top with:
+      * 1-line description of the panel
+      * the exact command to start the local server
+        (python tools/wattplot_control.py)
+      * an "Open panel" button
+
+Live server is already running in the background on this machine
+(http://localhost:8765/). To run it on a different machine:
+  1. python tools/wattplot_control.py
+  2. open http://localhost:8765/ in a browser
