@@ -1,0 +1,43 @@
+firmware+tools+docs: comprehensive logging (diagnostics + state events + tools)
+
+The user asked for "everything that can be logged, should be". This
+commit makes it so:
+
+FIRMWARE (wattplot.yaml):
+  - Diagnostic sensors: Uptime, Free Memory, MCU Temperature.
+    Free Memory uses ESP.getFreeHeap(). All polled at 30-60s and
+    surface in HA and via MQTT for graphing.
+  - text_sensor: "Last Event" — rolling one-line summary of the
+    most recent thing the wattplot did. Updated from many places
+    (state machine, nFAULT automation, solenoid on/off, calibration
+    script). Polled at 1s so changes show up in HA within a second.
+  - State transition log messages: every state_to_* script now
+    appends to Last Event and emits an ESP_LOGI/WARN with timestamp.
+    E.g. "-> Folding (up=42s)", "-> Locked (up=82s at_zero=1 at_max=0)".
+  - Solenoid on/off event logging: when the valve opens/closes,
+    Last Event captures V_batt at the time and the on-duration.
+    E.g. "Solenoid ON (V_batt=5.67V up=25s)",
+        "Solenoid OFF (was on 1492ms) up=27s".
+  - nFAULT event logging: actuator fault events also append to
+    Last Event with the fault count.
+  - Component log levels: state=nfo, nfault=WARN, solenoid=INFO,
+    endpoint=INFO, calib=INFO, alarm=INFO, control=INFO. These
+    are forwarded to MQTT topic wattplot/log via the existing
+    log_subscriber.py.
+
+CONTROL PANEL (docs/control.html):
+  - New "Sensors" card: Panel Temp, Soil Temp (in addition to
+    Soil Moisture, WiFi Signal).
+  - New "Device health" card: Uptime, Free heap (KB), MCU temp,
+    Last event. Last event uses accent color so it stands out.
+
+CONTROL SERVER (tools/wattplot_control.py):
+  - Added Uptime, Free Memory, MCU Temperature, Last Event to
+    ENTITY_KEYS so the local control panel exposes them.
+
+NEW TOOL (tools/dump_state.py):
+  - Comprehensive state dump. Connects to wattplot and prints
+  every exposed entity, organized into 8 sections (DIAGNOSTICS,
+  POWER, ACTUATOR, SOLENOID, SENSORS, CALIBRATION, H-BRIDGE,
+  LIGHT) plus a "OTHER EXPOSED ENTITIES" catch-all. Useful for
+  post-mortem debugging and verifying the chip is healthy.

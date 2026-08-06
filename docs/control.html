@@ -258,6 +258,16 @@
         <h2><span class="dot"></span>Sensors</h2>
         <div class="row"><span class="label">Soil Moisture</span><span class="value" id="soil">—</span></div>
         <div class="row"><span class="label">WiFi Signal</span><span class="value" id="wifi">—</span></div>
+        <div class="row"><span class="label">Panel Temp</span><span class="value" id="panel-t">—</span></div>
+        <div class="row"><span class="label">Soil Temp</span><span class="value" id="soil-t">—</span></div>
+      </div>
+
+      <div class="card" data-subsystem="mcu">
+        <h2><span class="dot"></span>Device health</h2>
+        <div class="row"><span class="label">Uptime</span><span class="value" id="uptime">—</span></div>
+        <div class="row"><span class="label">Free heap</span><span class="value" id="heap">—</span></div>
+        <div class="row"><span class="label">MCU temp</span><span class="value" id="mcu-t">—</span></div>
+        <div class="row"><span class="label">Last event</span><span class="value" id="last-event" style="font-size:0.78rem;color:var(--accent);">—</span></div>
       </div>
 
     </div>
@@ -362,6 +372,20 @@
         // sensors
         setText('soil', s['Soil Moisture'], '%');
         setText('wifi', s['WiFi Signal'], 'dBm');
+        setText('panel-t', s['Panel Temperature'], '°C');
+        setText('soil-t', s['Soil Temperature'], '°C');
+
+        // device health
+        setText('uptime', s['Uptime'], 's');
+        const heap = s['Free Memory'];
+        if (typeof heap === 'number' && heap > 0) {
+          $('heap').textContent = (heap/1024).toFixed(1) + ' KB';
+        }
+        setText('mcu-t', s['MCU Temperature'], '°C');
+        const le = s['Last Event'];
+        if (le && typeof le === 'string' && le.length) {
+          $('last-event').textContent = le;
+        }
 
       } catch (e) {
         setConnection(false);

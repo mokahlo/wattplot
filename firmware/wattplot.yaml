@@ -90,6 +90,17 @@ logger:
   # Disable with `mqtt_log_enabled: false` if not using MQTT logging.
   logs:
     "mqtt.log": DEBUG
+    "api": INFO        # connection / password events, not noise
+    "ota": INFO        # OTA start/finish, not the byte-by-byte progress
+    "wifi": INFO       # state transitions, signal changes
+    "state": INFO      # our state machine transitions
+    "nfault": WARN     # actuator/solenoid fault events
+    "solenoid": INFO   # valve on/off + auto-water guard events
+    "endpoint": INFO   # endstop hits
+    "calib": INFO      # self-calibration events
+    "alarm": INFO      # watering alarms
+    "control": INFO    # 1Hz control loop events
+
 
 # ===== Connectivity =====
 api:
@@ -702,6 +713,25 @@ sensor:
     id: rssi
     update_interval: 60s
 
+  # ===== v3.2: Diagnostic sensors =====
+  # These are the "is the device healthy" readouts. All surface in HA
+  # and are logged via MQTT so the log_subscriber.py can graph them.
+  - platform: uptime
+    name: "Uptime"
+    id: wp_uptime
+    update_interval: 30s
+  - platform: internal_temperature
+    name: "MCU Temperature"
+    id: wp_mcu_temp
+    update_interval: 60s
+  - platform: template
+    name: "Free Memory"
+    id: wp_free_heap
+    unit_of_measurement: "bytes"
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: 'return ESP.getFreeHeap();'
+
   # ===== v3.2: Calibration age =====
   # Seconds since the last completed actuator_calibrate run. 0 means
   # never calibrated. Surfaces as "Last Calibration (s)" in HA so you
@@ -736,6 +766,22 @@ sensor:
     update_interval: 30s
     lambda: |-
       return id(g_calib_retract_a);
+
+# ===== v3.2: Text sensors (free-form strings) =====
+# Last Event is a rolling one-line summary of the most recent thing
+# the wattplot did (state change, fault, solenoid on/off, calibration).
+# Updated from many places: state_to_*, nFAULT automation, solenoid
+# switch turn_on/off, calibration script, etc.
+# Note: WiFi IP / SSID / MAC aren't exposed as text_sensors because
+# the wifi_info platform doesn't exist in ESPHome 2026.7.2 and the
+# wifi singleton isn't reachable from a template lambda. Use the
+# ESPHome web UI on port 80 for those.
+text_sensor:
+  - platform: template
+    name: "Last Event"
+    id: wp_last_event
+    update_interval: 1s
+    lambda: 'return id(g_last_event);'
 
 # ===== DRV8871 nFAULT inputs (direct GPIO, no MCP23017) =====
 binary_sensor:
@@ -774,6 +820,12 @@ binary_sensor:
             id(g_actuator_fault_count) = id(g_actuator_fault_count) + 1;
             ESP_LOGE("nfault", "Actuator nFAULT LOW (count=%d) — stopping",
                      id(g_actuator_fault_count));
+            char buf[80];
+            snprintf(buf, sizeof(buf),
+                     "Actuator nFAULT (count=%d) up=%us",
+                     id(g_actuator_fault_count),
+                     (unsigned)(millis()/1000));
+            id(g_last_event) = buf;
             id(actuator_stop).execute();
             // If the fault persists > 2 s the 1 Hz control loop's
             // `i_motor > i_safe_limit + 0.3` check will trigger
@@ -860,16 +912,33 @@ switch:
     # State is tracked by ESPHome's template switch from the actions below
     # (no explicit lambda needed — outputs are only driven via these actions).
     turn_on_action:
-      - lambda: 'id(g_solenoid_on_since_ms) = millis();'
+      - lambda: |-
+          id(g_solenoid_on_since_ms) = millis();
+          float v = id(battery_voltage).state;
+          char buf[96];
+          snprintf(buf, sizeof(buf),
+                   "Solenoid ON (V_batt=%.2fV up=%us)",
+                   isnan(v) ? -1.0f : v,
+                   (unsigned)(millis()/1000));
+          id(g_last_event) = buf;
+          ESP_LOGI("solenoid", "%s", buf);
       - output.turn_on: solenoid_in1_out
       - output.turn_off: solenoid_in2_out
     turn_off_action:
       # Clear the on-timestamp so the next turn-on starts the watchdog
       # from zero, and clear the latched fault alarm (user acknowledged).
       - lambda: |-
+          unsigned long on_since = id(g_solenoid_on_since_ms);
+          unsigned long dur_ms = on_since ? (millis() - on_since) : 0;
           id(g_solenoid_on_since_ms) = 0;
           id(g_solenoid_alarm) = false;
-          ESP_LOGI("solenoid", "solenoid OFF (alarm cleared)");
+          char buf[96];
+          snprintf(buf, sizeof(buf),
+                   "Solenoid OFF (was on %ums) up=%us",
+                   (unsigned)dur_ms,
+                   (unsigned)(millis()/1000));
+          id(g_last_event) = buf;
+          ESP_LOGI("solenoid", "%s", buf);
       - output.turn_off: solenoid_in1_out
       - output.turn_off: solenoid_in2_out
 
@@ -1176,6 +1245,13 @@ globals:
     type: int
     initial_value: "0"
     restore_value: false
+  # v3.2: rolling "last event" string. Updated by the 1Hz control loop,
+  # calibration script, fault automations, and solenoid on/off. The
+  # `Last Event` template sensor mirrors it. Free-form human-readable.
+  - id: g_last_event
+    type: std::string
+    initial_value: '"boot"'
+    restore_value: false
   # ===== v3.2: Actuator self-calibration state =====
   # Set to true while the calibrate_actuator script is running. The 1 Hz
   # control loop checks this flag and steps back, so the calibration
@@ -1295,7 +1371,13 @@ script:
       - select.set:
           id: controller_state
           option: "Normal"
-      - lambda: 'id(g_state_entered_ms) = millis();'
+      - lambda: |-
+          id(g_state_entered_ms) = millis();
+          char buf[80];
+          snprintf(buf, sizeof(buf), "-> Normal (up=%us)",
+                   (unsigned)(millis()/1000));
+          id(g_last_event) = buf;
+          ESP_LOGI("state", "%s", buf);
       - light.turn_on:
           id: status_led
           brightness: 70%
@@ -1308,6 +1390,11 @@ script:
       - lambda: |-
           id(g_state_entered_ms) = millis();
           id(g_monitoring_countdown_ms) = 0;
+          char buf[80];
+          snprintf(buf, sizeof(buf), "-> Monitoring (up=%us)",
+                   (unsigned)(millis()/1000));
+          id(g_last_event) = buf;
+          ESP_LOGW("state", "%s", buf);
       - light.turn_on:
           id: status_led
           brightness: 70%
@@ -1317,7 +1404,13 @@ script:
       - select.set:
           id: controller_state
           option: "Folding"
-      - lambda: 'id(g_state_entered_ms) = millis();'
+      - lambda: |-
+          id(g_state_entered_ms) = millis();
+          char buf[80];
+          snprintf(buf, sizeof(buf), "-> Folding (up=%us)",
+                   (unsigned)(millis()/1000));
+          id(g_last_event) = buf;
+          ESP_LOGW("state", "%s", buf);
       - script.execute: actuator_retract
       - light.turn_on:
           id: status_led
@@ -1331,6 +1424,12 @@ script:
       - lambda: |-
           id(g_state_entered_ms) = millis();
           id(g_locked_countdown_ms) = 0;
+          char buf[80];
+          snprintf(buf, sizeof(buf), "-> Locked (up=%us at_zero=%d at_max=%d)",
+                   (unsigned)(millis()/1000),
+                   (int)id(g_at_zero), (int)id(g_at_max));
+          id(g_last_event) = buf;
+          ESP_LOGI("state", "%s", buf);
       - script.execute: actuator_stop
       - light.turn_on:
           id: status_led

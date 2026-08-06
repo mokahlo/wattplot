@@ -63,6 +63,10 @@ ENTITY_KEYS = {
     "H-bridge EN":                618246967,
     "Calibrate Actuator":         3817736166,  # button
     "Water Now":                  2963331103,  # button
+    "Uptime":                     1324261225,
+    "Free Memory":                2070763131,
+    "MCU Temperature":            487821941,
+    "Last Event":                 1381377912,
 }
 
 BUTTON_LABELS = {"Calibrate Actuator", "Water Now"}
