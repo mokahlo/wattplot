@@ -417,7 +417,14 @@ sensor:
       if (isnan(v)) return NAN;
       // IPROPI resistor: 5 kΩ internal. With 0.1 Ω shunt, A/V = 1/(0.1 × 5e3) = 2.0 A/V.
       // Invert: I = V / 0.5 = V × 2.0.
-      return v * 2.0;
+      float i = v * 2.0f;
+      // v3.2: new ESP32-S3 chip (rev v0.2, MAC e0:72:a1:f5:aa:ec) has a
+      // ~0.12 V ADC2 offset at 0 V input → ~0.24 A baseline on this pin.
+      // Subtract to report real current. Clamp at 0 so the value never
+      // goes negative.
+      i -= 0.24f;
+      if (i < 0.0f) i = 0.0f;
+      return i;
 
   # ===== v3: Solenoid IPROPI (jam detect) =====
   # Same DRV8871 IPROPI feature, on U5b. A free-running irrigation
@@ -440,7 +447,17 @@ sensor:
     lambda: |-
       float v = id(solenoid_ipropi_raw).state;
       if (isnan(v)) return NAN;
-      return v * 2.0;
+      // v3.2: solenoid H-bridge (U5b) is normally off. When the valve is
+      // closed, the IPROPI pin floats and ADC2 reads ~0.5 V of noise —
+      // ~1 A in our conversion. Only report real current when the valve
+      // is actually being driven. Same 0.24 A baseline offset as the
+      // motor IPROPI (same ADC2 peripheral, same chip).
+      if (!id(grow_light_relay).state) {
+        return 0.0f;
+      }
+      float i = v * 2.0f - 0.24f;
+      if (i < 0.0f) i = 0.0f;
+      return i;
 
   - platform: template
     id: battery_voltage
@@ -674,6 +691,41 @@ sensor:
     id: rssi
     update_interval: 60s
 
+  # ===== v3.2: Calibration age =====
+  # Seconds since the last completed actuator_calibrate run. 0 means
+  # never calibrated. Surfaces as "Last Calibration (s)" in HA so you
+  # can tell at a glance whether the wattplot knows its endstops.
+  - platform: template
+    name: "Last Calibration (s)"
+    id: last_calibration_sec
+    unit_of_measurement: "s"
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: |-
+      unsigned long last = id(g_last_calibration_ms);
+      if (last == 0) return 0.0f;
+      return (millis() - last) / 1000.0f;
+  # ===== v3.2: Endstop stall currents (from last calibration) =====
+  # IPROPI current (A) recorded at the moment each endstop was hit.
+  # Asymmetric values can indicate mechanical asymmetry (one end has
+  # a hard stop, the other a soft cushion or a slightly bent link).
+  - platform: template
+    name: "Last MAX Endstop Current"
+    id: last_calib_extend_a
+    unit_of_measurement: "A"
+    accuracy_decimals: 3
+    update_interval: 30s
+    lambda: |-
+      return id(g_calib_extend_a);
+  - platform: template
+    name: "Last ZERO Endstop Current"
+    id: last_calib_retract_a
+    unit_of_measurement: "A"
+    accuracy_decimals: 3
+    update_interval: 30s
+    lambda: |-
+      return id(g_calib_retract_a);
+
 # ===== DRV8871 nFAULT inputs (direct GPIO, no MCP23017) =====
 binary_sensor:
   # v3: schematic rev B routes nFAULT directly to GPIO. The MCP23017
@@ -758,6 +810,17 @@ binary_sensor:
     icon: "mdi:alert-circle"
     lambda: |-
       return id(g_solenoid_alarm);
+
+  # ===== v3.2: Calibration status =====
+  # Mirrors g_calibration_running. Lights up while the actuator_calibrate
+  # script is driving the H-bridge; lets HA show a "calibrating" badge
+  # and prevents users from triggering conflicting actions.
+  - platform: template
+    id: calibration_in_progress
+    name: "Calibration In Progress"
+    icon: "mdi:tune-vertical"
+    lambda: |-
+      return id(g_calibration_running);
 
 # ===== Solenoid (U5b DRV8871 — water / latch subsystem) =====
 # K1=A evolved to U5b: a second DRV8871 in single-direction H-bridge mode
@@ -936,17 +999,23 @@ number:
   # Motor current (A) above which we consider the actuator to have hit
   # an endstop. Tune in the field: above normal run current (~0.5 A),
   # below stall current (DRV8871 ITRIP ~1.15 A = ~0.58 V at IPROPI
-  # which ≈ 1.15 A given 0.1 Ω shunt and 5 kΩ internal resistor).
-  # A clean endstop hit pulls 0.8-1.0 A sustained for ~200 ms.
+  # v3.2: with the new IPROPI baseline subtraction (0.24 A on this
+  # chip), the actuator's running current is ~0.84 A and the endstop
+  # stall current is ~1.0 A. The threshold has to sit *between* those
+  # to distinguish real endstops from normal motion — so 0.90 A
+  # default, tight ~0.06 A margin on each side. If the running
+  # current changes (different actuator, different chip), adjust this
+  # in HA. Original (v3.1) was 0.80 A over a 200 ms window, which
+  # was tuned to a different actuator's current signature.
   - platform: template
     id: endstop_current_threshold
     name: "Endstop Current Threshold (A)"
-    min_value: 0.4
+    min_value: 0.3
     max_value: 2.0
-    step: 0.05
-    initial_value: "0.80"
+    step: 0.01
+    initial_value: "0.90"
     optimistic: true
-    restore_value: true
+    restore_value: false
 
 # ===== State machine =====
 select:
@@ -1005,6 +1074,15 @@ button:
     icon: "mdi:watering-can"
     on_press:
       - script.execute: one_off_water
+  # v3.2: actuator self-calibration. Runs ~35-45 s; can be triggered
+  # any time the battery is connected. Idempotent: a second press
+  # restarts the script (mode: restart) which resets the global flags.
+  - platform: template
+    id: calibrate_actuator_btn
+    name: "Calibrate Actuator"
+    icon: "mdi:tune-vertical"
+    on_press:
+      - script.execute: actuator_calibrate
 
 # ===== Globals (control state) =====
 globals:
@@ -1086,6 +1164,49 @@ globals:
   - id: g_actuator_fault_count
     type: int
     initial_value: "0"
+    restore_value: false
+  # ===== v3.2: Actuator self-calibration state =====
+  # Set to true while the calibrate_actuator script is running. The 1 Hz
+  # control loop checks this flag and steps back, so the calibration
+  # script can drive the H-bridge without the loop fighting it.
+  - id: g_calibration_running
+    type: bool
+    initial_value: "false"
+    restore_value: false
+  # Timestamp of the last completed calibration. 0 = never.
+  - id: g_last_calibration_ms
+    type: int
+    initial_value: "0"
+    restore_value: false
+  # Internal — millis() when the current calibration run started. Used
+  # by the calibrate_actuator script's while-loops to enforce timeouts.
+  - id: g_calib_started_ms
+    type: int
+    initial_value: "0"
+    restore_value: false
+  # Internal — milliseconds from start of calibration to MAX endstop hit.
+  # Recorded for diagnostic visibility; not used by the state machine.
+  - id: g_calib_extend_ms
+    type: int
+    initial_value: "0"
+    restore_value: false
+  # Internal — milliseconds from start of calibration to ZERO endstop hit.
+  - id: g_calib_retract_ms
+    type: int
+    initial_value: "0"
+    restore_value: false
+  # IPROPI current (A) measured at the moment each endstop was hit
+  # during the last calibration. Lets us see if the two endstops have
+  # meaningfully different stall currents — a sign of asymmetric
+  # mechanics (e.g. one end has a hard stop, the other has a soft
+  # cushion or a slightly bent link).
+  - id: g_calib_extend_a
+    type: float
+    initial_value: "0.0"
+    restore_value: false
+  - id: g_calib_retract_a
+    type: float
+    initial_value: "0.0"
     restore_value: false
   # Track when the actuator's nFAULT last cleared, for the
   # "fault-persists-too-long → fold" decision.
@@ -1204,6 +1325,109 @@ script:
           id: status_led
           brightness: 60%
 
+  # ===== v3.2: Actuator self-calibration =====
+  # Drives the actuator through its full range to find both endstops,
+  # using the IPROPI current-spike detection (3 s sustained, set in
+  # endpoint_detector). Total runtime is at least 30 s — each direction
+  # needs 3 s of stall confirmation plus a long settle so we can be sure
+  # the spike wasn't a transient load. With a fast actuator the routine
+  # typically runs ~30-32 s; with a slow one it tops out at ~38 s.
+  #
+  # Sequence:
+  #   1. Mark calibration running, set g_at_zero/g_at_max false.
+  #   2. Drive EXTEND. Wait for g_at_max (3 s sustained spike).
+  #      - 15 s hard timeout per direction.
+  #   3. Stop, hold at MAX for 12 s settle.
+  #   4. Drive RETRACT. Wait for g_at_zero.
+  #   5. Stop, hold at ZERO for 12 s settle.
+  #   6. Record g_last_calibration_ms, transition to Folding (which
+  #      immediately Locked since at_zero is true).
+  #
+  # The 1 Hz control loop sees g_calibration_running=true and steps
+  # back, so it doesn't try to drive the actuator to the commanded
+  # tilt while we're calibrating.
+  - id: actuator_calibrate
+    mode: restart
+    then:
+      - lambda: |-
+          ESP_LOGI("calib", "=== actuator self-calibration starting ===");
+          id(g_calibration_running) = true;
+          id(g_at_zero) = false;
+          id(g_at_max) = false;
+          id(g_calib_started_ms) = millis();
+          id(g_calib_extend_ms) = 0;
+          id(g_calib_retract_ms) = 0;
+          id(g_calib_extend_a) = 0.0f;
+          id(g_calib_retract_a) = 0.0f;
+
+      # === Phase 1: drive to MAX (extended) ===
+      - script.execute: actuator_extend
+      - while:
+          condition:
+            lambda: |-
+              return !id(g_at_max) &&
+                     (millis() - id(g_calib_started_ms) < 15000);
+          then:
+            - delay: 200ms
+      - script.execute: actuator_stop
+      - lambda: |-
+          if (id(g_at_max)) {
+            id(g_calib_extend_ms) = millis() - id(g_calib_started_ms);
+            // Current was captured by the endpoint_detector at the
+            // moment of detection (before the H-bridge turned off and
+            // IPROPI decayed). Don't overwrite here.
+            ESP_LOGI("calib", "MAX endstop confirmed at %u ms (i=%.2f A)",
+                     (unsigned)id(g_calib_extend_ms),
+                     id(g_calib_extend_a));
+          } else {
+            ESP_LOGW("calib", "MAX endstop NOT detected (15s timeout)");
+          }
+      - delay: 12s  # hold at MAX, then back off and let IPROPI settle
+
+      # === Phase 2: drive to ZERO (retracted) ===
+      # Arm the detector for the retract direction.
+      - lambda: |-
+          id(g_at_zero) = false;
+      - script.execute: actuator_retract
+      - while:
+          condition:
+            lambda: |-
+              // 15 s for Phase 2 drive (after Phase 1's 15 s + 12 s settle = 27 s).
+              // Total budget 42 s from script start.
+              return !id(g_at_zero) &&
+                     (millis() - id(g_calib_started_ms) < 42000);
+          then:
+            - delay: 200ms
+      - script.execute: actuator_stop
+      - lambda: |-
+          if (id(g_at_zero)) {
+            id(g_calib_retract_ms) = millis() - id(g_calib_started_ms);
+            // Current was captured by the endpoint_detector (see
+            // g_calib_extend_a comment).
+            ESP_LOGI("calib", "ZERO endstop confirmed at %u ms (i=%.2f A)",
+                     (unsigned)id(g_calib_retract_ms),
+                     id(g_calib_retract_a));
+          } else {
+            ESP_LOGW("calib", "ZERO endstop NOT detected (15s timeout)");
+          }
+      - delay: 12s  # settle at zero
+
+      # === Wrap up ===
+      - lambda: |-
+          unsigned long total = millis() - id(g_calib_started_ms);
+          ESP_LOGI("calib", "=== calibration complete (took %lu ms) ===",
+                   total);
+          id(g_calibration_running) = false;
+          id(g_last_calibration_ms) = millis();
+
+      # Return to Folding → Locked (since at_zero is now true). The
+      # select.set doesn't trigger state_to_folding, but the 1 Hz loop
+      # will see the state and immediately call state_to_locked because
+      # g_at_zero is set.
+      - select.set:
+          id: controller_state
+          option: "Folding"
+
   # NWS forecast poll
   # nws_poll DISABLED for dry-run validation: requires http_request component
   # which is not declared at the top level. The YAML must include:
@@ -1313,6 +1537,13 @@ interval:
           // Also: the local was named `i_safe` and shadowed the global `i_safe`
           // TemplateNumber, breaking the id() macro resolution. Renamed to
           // `i_safe_limit` (local) vs `i_safe` (global).
+          // v3.2: when actuator self-calibration is running, the calibrate
+          // script owns the H-bridge. The 1 Hz loop must step back or it
+          // will fight the calibration by trying to drive the actuator to
+          // the commanded tilt.
+          if (id(g_calibration_running)) {
+            return;
+          }
           const char* state = id(controller_state).current_option().c_str();
           // v2.5: read motor current from INA219 (U6a, 0x40, 0.1Ω shunt,
           // 200 ms poll). NaN-guard for the first few seconds after boot
@@ -1574,17 +1805,20 @@ interval:
           }
 
   - interval: 100ms
-    # v3.1: Endpoint detector (current-based homing).
+    # v3.2: Endpoint detector (current-based homing).
     # Watches motor IPROPI for a sustained spike. When i_motor_ipropi
-    # stays above `endstop_current_threshold` for >= 200 ms, the
+    # stays above `endstop_current_threshold` for >= 500 ms, the
     # actuator has hit an endstop. Direction is read from the H-bridge
     # output switches (hb_in1_sw / hb_in2_sw) so we know whether to set
     # g_at_zero (retracted) or g_at_max (extended).
     #
-    # 200 ms debounce filters motor startup inrush (~50-100 ms) and
-    # short load spikes. Stall current (DRV8871 ITRIP) trips the
-    # on_state nFAULT automation; we operate *below* that threshold
-    # but *above* normal run current.
+    # 1000 ms debounce (was 200 ms in v3.1, 3000 ms in early v3.2)
+    # balances two failure modes: too short and motion artifacts
+    # (inrush, slop) trigger false positives; too long and the small
+    # actuator here doesn't hold the stall long enough (it bounces
+    # off the endstop in ~1 s). With threshold 0.90 A (between
+    # running 0.84 A and stall 1.0 A) the 1000 ms window catches the
+    # endstop reliably enough on a 0.5" stroke actuator.
     id: endpoint_detector
     then:
       - lambda: |-
@@ -1597,7 +1831,7 @@ interval:
           float threshold = id(endstop_current_threshold).state;
           if (i_prop > threshold) {
             if (spike_start_ms == 0) spike_start_ms = millis();
-            if (millis() - spike_start_ms > 200) {
+            if (millis() - spike_start_ms > 1000) {
               bool in1 = id(hb_in1_sw).state;
               bool in2 = id(hb_in2_sw).state;
               if (in1 && !in2) {
@@ -1605,12 +1839,14 @@ interval:
                 id(g_at_max) = true;
                 id(g_at_zero) = false;
                 id(g_endstop_last_hit_ms) = millis();
+                id(g_calib_extend_a) = i_prop;  // capture at the moment of detection
                 ESP_LOGI("endpoint", "Endstop hit: AT MAX (i=%.2f A)", i_prop);
               } else if (!in1 && in2) {
                 // Retracting -> hit the 0° endstop
                 id(g_at_zero) = true;
                 id(g_at_max) = false;
                 id(g_endstop_last_hit_ms) = millis();
+                id(g_calib_retract_a) = i_prop;  // capture at the moment of detection
                 ESP_LOGI("endpoint", "Endstop hit: AT ZERO (i=%.2f A)", i_prop);
               }
               // If both or neither switch is on, the spike is invalid
