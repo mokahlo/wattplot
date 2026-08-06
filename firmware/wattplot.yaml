@@ -293,6 +293,12 @@ light:
 sensor:
   - platform: dallas_temp
     one_wire_id: panel_temp_bus
+    # v3.2: pin each sensor by its 64-bit ROM address. Without this,
+    # all three dallas_temp components default to the *first* sensor on
+    # the bus and you get "Unable to select an address" warnings.
+    # Addresses are baked at the factory; capture them from the bus
+    # scan log (gpio.one_wire component prints them at boot).
+    address: 0xb500000023e51028
     name: "Panel Temperature"
     id: panel_temperature
     unit_of_measurement: "°C"
@@ -303,6 +309,7 @@ sensor:
   # 5cm depth. Used by frost automation (soil < 4°C → heater ON).
   - platform: dallas_temp
     one_wire_id: panel_temp_bus
+    address: 0x5a00000023417028
     name: "Soil Temperature"
     id: soil_temperature
     unit_of_measurement: "°C"
@@ -310,8 +317,12 @@ sensor:
     update_interval: 60s
 
   # NEW (v2.8): Canopy air temperature for frost + DLI sanity check.
+  # Currently unwired (only 2 of 3 sensors on the bus) — will read
+  # NaN until a third probe is added. Replace the placeholder address
+  # below with the third sensor's address from the bus scan log.
   - platform: dallas_temp
     one_wire_id: panel_temp_bus
+    address: 0x0000000000000000
     name: "Canopy Air Temperature"
     id: canopy_temperature
     unit_of_measurement: "°C"
