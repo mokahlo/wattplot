@@ -58,18 +58,11 @@ shape is:
   "Panel Tilt":                 0,
   "Motor Current":              0.12,
   "Motor IPROPI Current":       0.08,
-  "Panel V":                    41.2,
-  "Panel Current":              1.4,
   "Panel Power":                57.7,
   "Battery Voltage":            12.6,
-  "Battery SOC":                96,
-  "POA Irradiance":             821.0,
-  "Panel Efficiency":           null,
   "Energy Today":               0.342,
   "Energy Total":               18.5,
   "Soil Moisture":              42.3,
-  "Soil Temperature":           22.1,
-  "Panel Temperature":          38.5,
   "WiFi Signal":                -52,
   "Uptime":                     4823,
   "Free Memory":                184320,
@@ -87,7 +80,11 @@ shape is:
   "Solenoid On Time (s)":       0,
   "Solenoid Budget (s)":        0,
   "Solenoid Max On-Time (s)":   300,
+  "Solenoid Battery Floor (V)": 12.0,
   "Actuator Bus V":             12.6,
+  "H-bridge IN1":               1,
+  "H-bridge IN2":               0,
+  "H-bridge EN":                1,
   "_meta": {
     "connected":        true,
     "stale_for_s":      0.4,
@@ -97,6 +94,14 @@ shape is:
   }
 }
 ```
+
+> **Note:** the `/api/state` response only includes entities in
+> `tools/wattplot_control.py`'s `ENTITY_KEYS` table. The ESPHome
+> firmware exposes more sensors than this list (Panel V, Panel
+> Current, POA Irradiance, Panel Efficiency, three DS18B20
+> temperature sensors) but those are not part of the panel API
+> surface. They're available via Home Assistant's ESPHome
+> integration, the `tools/dump_state.py` script, and the MQTT log.
 
 The `_meta` block is not an entity; the panel uses `connected`,
 `stale_for_s`, and `stale` to decide whether to render the
@@ -227,25 +232,43 @@ Response:
 The complete `ENTITY_KEYS` table lives in `tools/wattplot_control.py`.
 Stable labels include:
 
-**Numbers:** `Target Current (A)`, `I Safe (A)`, `Current Deadband
-(A)`, `Commanded Tilt (°)`, `Kp (deg per A)`, `Ki (deg per (A·s))`,
-`Max Step (° per s)`, `Solenoid Max On-Time (s)`,
-`Battery Water Floor (V)`, `One-Off Water (s)`,
-`Endstop Current Threshold (A)`.
+**Numbers** (settable via `POST /api/number`): `Commanded Tilt (°)`,
+`Motor IPROPI Current` (read-only).
 
-**Selects:** `Controller State` (Normal / Monitoring / Folding /
-Locked), `Controller Mode` (Power), `Solenoid Mode` (Off / Auto /
-Manual).
+**Selects** (settable via `POST /api/select`): `Controller State`
+(Normal / Monitoring / Folding / Locked), `Controller Mode` (Power
+only in v3.2), `Solenoid Mode` (Off / Auto / Manual).
 
-**Switches:** `Solenoid Valve`, `Actuator H-bridge IN1 (U5a)`,
-`Actuator H-bridge IN2 (U5a)`, `Actuator H-bridge EN (U5a)`. The
-H-bridge switches are exposed for diagnostics — toggling them
-directly bypasses the state machine.
+**Switches** (settable via `POST /api/switch`): `Solenoid Valve`,
+`H-bridge IN1`, `H-bridge IN2`, `H-bridge EN`. The H-bridge
+switches are exposed for diagnostics — toggling them directly
+bypasses the state machine.
 
-**Buttons:** `Water Now`, `Calibrate Actuator`.
+**Buttons** (settable via `POST /api/button`): `Water Now`,
+`Calibrate Actuator`.
 
-**Binary sensors:** `Actuator nFAULT`, `Solenoid nFAULT`,
-`Solenoid Fault Alarm`, `Calibration In Progress`.
+**Text sensors** (read-only): `Last Event` (boot log summary).
+
+**Binary sensors** (read-only, appear in `/api/state` as booleans):
+`Actuator nFAULT`, `Solenoid nFAULT`, `Solenoid Fault Alarm`,
+`Calibration In Progress`.
+
+**Diagnostics** (read-only): `WiFi Signal`, `Uptime`, `Free Memory`,
+`MCU Temperature`, `Battery Voltage`, `Panel Power`, `Soil
+Moisture`, `Energy Today`, `Energy Total`, `Actuator Bus V`,
+`Solenoid On Time (s)`, `Solenoid Budget (s)`,
+`Solenoid Max On-Time (s)`, `Solenoid Battery Floor (V)`,
+`Last Calibration (s)`, `Last MAX Endstop Current`,
+`Last ZERO Endstop Current`, `Panel Tilt` (mirrors `Commanded Tilt`).
+
+**Not in the panel API** (but exposed by ESPHome): the INA219 V/I
+sensors (`Panel V`, `Panel Current`), the DS18B20 temperatures
+(`Panel Temperature`, `Soil Temperature`, `Canopy Air
+Temperature`), `POA Irradiance`, `Panel Efficiency`, `Battery
+SOC`. These reach Home Assistant via the ESPHome integration,
+the `tools/dump_state.py` script, and the MQTT log stream — but
+not via this HTTP API. Add the missing labels to
+`wattplot_control.ENTITY_KEYS` if you want them here.
 
 ---
 
