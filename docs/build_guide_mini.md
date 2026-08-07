@@ -1,5 +1,20 @@
 # Wattplot Mini v2.4 — Build Guide
 
+> **STALE — written for the v2.4 / ESP32-C3 + BMI160 IMU + relay + GPIO4/5/10 architecture.** Pin numbers, sensor names, and entity IDs in
+> this doc do not match `firmware/wattplot.yaml` v3.2 (ESP32-S3,
+> DRV8871 for solenoid, GPIO6/7/10/12/16). The Mini's **physical
+> build** is still described accurately here (bed, panel, kickstand
+> actuator), but the **electronics steps** (Phase 6 onward) need
+> cross-checking against:
+>
+> - Pin map: `docs/pinmap.html`
+> - Schematic: `docs/schematic.html` (rev B, 2026-08-03)
+> - Firmware config: `firmware/wattplot.yaml`
+> - Firmware quick-start: `firmware/README.md`
+>
+> A future pass will regenerate this doc against the current YAML.
+> Tracked in [ROADMAP.md](../ROADMAP.md).
+
 Benchtop design-validation prototype. **18"×14" bed, ECO-WORTHY
 10W panel, 100mm kickstand linear actuator** — sized to match the
 parts you already ordered.

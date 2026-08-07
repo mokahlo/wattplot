@@ -1,21 +1,21 @@
-# Wattplot Build Guide: my_craigslist_panel
+# Wattplot Build Guide: large_format_1m65
 
 > **STALE — auto-generated from the same template as `build_guide.md`
 > (which is itself stale).** The panel-preset-specific geometry (Phase 0
-> lumber cut list, Phase 1 bed dimensions) is correct for the custom
-> craigslist-style panel preset; the **electronics phases** (Phase 7
-> onward) reference the v2.4 architecture that no longer exists. See
-> `firmware/README.md` and `docs/pinmap.html` for the current truth.
-> Tracked in [ROADMAP.md](../ROADMAP.md).
+> lumber cut list, Phase 1 bed dimensions) is correct for the large-format
+> 1.65 m² preset; the **electronics phases** (Phase 7 onward) reference
+> the v2.4 architecture that no longer exists. See `firmware/README.md`
+> and `docs/pinmap.html` for the current truth. Tracked in
+> [ROADMAP.md](../ROADMAP.md).
 
 Step-by-step assembly of the entire apparatus. Follow the order below. Each step lists the **time**, **tools**, **parts**, and **verification**.
 
-**Total build time:** ~8.0 hr over a weekend (with lumber pre-cut).
+**Total build time:** ~7.9 hr over a weekend (with lumber pre-cut).
 
 **Specifications for this build:**
-- Panel: 70.0" × 42.0" × 1.4" (5.83 × 3.50 ft), 28.0 lb
-- Wattage: 273 W (5 yr old, monofacial)
-- Bed: 71.0" × 43.0" (5.92 × 3.58 ft), 12" deep walls, bottomless
+- Panel: 65.0" × 41.0" × 1.4" (5.42 × 3.42 ft), 41.0 lb
+- Wattage: 392 W (nameplate 400 W, derated after 4 yr, bifacial)
+- Bed: 65.0" × 41.0" (5.42 × 3.42 ft), 12" deep walls, bottomless
 
 ## Phase 0: Pre-build (Day 0, ~1.0 hr)
 
@@ -23,21 +23,23 @@ Step-by-step assembly of the entire apparatus. Follow the order below. Each step
 
 | Nominal | Qty | Length | Use |
 |---|---|---|---|
-| 2x12 | 2 | 71.0" (5.92 ft) | long bed wall (north/south) |
-| 2x12 | 2 | 40.0" (3.33 ft) | short bed wall (west/east) |
-| 2x6 | 2 | 71.0" (5.92 ft) | long frame rail |
-| 2x6 | 2 | 40.0" (3.33 ft) | cross frame rail |
-| 2x4 | 1 | 83.0" (6.92 ft) | diagonal brace |
-| 4x4 | 2 | 71.0" (5.92 ft) | long skid |
+| 1x6 | 10 | 65.0" (5.42 ft) | long wall skin (N/S), 4 courses |
+| 1x6 | 10 | 39.5" (3.29 ft) | short wall skin (W/E), 4 courses |
+| 2x4 | 16 | 27.5" (2.29 ft) | wall cleat (vertical, <=24" o.c.) |
+| 2x6 | 2 | 65.0" (5.42 ft) | wall cap, hinge + strut walls |
+| 2x6 | 2 | 65.0" (5.42 ft) | long frame rail |
+| 2x6 | 2 | 38.0" (3.17 ft) | cross frame rail |
+| 2x4 | 1 | 76.9" (6.40 ft) | diagonal brace |
+| 4x4 | 2 | 65.0" (5.42 ft) | long skid |
 
-**Source from 8-ft stock:** 4× 2x12, 2× 2x6, 1× 2x4, 2× 4x4
+**Source from 8-ft stock:** 15× 1x6, 7× 2x4, 5× 2x6, 2× 4x4
 
 **Tip:** many yards will cut to length for free or a small fee. Have them cut each piece on the list above. None of the cuts are mitered (90° square cut only).
 
 ### 0.2 Hardware
 
 - 2 × galvanized butt hinge, 4.0"×4.0" leaf, 0.5" pin, HDG
-- 1 × ½" × 73.0" steel rod (continuous, through all hinges)
+- 1 × ½" × 67.0" steel rod (continuous, through all hinges)
 - 6 × aluminum mid-clamps, 35mm channel, M8 SS bolt + EPDM washer
 - 8 × 3/8" × 4" carriage bolt HDG + washer + hex nut (bed corner joints)
 - 8 × 5/16" × 3" lag bolt HDG (hinge leaf to bed wall)
@@ -46,7 +48,7 @@ Step-by-step assembly of the entire apparatus. Follow the order below. Each step
 
 ### 0.3 Panel + electrical
 
-- 1 × **273 W nameplate (273 W after derate) salvage panel** (you provide)
+- 1 × **400 W nameplate (392 W after derate) salvage panel** (you provide)
   - Verify under full sun: Voc within 5% of nameplate (multimeter)
   - Glass intact, no cracks or delamination
   - Aluminum frame straight, junction box sealed
@@ -76,12 +78,12 @@ Each bed wall has a 3" wide × 0.75" deep notch at each end.
 **Tools:** drill, ⅛" pilot bit, #6 × 1.5" wood screws, square
 
 **Process:**
-1. Lay out the 4 walls on a flat surface. Long walls are 71.0" (5.92 ft). Short walls are 40.0" (3.33 ft).
+1. Lay out the 4 walls on a flat surface. Long walls are 65.0" (5.42 ft). Short walls are 38.0" (3.17 ft).
 2. Bring the corners together. The half-lap notches interlock.
 3. Pre-drill 2 holes per corner (one near the top, one near the bottom).
 4. Drive #6 × 1.5" wood screws through the corners.
 
-**Verification:** bed box is 71.0" × 43.0" outside, square (measure diagonally, both should be the same).
+**Verification:** bed box is 65.0" × 41.0" outside, square (measure diagonally, both should be the same).
 
 ### 1.3 Attach the skids
 
@@ -89,7 +91,7 @@ Each bed wall has a 3" wide × 0.75" deep notch at each end.
 
 **Process:**
 1. Flip the bed upside down.
-2. Place two 4x4×71.0" skids under the bed, aligned with the long walls.
+2. Place two 4x4×65.0" skids under the bed, aligned with the long walls.
 3. Pre-drill and screw through the skids into the bed walls.
 4. Use 2-3 screws per skid.
 
@@ -102,18 +104,18 @@ Each bed wall has a 3" wide × 0.75" deep notch at each end.
 **Tools:** drill, ⅛" pilot bit, #6 × 1.5" wood screws, square
 
 **Process:**
-1. Lay the 4 frame rails on a flat surface. Long rails are 71.0" (5.92 ft). Cross rails are 40.0" (3.33 ft).
+1. Lay the 4 frame rails on a flat surface. Long rails are 65.0" (5.42 ft). Cross rails are 38.0" (3.17 ft).
 2. The cross rails fit between the long rails. Butt joints (no miter).
 3. Pre-drill 2 holes per corner. Drive #6 × 1.5" wood screws.
 
-**Verification:** frame is 71.0" × 43.0" outside, square.
+**Verification:** frame is 65.0" × 41.0" outside, square.
 
 ### 2.2 Add the diagonal brace
 
 **Tools:** drill, ⅛" pilot bit, #6 × 1" screws, measuring tape
 
 **Process:**
-1. The 2x4×83.0" diagonal brace runs corner to corner inside the frame.
+1. The 2x4×76.9" diagonal brace runs corner to corner inside the frame.
 2. Position the brace so its ends butt into the inside faces of the long rails.
 3. Pre-drill 2 holes per end. Drive #6 × 1" screws (4 total).
 
@@ -127,7 +129,7 @@ Each bed wall has a 3" wide × 0.75" deep notch at each end.
 
 **Process:**
 1. Lay the frame on top of the bed, with the frame's south rail resting on the bed's south wall.
-2. Position the 2 hinges evenly along the south rail. Spacing: 63.0" center-to-center, with 4" margin on each end.
+2. Position the 2 hinges evenly along the south rail. Spacing: 57.0" center-to-center, with 4" margin on each end.
 3. Mark the hinge positions on both the frame's south rail and the bed's south wall.
 4. Pre-drill 4 holes per hinge (2 per leaf), 5/64" bit.
 5. Attach the wall leaf to the bed's south wall.
@@ -140,7 +142,7 @@ Each bed wall has a 3" wide × 0.75" deep notch at each end.
 **Tools:** mallet (rubber)
 
 **Process:**
-1. Thread the ½" × 73.0" steel rod through all hinges, starting from one end.
+1. Thread the ½" × 67.0" steel rod through all hinges, starting from one end.
 2. Tap gently with a rubber mallet to seat the pin fully.
 3. The pin should extend ~1" past the last hinge on each end.
 
@@ -150,7 +152,7 @@ Each bed wall has a 3" wide × 0.75" deep notch at each end.
 
 ### 4.1 Place the panel on the frame
 
-**Tools:** hands (the panel weighs 28.0 lb).
+**Tools:** hands (the panel weighs 41.0 lb).
 
 **Process:**
 1. With the frame flat on the bed, place the panel on top of the frame, centered.
@@ -295,7 +297,7 @@ esphome run firmware/wattplot.yaml
 
 ---
 
-**Total time:** ~8.0 hr (with pre-cut lumber and a clean workspace).
+**Total time:** ~7.9 hr (with pre-cut lumber and a clean workspace).
 
 **Total cost:** see `python bring_your_own_panel.py` for an itemized estimate.
 

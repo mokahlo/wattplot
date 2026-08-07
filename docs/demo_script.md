@@ -1,5 +1,10 @@
 # Demo Script, Maker Faire Bay Area 2026
 
+> **STALE — references the BMI160 IMU and a 90° "verticalize to dry the
+> bed" pitch beat. The IMU is disabled in v3.2 and the 90° mode was
+> retired (fails the wind calc).** Update the script before the booth.
+> See `firmware/README.md` for what the controller actually does today.
+
 Three tiers, matched to the visitor. The 30-second version is for the
 casual walk-by, most of your visitors. The 5-minute version is for
 the maker who wants to see the firmware. Read the room.

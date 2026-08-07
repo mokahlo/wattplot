@@ -1,5 +1,20 @@
 # Wattplot v2 — Control Law
 
+> **ASPIRATIONAL — the 10-priority decision stack described in this doc
+> is not all implemented in firmware.** The current implementation
+> (`firmware/wattplot.yaml` v3.2) runs **only the wind-safety
+> 4-state machine** (NORMAL → MONITORING → FOLDING → LOCKED) at 1 Hz,
+> with hard current-limit and nFAULT persistence as fold triggers.
+> The "user override / NWS rain / NWS wind > 50 mph / soil wet 72h+ /
+> soil dry 48h+ / time-of-day tracking" priorities are design intent,
+> not deployed behavior. Treat this doc as the **target spec** and
+> `firmware/wattplot.yaml` (plus `firmware/README.md`) as the
+> **deployed behavior**.
+>
+> The IMU (BMI160) and physical limit switches this doc references
+> are also not in the current hardware — see `firmware/README.md`
+> §"Hardware assumptions" for the rev B schematic reality.
+
 The smart controller's goal, decision logic, and state machine. This is the
 canonical reference for the firmware. The implementation is in ESPHome YAML
 (proposed) or Arduino C++ (alternative); the law is the same either way.

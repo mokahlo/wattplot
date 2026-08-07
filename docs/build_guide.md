@@ -1,5 +1,20 @@
 # Wattplot v2 — Build Guide
 
+> **STALE — written for the v2.4 / ESP32-WROOM-32 + BMI160 IMU +
+> limit-switches architecture.** Pin numbers, sensor names, and
+> entity IDs in this doc do not match `firmware/wattplot.yaml` v3.2.
+> Use this as **design intent** (the build phases, sequence, and
+> mechanical steps are still valid) and cross-check the electronics
+> steps against:
+>
+> - Pin map: `docs/pinmap.html`
+> - Schematic: `docs/schematic.html` (rev B, 2026-08-03)
+> - Firmware config: `firmware/wattplot.yaml`
+> - Firmware quick-start: `firmware/README.md`
+>
+> A future pass will regenerate this doc against the current YAML.
+> Tracked in [ROADMAP.md](../ROADMAP.md).
+
 Step-by-step assembly of the entire apparatus. Follow the order below.
 Each step lists the **time**, **tools**, **parts**, and **verification**.
 

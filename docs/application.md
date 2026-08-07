@@ -1,5 +1,11 @@
 # Wattplot, Maker Faire Bay Area 2026, Application
 
+> **STALE — references the BMI160 IMU ("closed-loop position feedback")
+> and the 90° verticalize-for-rain tilt behavior.** The IMU is disabled
+> in v3.2 and the 90° mode was retired (fails the wind calc). If you
+> re-submit, soften those answers — see `firmware/README.md` and README
+> §"Status & roadmap" for the current truth.
+
 > **Curated responses for the Maker Faire Bay Area 2026 Call for Makers.**
 > Copy each answer into the form. Notes below each field explain the
 > choice.
@@ -202,8 +208,8 @@ background, crop to square.*
 ### Please describe your hands-on activity (Required)
 
 > Visitors press a button on the booth table to tilt the panel
-> between three modes: storm fold (0°), power (35°), and
-> bed-sun (90°). The Mini v2.4 on the table responds in real
+> between three modes: storm fold (0°), mid (15°), and
+> power (35°, the structural max). The Mini v2.4 on the table responds in real
 > time. Kids see the engineering, a PI loop on motor current,
 > an IMU for closed-loop position feedback, a priority-ordered
 > decision stack. Adults see the agrivoltaic loop, sun → MPPT

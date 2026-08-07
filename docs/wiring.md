@@ -1,5 +1,21 @@
 # Wattplot v2 — Wiring Diagram
 
+> **STALE — written for the v1 PCB (ESP32-WROOM-32E, BMI160, limit
+> switches, GPIO4 DS18B20, GPIO16/17/18 DRV8871, GPIO19 grow-light
+> relay, GPIO32 soil, GPIO33 battery, GPIO34/35 limits).** The current
+> hardware is **ESP32-S3, schematic rev B (2026-08-03)**, with the
+> pin map and BOM significantly changed. Use this as design intent
+> (the harness topology, fusing, and outdoor-wiring practices are
+> still valid) and cross-check every pin against:
+>
+> - Pin map: `docs/pinmap.html`
+> - Schematic: `docs/schematic.html` (rev B, 2026-08-03)
+> - Firmware config: `firmware/wattplot.yaml`
+> - Firmware quick-start: `firmware/README.md`
+>
+> A future pass will regenerate this doc against the current schematic.
+> Tracked in [ROADMAP.md](../ROADMAP.md).
+
 Pin-by-pin wiring from the **Wattplot Controller v1 PCB** (in its
 waterproof enclosure, mounted on the bed's east short wall) to every
 component on the apparatus. The PCB pin map is in `docs/pcb_design.md`.

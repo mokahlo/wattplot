@@ -1,5 +1,20 @@
 # Wattplot v2 — Sensor Placement
 
+> **STALE — written for the v2.4 architecture (BMI160 IMU, GPIO33 battery,
+> GPIO4 DS18B20, GPIO32 soil, WS2812B status LED, limit switches).** The
+> current hardware is **ESP32-S3, schematic rev B (2026-08-03)**, where
+> the IMU / WS2812B / limit switches are removed, battery is on GPIO7,
+> soil is on GPIO6, DS18B20 is on GPIO16. The sensor **mounting
+> philosophy** (where on the apparatus each sensor should live, and why)
+> is still mostly valid; the **wire colors / pin numbers** are not.
+> Cross-check against:
+>
+> - Pin map: `docs/pinmap.html`
+> - Schematic: `docs/schematic.html` (rev B, 2026-08-03)
+> - Firmware config: `firmware/wattplot.yaml`
+>
+> A future pass will regenerate this doc. Tracked in [ROADMAP.md](../ROADMAP.md).
+
 Where each sensor mounts on the apparatus, why that location, and how to
 route its cable. Reference the **side view** at the end of this doc.
 

@@ -1,5 +1,12 @@
 # Wattplot, Maker Faire FAQ
 
+> **STALE — references the BMI160 IMU and entity names from the v2.4
+> firmware (`panel_voltage_v`, `panel_current_a`, `poa_irradiance_w_m2`,
+> `battery_v`, etc.). The IMU is disabled; entity names in v3.2 are
+> human-friendly ("Panel V", "Panel Current", "POA Irradiance",
+> "Battery Voltage").** Update before printing. See `docs/control.html`
+> and `firmware/README.md` for the current entity list.
+
 Anticipated questions, ranked by how often you'll get them. Read this
 once before the faire. The answers are designed to be said out loud,
 not just read.

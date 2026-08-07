@@ -1,5 +1,14 @@
 # Wattplot Build Guide: longi_620W
 
+> **STALE — auto-generated from the same template as `build_guide.md`
+> (which is itself stale).** The panel-preset-specific geometry (Phase 0
+> lumber cut list, Phase 1 bed dimensions) is correct for the LONGi 620 W
+> preset; the **electronics phases** (Phase 7 onward) reference the v2.4
+> architecture (ESP32-WROOM-32E, BMI160, limit switches, GPIO4/16/17/18,
+> DPS5005) that no longer exists. See `firmware/README.md` and
+> `docs/pinmap.html` for the current truth. Tracked in
+> [ROADMAP.md](../ROADMAP.md).
+
 Step-by-step assembly of the entire apparatus. Follow the order below. Each step lists the **time**, **tools**, **parts**, and **verification**.
 
 **Total build time:** ~8.7 hr over a weekend (with lumber pre-cut).

@@ -1,5 +1,13 @@
 # Wattplot Build Guide: residential_60cell
 
+> **STALE — auto-generated from the same template as `build_guide.md`
+> (which is itself stale).** The panel-preset-specific geometry (Phase 0
+> lumber cut list, Phase 1 bed dimensions) is correct for the 60-cell
+> residential preset; the **electronics phases** (Phase 7 onward) reference
+> the v2.4 architecture that no longer exists. See `firmware/README.md`
+> and `docs/pinmap.html` for the current truth. Tracked in
+> [ROADMAP.md](../ROADMAP.md).
+
 Step-by-step assembly of the entire apparatus. Follow the order below. Each step lists the **time**, **tools**, **parts**, and **verification**.
 
 **Total build time:** ~7.9 hr over a weekend (with lumber pre-cut).

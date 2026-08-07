@@ -1,5 +1,21 @@
 # Wattplot v2 — Test & Validation Checklist
 
+> **STALE — written for the v2.4 architecture (BMI160 IMU, GPIO34/35
+> limit switches, GPIO19 grow-light relay, WS2812B status LED, BEDSUN
+> 90° mode, "Watchdog (IMU disconnect) → FOLDING after 30s").** The
+> current hardware is **ESP32-S3, schematic rev B (2026-08-03)** with
+> the IMU / limit switches / WS2812B removed, IPROPI-based homing
+> instead of physical switches, current-based endstops, and the 90°
+> BEDSUN mode retired. The **mechanical** test sequence is still
+> valid; the **electrical** test sequence is not. Cross-check against:
+>
+> - Pin map: `docs/pinmap.html`
+> - Schematic: `docs/schematic.html` (rev B, 2026-08-03)
+> - Firmware config: `firmware/wattplot.yaml`
+> - Firmware quick-start: `firmware/README.md`
+>
+> A future pass will regenerate this doc. Tracked in [ROADMAP.md](../ROADMAP.md).
+
 What to verify, in what order, and how to interpret the results. The
 build guide (`docs/build_guide.md`) covers the mechanical assembly. This
 doc covers the **testing and validation** at every level.

@@ -1,5 +1,22 @@
 # Wattplot Controller v1 — PCB Design Specification
 
+> **STALE — written for the v1 PCB (ESP32-WROOM-32E, BMI160 IMU, WS2812B
+> status LED, DPS5005 MPPT path, GPIO4/16/17/18/19/21/22/25/32/33/34/35
+> pinout, K1 relay for the grow light, J7/J8/J9/J10 connector map).**
+> The current hardware is **schematic rev B (2026-08-03)** on
+> **ESP32-S3-DevKitC-1-N16R8**, with the IMU / WS2812B / relay / limit
+> switches / DPS5005 removed. The block diagram and high-level design
+> notes are still useful, but the BOM, netlist, and pin map need to be
+> regenerated. See:
+>
+> - Pin map: `docs/pinmap.html`
+> - Schematic: `docs/schematic.html` (rev B, 2026-08-03)
+> - Firmware config: `firmware/wattplot.yaml`
+> - Firmware quick-start: `firmware/README.md`
+>
+> A future pass will regenerate this doc against the current schematic.
+> Tracked in [ROADMAP.md](../ROADMAP.md).
+
 The custom PCB for the Wattplot v2 smart-folding controller. This document is
 the complete specification: schematic, netlist, BOM, board layout, and
 assembly notes. Hand it to KiCad / EasyEDA / JLCPCB's free DFM service to

@@ -1,5 +1,12 @@
 # Wattplot, One-Pager (booth handout)
 
+> **STALE — references the retired `BedSun` (90°) mode, the BMI160 IMU,
+> and 0–90° tilt range. The current hardware maxes at 35° tilt
+> (structurally capped per `analysis/wind_load.py`); the IMU is disabled;
+> the 90° mode fails the wind calc and was retired in v3.1.** Treat as
+> design intent and update before printing. See `firmware/README.md` and
+> README §"Status & roadmap" for the current truth.
+
 > A single-page, 8.5×11 take-home. Source for this is the markdown
 > below; render to PDF for printing (Vistaprint, FedEx Kinko's, or
 > `pandoc`).
@@ -44,7 +51,7 @@ recycling by 10-20 years.
 | Power (35° tilt, 620W new bifacial) | ~2,240 kWh/yr |
 | Tomato yield (4 plants) | ~124 kg/yr, about 250 lb |
 | Wind design | 115 mph 3-sec gust (ASCE 7-22, Cat II 700-yr) |
-| Tilt range | 0° (storm) to 90° (full bed sun) |
+| Tilt range | 0° (storm, stowed flat) to 35° (structural max) |
 | Panel | Any up to 97"×61", 30+ year life |
 | Battery | 12 V 100 Ah LiFePO4, ~10 yr life |
 | Microinverter | Enphase IQ7+ or APsystems DS3, 240 V |

@@ -1,5 +1,21 @@
 # Wattplot Smart Planter — Watering + Monitoring Spec (v2.4)
 
+> **STALE — written for the v2.4 mini on ESP32-C3 (GPIO5 relay, GPIO4 soil,
+> GPIO10 1-Wire, GPIO8/9 I²C, GPIO20/21 UART).** The current hardware is
+> **ESP32-S3, schematic rev B (2026-08-03)**, with GPIO6 soil, GPIO16
+> 1-Wire, GPIO8/18 I²C, and a **DRV8871 H-bridge (U5b) on GPIO10** driving
+> the solenoid (no relay). The watering **policy** (when to water, safety
+> guards, auto-mode logic) is still mostly valid; the **pin numbers and
+> entity IDs** (`switch.watering_solenoid` etc.) are wrong. Cross-check
+> against:
+>
+> - Pin map: `docs/pinmap.html`
+> - Schematic: `docs/schematic.html` (rev B, 2026-08-03)
+> - Firmware config: `firmware/wattplot.yaml`
+> - Live entities: `docs/control.html`
+>
+> A future pass will regenerate this doc. Tracked in [ROADMAP.md](../ROADMAP.md).
+
 ## Overview
 
 The mini v2.4 turns the planter into a fully-instrumented smart garden:

@@ -1,5 +1,10 @@
 # Wattplot, Poster Concept (24×36 vertical)
 
+> **STALE — references the retired `BedSun` (90°) "sun" mode and the
+> BMI160 IMU. Both are gone in v3.2.** Update the mode list before
+> printing; the rest of the framing is fine. See `firmware/README.md`
+> for current behavior.
+
 > This is the **text and layout** for the booth poster. Send to a
 > designer (Fiverr, local student) for visual execution. Print at
 > FedEx Kinko's on foam core, ~$40.
