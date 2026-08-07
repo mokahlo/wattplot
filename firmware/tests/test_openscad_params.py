@@ -185,21 +185,34 @@ def test_canonical_model_compiles():
         import pytest
         pytest.skip("openscad not installed; install via apt/brew/choco")
 
-    with tempfile.TemporaryDirectory() as tmp:
-        # --export-format=csg writes the evaluated CSG tree without
-        # tessellating -- fast, no real STL produced, but a parse
-        # failure surfaces as a nonzero exit code.
-        out = Path(tmp) / "out.csg"
-        result = subprocess.run(
-            [openscad, "-o", str(out), str(REPO_ROOT / "models" / "openscad" / "wattplot.scad")],
-            capture_output=True, text=True, timeout=60,
-            check=False,
-        )
-        assert result.returncode == 0, (
-            f"openscad parse failed (exit {result.returncode}):\n"
-            f"  stderr: {result.stderr[:2000]}\n"
-            f"  stdout: {result.stdout[:2000]}"
-        )
-        assert out.exists() and out.stat().st_size > 0, (
-            f"openscad produced no CSG output (file {out} missing or empty)"
-        )
+    for scad_file in [
+        "wattplot.scad",
+        "technical_drawing.scad",
+        "parts/bed.scad",
+        "parts/posts.scad",
+        "parts/hinges.scad",
+        "parts/panel.scad",
+        "parts/frame.scad",
+        "parts/actuator.scad",
+    ]:
+        with tempfile.TemporaryDirectory() as tmp:
+            # --export-format=csg writes the evaluated CSG tree
+            # without tessellating -- fast, no real STL produced,
+            # but a parse failure surfaces as a nonzero exit code.
+            out = Path(tmp) / "out.csg"
+            result = subprocess.run(
+                [openscad, "-o", str(out),
+                 str(REPO_ROOT / "models" / "openscad" / scad_file)],
+                capture_output=True, text=True, timeout=60,
+                check=False,
+            )
+            assert result.returncode == 0, (
+                f"openscad parse failed for {scad_file} "
+                f"(exit {result.returncode}):\n"
+                f"  stderr: {result.stderr[:2000]}\n"
+                f"  stdout: {result.stdout[:2000]}"
+            )
+            assert out.exists() and out.stat().st_size > 0, (
+                f"openscad produced no CSG output for {scad_file} "
+                f"(file {out} missing or empty)"
+            )

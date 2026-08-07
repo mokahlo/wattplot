@@ -10,8 +10,11 @@ implementation that doesn't require a GUI to render.
 
 | File | Purpose |
 |---|---|
-| `wattplot.scad` | The full assembly. Renders the bed, posts, frame, panel, hinges, and actuator at the LONGi Hi-MO X10 620W preset, 35° panel tilt. ~200 lines, well-commented as a teaching reference. |
+| `wattplot.scad` | The full assembly. Renders the bed, posts, frame, panel, hinges, and actuator at the LONGi Hi-MO X10 620W preset, 35° panel tilt. ~150 lines (most of the geometry is in `parts/`). |
 | `wattplot_params.scad` | A hand-maintained mirror of `wattplot_params.py` at the repo root. All dimensions in inches. The CI test `firmware/tests/test_openscad_params.py` verifies Python/SCAD parity so they don't drift. |
+| `technical_drawing.scad` | Renders the same assembly as a 2D orthographic projection for the docs site's engineering section. Camera angle is set at render time (top / side / front). |
+| `parts/` | Per-part modules. Each `.scad` in this directory is a self-contained part (bed, posts, hinges, panel, frame, actuator) that includes the params file and can be opened directly to render just that part. `wattplot.scad` is now a thin orchestrator that `use <>`s them. |
+| `parts/_palette.scad` | Shared color palette (the canonical wattplot.scad defines its own palette inline; the per-part files each define defaults so they can render standalone). |
 | `presets/` | Reserved for per-preset `.scad` files (not yet generated). The Makefile and `tools/render_openscad.sh` already render the canonical model with per-preset `-D` overrides. |
 
 ## Render
@@ -33,6 +36,13 @@ make scad-stl-all
 
 # preview PNGs for the docs site (camera angle set for the gallery)
 make scad-preview
+
+# 2D technical drawings (top, side, front orthographic projections)
+make scad-tech-drawings
+
+# render a single part standalone
+openscad -o bed.stl models/openscad/parts/bed.scad
+openscad -o frame.stl models/openscad/parts/frame.scad
 ```
 
 The Makefile lives at the repo root. The shell-script wrapper is

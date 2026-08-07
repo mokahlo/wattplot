@@ -55,7 +55,7 @@ LARGE_L     = 65.0
 LARGE_W     = 41.0
 LARGE_WATT  = 400
 
-.PHONY: all scad scad-stl scad-stl-all scad-preview scad-clean
+.PHONY: all scad scad-stl scad-stl-all scad-preview scad-tech-drawings scad-clean
 
 all: scad-stl
 
@@ -71,6 +71,11 @@ scad-stl-all: $(addprefix $(OUT_DIR)/wattplot_,$(addsuffix .stl,$(PRESETS)))
 
 # Cheap preview PNGs for the docs site
 scad-preview: $(addprefix $(OUT_DIR)/wattplot.scad-,$(addsuffix .png,$(PRESETS)))
+
+# 2D technical drawings (top / side / front orthographic projections)
+# for the docs engineering section. Renders directly to PNG with
+# the camera angle set per-view.
+scad-tech-drawings: $(addprefix $(OUT_DIR)/wattplot_,$(addsuffix .png,top_view side_view front_view))
 
 scad-clean:
 	rm -f $(OUT_DIR)/wattplot*.stl $(OUT_DIR)/wattplot*.png
@@ -114,6 +119,25 @@ $(OUT_DIR)/wattplot.scad-%.png: models/openscad/wattplot.scad | $(OUT_DIR)
 		--projection=p \
 		$$OPTS \
 		-o $@ models/openscad/wattplot.scad
+
+# 2D technical drawings. Each view is a different camera angle.
+# Camera args: eyex,eyey,eyez,centerx,centery,centerz,distance
+#   top_view:    looking down (0, 20, 0)
+#   side_view:   looking from south (0, 0, -20)
+#   front_view:  looking from east (20, 0, 0)
+$(OUT_DIR)/wattplot_%.png: models/openscad/technical_drawing.scad | $(OUT_DIR)
+	@echo "  drawing  $(notdir $@)"
+	@case "$*" in \
+	  top_view)    CAM="--camera=0,15,0,0,0,0,40" ;; \
+	  side_view)   CAM="--camera=0,5,-15,0,30,0,40" ;; \
+	  front_view)  CAM="--camera=15,5,0,0,30,0,40" ;; \
+	  *) echo "unknown view: $*" >&2; exit 2 ;; \
+	esac
+	$(OPENSCAD) --projection=o --imgsize=2000,1200 \
+		--colorscheme=Starnight \
+		--view=axes \
+		$$CAM \
+		-o $@ models/openscad/technical_drawing.scad
 
 $(OUT_DIR):
 	mkdir -p $@

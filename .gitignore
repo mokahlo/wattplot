@@ -86,6 +86,9 @@ tools/commit_msg_*.txt
 # references; the canonical "where to download" list is in
 # models/freecad/parts/vendor/README.md.
 parts/
+# ...except the OpenSCAD per-part modules under models/openscad/parts/.
+# Those are checked-in source files, not vendor PDFs.
+!models/openscad/parts/
 
 # SVG renders from models/render_svg_views.py (PNG renders already
 # gitignored above). Small but regenerable build artifacts.
