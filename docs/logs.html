@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Wattplot — Logs</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d1117; --surface: #161b22; --elev: #1f2530;
+      --border: #2a313c; --border-2: #3a414e;
+      --ink: #e6e3dc; --ink-2: #a8a59c; --muted: #6e6c66;
+      --accent: #ff9a5e; --accent-2: #ffb27a;
+      --good: #6cc8a3; --bad: #e8a5a8; --warn: #f0c270;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: 'Outfit', system-ui, sans-serif; min-height: 100vh; }
+    body { background: radial-gradient(ellipse at top, rgba(255,154,94,0.04) 0%, transparent 60%), var(--bg); }
+    .wrap { max-width: 1280px; margin: 0 auto; padding: 24px 24px 60px; }
+    header { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 14px; padding-bottom: 18px; border-bottom: 1px solid var(--border); margin-bottom: 22px; }
+    h1 { font-size: 1.5rem; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+    h1 .logo { color: var(--accent); }
+    .led { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 8px; background: var(--muted); transition: background 0.3s; }
+    .led.live { background: var(--good); box-shadow: 0 0 8px var(--good); }
+    .status-line { color: var(--ink-2); font-size: 0.85rem; font-family: 'JetBrains Mono', monospace; }
+    .status-line .sep { color: var(--muted); margin: 0 6px; }
+
+    .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+    .toolbar label { font-size: 0.85rem; color: var(--ink-2); margin-right: 4px; }
+    .toolbar select, .toolbar input[type=number] {
+      background: var(--bg); color: var(--ink); border: 1px solid var(--border-2);
+      border-radius: 6px; padding: 4px 8px; font: inherit; font-size: 0.85rem;
+    }
+    .toolbar button {
+      font: inherit; font-size: 0.85rem; cursor: pointer; padding: 5px 12px;
+      background: var(--elev); color: var(--ink); border: 1px solid var(--border-2);
+      border-radius: 6px;
+    }
+    .toolbar button:hover { border-color: var(--accent); background: var(--accent-soft); }
+    .toolbar button.primary { background: var(--accent); color: #1a0f00; border-color: var(--accent); font-weight: 600; }
+    .toolbar .spacer { flex: 1; }
+
+    .grid { display: grid; grid-template-columns: 1fr 280px; gap: 16px; }
+    @media (max-width: 1000px) { .grid { grid-template-columns: 1fr; } }
+
+    .logs-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    .files-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; height: fit-content; }
+    .files-card h2 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-2); margin: 0 0 10px; font-weight: 600; }
+    .files-card .file { padding: 7px 8px; border-radius: 6px; font-size: 0.82rem; margin-bottom: 3px; cursor: pointer; border: 1px solid transparent; }
+    .files-card .file:hover { background: var(--elev); }
+    .files-card .file.active { background: var(--accent-soft); border-color: var(--accent); }
+    .files-card .file .name { font-family: 'JetBrains Mono', monospace; color: var(--ink); font-size: 0.78rem; word-break: break-all; }
+    .files-card .file .size { color: var(--muted); font-size: 0.7rem; }
+    .files-card .file.current .name::after { content: " (current)"; color: var(--accent); font-size: 0.7rem; }
+
+    .logs-body { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; line-height: 1.55; padding: 10px 14px; max-height: 75vh; overflow-y: auto; white-space: pre-wrap; word-break: break-all; }
+    .logs-body .line { padding: 1px 0; }
+    .logs-body .line:hover { background: var(--elev); }
+    .logs-body .E { color: var(--bad); }
+    .logs-body .W { color: var(--warn); }
+    .logs-body .I { color: var(--ink-2); }
+    .logs-body .D, .logs-body .V { color: var(--muted); }
+    .logs-body .ts { color: var(--ink-2); margin-right: 8px; }
+
+    .footer { margin-top: 30px; padding-top: 18px; border-top: 1px solid var(--border); color: var(--muted); font-size: 0.8rem; text-align: center; }
+    .empty { color: var(--muted); padding: 24px; text-align: center; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1><span class="logo">Wattplot</span> <span style="color: var(--ink-2); font-weight: 400;">logs</span></h1>
+      <div class="status-line">
+        <span class="led" id="led"></span>
+        <span id="conn-status">connecting…</span>
+        <span class="sep">·</span>
+        <span id="refresh-ts">never</span>
+        <span class="sep">·</span>
+        <span id="size-info">—</span>
+      </div>
+    </header>
+
+    <div class="toolbar">
+      <label>File:</label>
+      <select id="file-sel">
+        <option value="current">current (wattplot.log)</option>
+        <option value="rotated">rotated (.gz)</option>
+      </select>
+      <label>Level:</label>
+      <select id="level-sel">
+        <option value="all">all</option>
+        <option value="debug">debug + verbose</option>
+        <option value="info">info</option>
+        <option value="warn">warn</option>
+        <option value="error">error</option>
+      </select>
+      <label>Lines:</label>
+      <input type="number" id="lines-in" value="500" min="50" max="5000" step="50">
+      <button class="primary" id="refresh-btn">Refresh</button>
+      <label style="margin-left:14px;"><input type="checkbox" id="auto-chk" checked> auto-refresh (5 s)</label>
+      <div class="spacer"></div>
+      <span id="file-info" style="color: var(--muted); font-size: 0.8rem;"></span>
+    </div>
+
+    <div class="grid">
+      <div class="logs-card">
+        <div class="logs-body" id="logs-body">
+          <div class="empty">loading…</div>
+        </div>
+      </div>
+      <div class="files-card">
+        <h2>Files</h2>
+        <div id="files-list"></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      Wattplot v2 · live log viewer · reads from the wattplot_control.py
+      server (<code>/api/logs</code>), which tails <code>logs/wattplot.log</code>
+      produced by <code>tools/log_subscriber.py</code>
+    </div>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let autoTimer = null;
+    let lastLineCount = 0;
+
+    function fmtSize(b) {
+      if (b < 1024) return b + ' B';
+      if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+      if (b < 1024 * 1024 * 1024) return (b / 1024 / 1024).toFixed(1) + ' MB';
+      return (b / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[c]));
+    }
+
+    // Colorize a log line: detect "[E]", "[W]", "[I]", "[D]", "[V]" tags
+    function colorize(line) {
+      const m = line.match(/\[([EWIDV])\]/);
+      if (m) {
+        const cls = m[1];
+        return `<span class="${cls}">${escapeHtml(line)}</span>`;
+      }
+      return escapeHtml(line);
+    }
+
+    async function refresh() {
+      const file = $('file-sel').value;
+      const level = $('level-sel').value;
+      const lines = parseInt($('lines-in').value, 10) || 500;
+
+      $('conn-status').textContent = 'fetching…';
+      try {
+        const r = await fetch(`/api/logs?file=${file}&level=${level}&lines=${lines}`);
+        const j = await r.json();
+        if (j.error) {
+          $('logs-body').innerHTML = `<div class="empty">${escapeHtml(j.error)}</div>`;
+        } else {
+          const body = $('logs-body');
+          if (!j.lines.length) {
+            body.innerHTML = `<div class="empty">no lines match the filter</div>`;
+          } else {
+            // Render in reverse so newest is on top — auto-scroll to top
+            const html = j.lines.slice().reverse().map(l =>
+              `<div class="line">${colorize(l)}</div>`
+            ).join('');
+            body.innerHTML = html;
+            lastLineCount = j.lines.length;
+          }
+        }
+
+        // Files list
+        const list = $('files-list');
+        list.innerHTML = j.files.map(f => {
+          const date = new Date(f.mtime * 1000);
+          const dateStr = date.toLocaleString();
+          const active = f.current ? (file === 'current') : (file === 'rotated');
+          return `<div class="file ${active ? 'active' : ''} ${f.current ? 'current' : ''}" data-name="${f.name}" data-current="${f.current ? '1' : '0'}">
+            <div class="name">${escapeHtml(f.name)}</div>
+            <div class="size">${fmtSize(f.size)} &middot; ${dateStr}</div>
+          </div>`;
+        }).join('');
+
+        // Click to switch
+        list.querySelectorAll('.file').forEach(el => {
+          el.addEventListener('click', () => {
+            const isCurrent = el.dataset.current === '1';
+            $('file-sel').value = isCurrent ? 'current' : 'rotated';
+            refresh();
+          });
+        });
+
+        // Size info
+        $('size-info').textContent = `${fmtSize(j.current_size)} current, ${fmtSize(j.total_size)} total`;
+        $('file-info').textContent = `${j.lines.length} lines shown`;
+
+        $('conn-status').textContent = 'connected';
+        $('led').className = 'led live';
+        $('refresh-ts').textContent = new Date().toLocaleTimeString();
+      } catch (e) {
+        $('conn-status').textContent = 'error: ' + e.message;
+        $('led').className = 'led';
+      }
+    }
+
+    function setupAuto() {
+      if (autoTimer) clearInterval(autoTimer);
+      if ($('auto-chk').checked) {
+        autoTimer = setInterval(refresh, 5000);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      $('refresh-btn').addEventListener('click', refresh);
+      $('file-sel').addEventListener('change', refresh);
+      $('level-sel').addEventListener('change', refresh);
+      $('lines-in').addEventListener('change', refresh);
+      $('auto-chk').addEventListener('change', setupAuto);
+      refresh();
+      setupAuto();
+    });
+  </script>
+</body>
+</html>
