@@ -567,8 +567,10 @@ def test_poa_lambda_uses_corrected_hour_angle(compiled_main_cpp):
     assert "(-105.0)" in compiled_main_cpp, (
         "POA hour-angle correction is missing the MST timezone central "
         "meridian (-105.0). The firmware is back to the UTC-only "
-        "correction that makes POA = 0 all day. See "
-        "firmware/logic/sun.py:hour_angle_rad for the reference."
+        "correction that makes POA = 0 all day. The C++ lambda in "
+        "poa_irradiance is the implementation; pvlib's "
+        "solarposition.get_solarposition() is the cross-check during "
+        "tuning. Keep the math in sync with wattplot_params LOCATION."
     )
     # The old buggy formula should NOT be present in this exact form.
     # We allow `(-112.07 / 15.0)` only if it's inside the corrected

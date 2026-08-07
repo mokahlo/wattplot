@@ -666,8 +666,13 @@ sensor:
       // is -0.471 hours. Civil noon becomes solar_hour 11.529,
       // hour angle -7.07° (sun is east of meridian, crosses at
       // solar noon ~12:28 civil time — the "apparent solar noon"
-      // for Phoenix's longitude). See firmware/logic/sun.py for
-      // the reference Python implementation; keep in sync.
+      // for Phoenix's longitude). The Python reference used to live
+      // in firmware/logic/sun.py:hour_angle_rad but that module
+      // was removed (it was only used as a development-time cross-
+      // check). The C++ lambda below IS the implementation; pvlib's
+      // solarposition.get_solarposition() is the cross-check during
+      // tuning. Keep the math here in sync with wattplot_params.
+      // LOCATION['longitude'] / ['timezone'].
       const float lon_correction = (-112.07 - (-105.0)) / 15.0;
       float solar_hour = hour + lon_correction;
       float hour_angle = (solar_hour - 12.0) * 15.0 * M_PI / 180.0;
