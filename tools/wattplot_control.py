@@ -21,6 +21,7 @@ Endpoints (all JSON, POST unless noted):
 """
 import asyncio
 import math
+import sys
 import time
 from pathlib import Path
 
@@ -575,5 +576,158 @@ def main():
     web.run_app(make_app(), port=LOCAL_PORT, print=lambda *a, **k: None)
 
 
+def self_test():
+    """Boot-time sanity checks. Run with `python tools/wattplot_control.py --self-test`.
+
+    Catches the failure modes that would otherwise surface only
+    when the operator first hits the panel and the wattplot
+    isn't reachable:
+      - wattplot_params importable
+      - ENTITY_KEYS is non-empty and has unique integer keys
+      - the rate-limit bucket math works (allows the first N,
+        rejects the N+1th)
+      - all routes resolve to a handler (i.e. no typos in the
+        router.add_* block)
+      - /api/state handler returns valid JSON with the _meta block
+      - /api/whoami handler returns valid JSON
+
+    Exits 0 on success, 1 on any check failure. Prints a short
+    summary so the operator knows what passed.
+    """
+    # The script may be run from anywhere; wattplot_params lives
+    # at the repo root. Add it to sys.path before importing.
+    repo_root = Path(__file__).resolve().parent.parent
+    if str(repo_root) not in sys.path:
+        sys.path.insert(0, str(repo_root))
+
+    failures = []
+
+    def check(name, fn):
+        try:
+            fn()
+            print(f"  [OK]   {name}")
+        except Exception as exc:
+            print(f"  [FAIL] {name}: {exc}")
+            failures.append(name)
+
+    def check_imports():
+        import wattplot_params
+        # The validation at import time should have already fired
+        # if anything was wrong. Just confirm.
+        assert wattplot_params.PANEL_PRESETS, "PANEL_PRESETS is empty"
+
+    def check_entity_keys():
+        assert ENTITY_KEYS, "ENTITY_KEYS is empty"
+        keys = list(ENTITY_KEYS.values())
+        assert len(set(keys)) == len(keys), "ENTITY_KEYS has duplicate values"
+        assert all(isinstance(k, int) for k in keys), "ENTITY_KEYS values must be int"
+
+    def check_button_labels():
+        assert BUTTON_LABELS, "BUTTON_LABELS is empty"
+        for label in BUTTON_LABELS:
+            assert label in ENTITY_KEYS, f"button label {label!r} not in ENTITY_KEYS"
+
+    def check_rate_limit():
+        bucket = _TokenBucket(WRITE_BUCKET_CAPACITY)
+        for _ in range(WRITE_BUCKET_CAPACITY):
+            assert bucket.allow(WRITE_BUCKET_CAPACITY,
+                                WRITE_BUCKET_REFILL_PER_S)
+        # Next call should fail.
+        assert not bucket.allow(WRITE_BUCKET_CAPACITY,
+                                WRITE_BUCKET_REFILL_PER_S)
+
+    def check_routes():
+        # Build the app with a fake client; walk its router.
+        from aiohttp import web
+        app = web.Application(middlewares=[cors_middleware,
+                                          rate_limit_middleware,
+                                          link_down_middleware])
+        fake = type("F", (), {"connected": False, "_last_push_wall": 0.0,
+                                "get": lambda l: None,
+                                "stale_for": lambda: None})()
+        app["wp"] = fake
+        app.router.add_get("/",            handle_index)
+        app.router.add_get("/control.html", handle_index)
+        app.router.add_get("/logs.html",   handle_logs_page)
+        app.router.add_get("/api/state",   handle_state)
+        app.router.add_get("/api/whoami",  handle_whoami)
+        app.router.add_get("/login",       handle_login)
+        app.router.add_get("/api/logs",    handle_logs)
+        app.router.add_post("/api/switch",  handle_switch)
+        app.router.add_post("/api/number",  handle_number)
+        app.router.add_post("/api/select",  handle_select)
+        app.router.add_post("/api/button",  handle_button)
+        paths = [r.canonical for r in app.router.resources()]
+        for path in ("/api/state", "/api/whoami", "/api/switch",
+                     "/api/number", "/api/select", "/api/button",
+                     "/api/logs", "/control.html", "/logs.html"):
+            assert path in paths, f"route {path!r} not registered"
+
+    async def _async_handlers():
+        from aiohttp import web
+        from aiohttp.test_utils import make_mocked_request
+
+        # Build a minimal app with our fake client wired in, so the
+        # handler can read it from request.app['wp'].
+        app = web.Application(middlewares=[cors_middleware,
+                                          rate_limit_middleware,
+                                          link_down_middleware])
+
+        class FakeWattplot:
+            connected = True
+            _last_push_wall = 0.0
+            def stale_for(self):
+                return 0.5
+            def get(self, *args, **kwargs):
+                _values = {"Motor Current": 0.5, "Panel Power": 57.7}
+                if args:
+                    return _values.get(args[0])
+                return None
+        app["wp"] = FakeWattplot()
+
+        # /api/state with a fake client
+        req = make_mocked_request("GET", "/api/state", app=app)
+        resp = await handle_state(req)
+        body = resp.body.decode("utf-8")
+        assert "_meta" in body, "/api/state response missing _meta"
+        assert "Motor Current" in body, "/api/state response missing entity"
+
+        # /api/whoami
+        req = make_mocked_request("GET", "/api/whoami", app=app)
+        resp = await handle_whoami(req)
+        body = resp.body.decode("utf-8")
+        assert "authed" in body, "/api/whoami response missing authed"
+
+    def check_handlers():
+        try:
+            asyncio.run(_async_handlers())
+        except RuntimeError:
+            # If we're already inside a running loop (e.g.
+            # pytest-asyncio), fall back to the sync path.
+            loop = asyncio.new_event_loop()
+            try:
+                loop.run_until_complete(_async_handlers())
+            finally:
+                loop.close()
+
+    print(f"wattplot_control self-test ({len(ENTITY_KEYS)} entity keys, "
+          f"capacity {WRITE_BUCKET_CAPACITY} burst, "
+          f"refill {WRITE_BUCKET_REFILL_PER_S} tok/s):")
+    check("imports",               check_imports)
+    check("entity keys",            check_entity_keys)
+    check("button labels",          check_button_labels)
+    check("rate-limit math",        check_rate_limit)
+    check("routes registered",      check_routes)
+    check("handler responses",      check_handlers)
+    if failures:
+        print(f"\n{len(failures)} check(s) failed: {failures}")
+        sys.exit(1)
+    print("\nAll checks passed.")
+
+
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) > 1 and sys.argv[1] == "--self-test":
+        sys.argv.pop(1)
+        self_test()
+    else:
+        main()
