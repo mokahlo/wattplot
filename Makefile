@@ -133,7 +133,7 @@ $(OUT_DIR)/wattplot_%.png: models/openscad/technical_drawing.scad | $(OUT_DIR)
 	  front_view)  CAM="--camera=15,5,0,0,30,0,40" ;; \
 	  *) echo "unknown view: $*" >&2; exit 2 ;; \
 	esac
-	$(OPENSCAD) --projection=o --imgsize=2000,1200 \
+	$(OPENSCAD) --projection=o --imgsize=2000,1500 \
 		--colorscheme=Starnight \
 		--view=axes \
 		$$CAM \
