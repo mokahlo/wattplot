@@ -34,6 +34,11 @@ dist/
 
 # Generated render outputs (regenerable from source)
 renders/*.png
+# ...except the OpenSCAD-rendered STL + PNG artifacts. These are
+# committed so the docs site and the booth viewer can ship them
+# without requiring every contributor to have OpenSCAD installed.
+!renders/wattplot_*.stl
+!renders/wattplot_*.png
 models/*.step
 models/*.stl
 models/*.3mf
