@@ -34,4 +34,7 @@
   <url><loc>https://mokahlo.github.io/wattplot/api.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://mokahlo.github.io/wattplot/glossary.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://mokahlo.github.io/wattplot/pre_build_checklist.html</loc><changefreq>yearly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://mokahlo.github.io/wattplot/surge_protection.html</loc><changefreq>yearly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://mokahlo.github.io/wattplot/search.html</loc><changefreq>yearly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://mokahlo.github.io/wattplot/404.html</loc><changefreq>yearly</changefreq><priority>0.1</priority></url>
 </urlset>
