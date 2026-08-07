@@ -34,6 +34,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install numpy pandas matplotlib pvlib shapely scipy
+          pip install -r requirements-dev.txt
 
       - name: "Smoke test: import all modules"
         run: |
@@ -44,6 +45,16 @@ jobs:
           print('Params OK:', LOCATION['name'])
           "
 
+      # Guards firmware/wattplot.yaml against pin-map / entity-ID drift.
+      # esphome is NOT installed here, so the compile-and-inspect codegen
+      # tests self-skip via the `requires_esphome` marker in conftest.py;
+      # the YAML-text checks (pin map, required IDs, deprecated-API guards)
+      # all still run. To get the codegen tier too, add `pip install esphome`
+      # above — it costs several minutes for the toolchain on a cold cache.
+      - name: Run firmware test suite
+        run: |
+          pytest firmware/tests/ -q
+
       - name: Run sun simulator
         run: |
           python analysis/sun_simulator.py
@@ -51,6 +62,10 @@ jobs:
       - name: Run wind load analysis
         run: |
           python analysis/wind_load.py
+
+      - name: Run post-bending analysis
+        run: |
+          python analysis/post_bending.py
 
       - name: Run shadow raycaster
         run: |
