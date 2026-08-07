@@ -148,7 +148,7 @@ if __name__ == "__main__":
     # Phoenix summer noon, 35° tilt
     import sys, os
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from wattplot_params import BED, STRUCTURE, PANEL
+    from wattplot_params import BED, PANEL
 
     hinge_y = BED['wall_h_in']
     hinge_z = BED['outer_W_in'] / 2.0

@@ -58,6 +58,8 @@
   .dropdown .menu a:hover { background: var(--accent-soft); color: var(--accent); }
   .topnav .livelink { color: var(--accent); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; font-size: 12px; padding: 6px 12px; border: 1px solid var(--accent); border-radius: 6px; margin-left: 8px; text-decoration: none; }
   .topnav .livelink:hover { background: var(--accent-soft); color: var(--accent-2); border-color: var(--accent-2); }
+  .topnav .logslink { color: var(--ink-2); font-size: 12px; padding: 6px 10px; border: 1px solid var(--border-2); border-radius: 6px; margin-left: 6px; text-decoration: none; }
+  .topnav .logslink:hover { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 
   main { padding: 56px 0 80px; }
   .lede { font-size: 18px; color: var(--ink-2); max-width: 720px; margin: 0 0 32px; }
@@ -175,9 +177,8 @@
         </div>
       </div>
     </nav>
-    <a 
-    <a class='livelink' href='control.html' title='Live control panel (local server)'>Live</a>
-    class="gh" href="https://github.com/mokahlo/wattplot">GitHub ↗</a>
+    <a class='livelink' href='https://control.phxtraffic.com/control.html' target='_blank' rel='noopener' title='Live control panel - public readings, sign-in for controls'>Live &#8599;</a>
+    <a class="gh" href="https://github.com/mokahlo/wattplot">GitHub ↗</a>
   </div>
 </header>
 
@@ -311,7 +312,7 @@
         <li>Disconnect the battery AND cover the panel with an opaque tarp before doing any wiring work. Both. Always.</li>
         <li>Install an appropriately rated fuse or DC breaker within 6 inches of every battery terminal.</li>
         <li>Use wire gauge rated for the actual current — undersized wire is a fire starter.</li>
-        <li>Use a charge controller matched to your panel and battery chemistry. Do not bypass it. The schematic uses a Sunapex 10A MPPT for the mini build; the full-size 620W build needs a Victron SmartSolar 75/15 or equivalent.</li>
+        <li>Use a charge controller matched to your panel and battery chemistry. Do not bypass it. The schematic uses a Sunapex 10A MPPT for the mini build; the full-size 620W build needs a Victron SmartSolar 100/30 (or EPEver Tracer 4210AN) — sized for the panel's Imp (~17 A), not just Voc.</li>
         <li>If a battery is ever hot, swollen, or venting — evacuate the area and call your local fire department. LiFePO4 venting is less dramatic than LiPo, but the off-gas is flammable and toxic.</li>
         <li>Have a Class ABC fire extinguisher within reach when working on any battery system.</li>
       </ol>

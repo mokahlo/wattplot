@@ -9,13 +9,13 @@ shade where they need it most; the panel keeps generating on a
 structure that would have been lumber anyway.
 
 Open-source end-to-end: 3D model, sun simulation, wind-load analysis,
-cut lists, schematic (rev B), ESPHome firmware (v3.1), PCB layout, and
+cut lists, schematic (rev B), ESPHome firmware (v3.2), PCB layout, and
 a GitHub Pages site. MIT license, no paywalls, no telemetry.
 
 > **Status:** working prototype. The Mini v2.4 is built and running on
 > the bench. The full-size build (Longi 620W) is mechanically and
 > aerodynamically validated by FreeCAD 3D model + ASCE 7-22 wind
-> calc + geometric shadow raycaster. Firmware v3.1 is compiled and
+> calc + geometric shadow raycaster. Firmware v3.2 is compiled and
 > ready to flash (the chip is currently wedged; see [Status &
 > roadmap](#status--roadmap) below).
 
@@ -52,7 +52,7 @@ strut holes and pivot line to accept the actuator later.
 | Cut lists | ✅ Validated | `models/cut_list.py` — every board, every cut. |
 | Mini v2.4 (electronics) | ✅ Built & running on bench | 18×14″, 10W panel, kickstand actuator, ESPHome firmware. |
 | Full-size structural (Basic) | ✅ Designed | 8×5 ft bed, no electronics. Weekend build. |
-| Full-size Smart (electronics) | 🟡 Firmware ready, chip wedged | Schematic rev B + firmware v3.1 compiled; needs physical BOOT+RESET. |
+| Full-size Smart (electronics) | 🟡 Firmware ready, chip wedged | Schematic rev B + firmware v3.2 compiled; needs physical BOOT+RESET. |
 | Custom PCB | ✅ Designed | Schematic + PCB layout. JLCPCB-ready. |
 | GitHub Pages site | ✅ Live | Dark theme, 10+ pages, 3D viewer, data dashboard, gallery, diagrams. |
 | Booth materials | 🟡 Mid-refresh | One-pager + FAQ + poster + sim ready; needs new symbiosis framing. |
@@ -60,7 +60,7 @@ strut holes and pivot line to accept the actuator later.
 
 What this means in practice: the design is complete, the documentation
 is live, the firmware builds clean. The two remaining "blocked" items
-are (1) recovering the wedged ESP32-S3 so we can flash v3.1, and
+are (1) recovering the wedged ESP32-S3 so we can flash v3.2, and
 (2) hearing back from the WattPlot.com operator on whether coexistence
 on the name is OK.
 
@@ -145,13 +145,20 @@ panel is *not* a good fit).
 
 ## Build photos
 
-_(No physical build yet - placeholder for v1 prototype photos. Once you have a build, drop the images in `renders/build_photos/` and update this section.)_
+The Mini v2.4 build is on the bench (see Status table). Photos of the full-size
+build will go in `renders/build_photos/` once the full-size prototype exists;
+until then, the booth package in [`booth/`](booth/) has the wood-frame renders
+that represent the as-designed geometry. The template below describes the
+shot list once a physical build is in hand.
 
 **Build the entire apparatus:** see [`docs/build_guide.md`](docs/build_guide.md) for
-the step-by-step assembly guide (8 phases, ~10-15 hours).
+the step-by-step assembly guide (8 phases, ~10-15 hours). *(Note: this doc is
+written for the v2 architecture; treat it as design intent and cross-check
+against `firmware/wattplot.yaml` for the current pin map and entity names.)*
 
 **Test & validation:** see [`docs/test_checklist.md`](docs/test_checklist.md) for
-per-component and per-system tests, with a final sign-off checklist.
+per-component and per-system tests, with a final sign-off checklist. *(Same
+staleness caveat as `build_guide.md`.)*
 
 **Photo template** (for the build log):
 
@@ -163,14 +170,13 @@ per-component and per-system tests, with a final sign-off checklist.
 | 4 | Hinge detail | Side, 12" away | One hinge in close-up, show leaf + knuckle + 1⁄2" pin |
 | 5 | Actuator mount | Side | 2x6 PT clevis on north rail, 2x6 wall block, 1⁄2" pin |
 | 6 | Panel mounting | Above, looking down | 6× aluminum mid-clamps on the rails |
-| 7 | IMU on frame | Underside of north rail | BMI160 breakout screwed to the rail |
-| 8 | PCB in enclosure | Above, enclosure open | All JST-XH connectors, ESP32, IMU/INA219 visible |
-| 9 | Wiring close-up | Side, 6" away | Cable carrier with motor + IMU cables |
-| 10 | Soil sensors | Soil cross-section | DS18B20 + soil moisture in the bed |
-| 11 | Soil filled + planted | Front | 4 tomato seedlings, 11.25" soil depth |
-| 12 | Dashboard on phone | Phone in hand | HA dashboard showing tilt, DLI, current draw |
-| 13 | Canopy at 35° (max tilt) | Iso from east | POWER mode, structural max |
-| 14 | Canopy flat (storm) | Iso from east | FOLDING mode, stowed |
+| 7 | PCB in enclosure | Above, enclosure open | JST-XH connectors, ESP32-S3, DRV8871s, INA219s visible |
+| 8 | Wiring close-up | Side, 6" away | Cable carrier with motor + actuator leads |
+| 9 | Soil sensors | Soil cross-section | DS18B20 + soil moisture in the bed |
+| 10 | Soil filled + planted | Front | 4 tomato seedlings, 11.25" soil depth |
+| 11 | Dashboard on phone | Phone in hand | HA dashboard showing tilt, motor current, panel power |
+| 12 | Canopy at 35° (max tilt) | Iso from east | Power mode, structural max |
+| 13 | Canopy flat (storm) | Iso from east | Folding mode, stowed |
 
 Add your photos to `renders/build_photos/` and link them in this section.
 
@@ -193,7 +199,6 @@ models/
       actuator_mount.py
     assemble.py                         ← imports all parts, exports STEP+STL+FCStd
     _run.py                             ← freecadcmd entry point
-  legacy_cadquery/                     ← old cadquery model (archived)
   shadow_raycaster.py                  ← geometric bed-shadow from 3D panel
   render_3d_views.py, render_svg_views.py
 analysis/
@@ -303,38 +308,56 @@ available). Hardware (hinges, panel clamps) is metal where the load demands.
 See `analysis/wind_load_report.md` and `analysis/sun_simulator.py` for the
 underlying calculations.
 
-### Open structural questions (not yet resolved)
+### Open structural questions
 
 Raising the canopy onto 72" posts solved the walk-under/reach-under
-problem but opened two checks that have **not** been done:
+problem but opened two checks. Both are now analyzed — and the first one
+**fails** as currently specced:
 
-1. **Post bending.** The wind analysis treats the whole thing as a rigid
-   body tipping about the bed edge. It does not check the 4x4 posts as
-   cantilevers carrying panel drag at their base connection — which is
-   the most likely real failure mode, ahead of tipping.
+1. **Post bending.** `analysis/post_bending.py` checks the 4x4 posts as
+   cantilevers carrying panel drag at their base connection (the wind
+   analysis in `analysis/wind_load.py` only checks the structure tipping
+   as a rigid body — a separate failure mode). **Result: FAIL at the 35°
+   operating cap** (SF 0.65 vs. target 1.5, worst-case load sharing).
+   Unbraced, the real bending-safe tilt limit is closer to 20° than 35°.
+   Two remedies, either sufficient: **(A)** upsize to 6x6 posts (SF 2.53,
+   passes with margin) or **(B)** add lateral bracing (below) and confirm
+   the residual base moment fits a standard bracket. See
+   `analysis/post_bending_report.md` for the full numbers.
 2. **Lateral bracing.** A 6-ft post-and-beam frame needs diagonal
    bracing. The retired panel-frame diagonal doesn't apply here, and the
    obvious knee brace wants 45° miters, which collides with design rule
-   #1 (no miter cuts). Square-cut gussets are the likely answer; not
-   designed yet.
+   #1 (no miter cuts). **Square-cut gusset plates are the answer** — a
+   square-cut brace (or a plywood/steel gusset alone) bolted flat across
+   the post/rail corner carries the same axial force a mitered brace
+   would, with zero non-90° cuts. Sized in `analysis/post_bending.py`
+   (§Bracing): ~335 lb axial demand at the 35° cap, spec target ≥ 500 lb
+   — well within off-the-shelf structural angle brackets.
 
-Both are tracked before any full-size build.
+**Do not build the full-size Smart tier with 4x4 posts, unbraced, at
+35° tilt** until one of the two remedies above is locked in. Both are
+tracked before any full-size build; this is a first-pass calc, not a
+stamped one — get a PE review before anything goes in the ground.
 
 ## The smart controller (target design)
+
+**Every priority is clamped to θ_max = 35°** (the structural cap — see
+[`docs/control_law.md`](docs/control_law.md)). The old 90° "wring-out"
+and "bed-sun" modes are retired: to give the bed full sun or dry it out,
+stow flat at 0° instead, where the panel shades nothing and carries
+~zero wind load.
 
 ```
 priority  source                              sets θ_desired / lights
 ─────────────────────────────────────────────────────────────────
-   1      user override                       arbitrary
+   1      user override                       arbitrary 0-35
    2      hard current limit                  θ = 0 (safety)
    3      NWS rain forecast + dry soil        θ = 0 (capture rain)
    4      NWS wind forecast > 50 mph          θ = 15 (preemptive)
-   5      wind > 50% of safe limit            pause tracking
-   6      soil wet 72h+ → wring out           θ = 90
+   5      wind ≥ 50% of I_safe                pause tracking
+   6      soil wet 72h+                       θ = 0 (stow flat, sun dries bed)
    7      soil dry 48h+ + no rain → conserve  θ = 35
-   8      time-of-day + tracking mode         θ = 0-90 (azimuth track)
-   9      time-of-day + power mode            θ = 35
-   10     time-of-day + bed-sun mode          θ = 90
+   8      time-of-day + tracking mode         θ = 0-35 (azimuth track, capped)
    L1     battery SOC < 50%                  lights off
    L2     natural DLI > target               lights off
    L3     DLI deficit > 0 (need light)       lights on (pre/post-dawn)
@@ -342,6 +365,9 @@ priority  source                              sets θ_desired / lights
 ```
 
 Goal: **keep motor current below I_safe, while maximizing commanded tilt for sun exposure.**
+
+`docs/control_law.md` is the canonical version of this table; the firmware
+enforces the 35° cap in the `commanded_tilt` number component.
 
 ## How to run
 

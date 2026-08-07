@@ -64,6 +64,8 @@
   .dropdown .menu a:hover { background: var(--accent-soft); color: var(--accent); }
   .topnav .livelink { color: var(--accent); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; font-size: 12px; padding: 6px 12px; border: 1px solid var(--accent); border-radius: 6px; margin-left: 8px; text-decoration: none; }
   .topnav .livelink:hover { background: var(--accent-soft); color: var(--accent-2); border-color: var(--accent-2); }
+  .topnav .logslink { color: var(--ink-2); font-size: 12px; padding: 6px 10px; border: 1px solid var(--border-2); border-radius: 6px; margin-left: 6px; text-decoration: none; }
+  .topnav .logslink:hover { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
   .dropdown > a.has-caret { cursor: pointer; user-select: none; }
 
   main { padding: 40px 0 80px; }
@@ -145,6 +147,60 @@
   .live-cta-btn:hover { background: var(--accent-2); }
   @media (max-width: 900px) {
     .live-cta { grid-template-columns: 1fr; }
+  }
+
+  /* ---- Live telemetry strip (reads control.phxtraffic.com) ---- */
+  .live-now {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px 20px; margin: 18px 0 24px;
+  }
+  .live-now .hd {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 14px; flex-wrap: wrap;
+  }
+  .live-now .hd h3 { margin: 0; font-size: 15px; }
+  .live-now .hd .spacer { flex: 1; }
+  .live-dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--muted); flex-shrink: 0;
+  }
+  .live-dot.up   { background: var(--good); box-shadow: 0 0 8px var(--good); }
+  .live-dot.warn { background: var(--warn); }
+  .live-dot.down { background: var(--bad); }
+  .live-status {
+    font-size: 12px; color: var(--ink-2);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .live-tiles {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 12px;
+  }
+  .live-tile {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 14px;
+  }
+  .live-tile .v {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.25rem; color: var(--accent); font-weight: 500;
+    line-height: 1.2;
+  }
+  .live-tile .v .u { font-size: 0.7em; color: var(--ink-2); margin-left: 3px; }
+  .live-tile .l {
+    font-size: 11px; color: var(--muted); margin-top: 4px;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  /* Dim the numbers when they are no longer trustworthy, so a frozen
+     snapshot never reads as current telemetry. */
+  .live-now.is-stale .live-tiles, .live-now.is-down .live-tiles { opacity: 0.45; }
+  .live-note {
+    margin-top: 12px; font-size: 12.5px; color: var(--ink-2);
+    line-height: 1.5; display: none;
+  }
+  .live-now.is-stale .live-note, .live-now.is-down .live-note { display: block; }
+  .live-note code {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.9em;
+    background: var(--bg); padding: 1px 5px; border-radius: 4px;
+    border: 1px solid var(--border);
   }
 
   /* Stats summary */
@@ -234,9 +290,8 @@
         </div>
       </div>
     </nav>
-    <a 
-    <a class='livelink' href='control.html' title='Live control panel (local server)'>Live</a>
-    class="gh" href="https://github.com/mokahlo/wattplot">GitHub ↗</a>
+    <a class='livelink' href='https://control.phxtraffic.com/control.html' target='_blank' rel='noopener' title='Live control panel - public readings, sign-in for controls'>Live &#8599;</a>
+    <a class="gh" href="https://github.com/mokahlo/wattplot">GitHub ↗</a>
   </div>
 </header>
 
@@ -250,14 +305,32 @@
       Drop in a CSV from your own logger to replace the synthetic sample data below.
     </p>
 
+    <div class="live-now" id="live-now">
+      <div class="hd">
+        <span class="live-dot" id="live-dot"></span>
+        <h3>Live from the wattplot</h3>
+        <span class="spacer"></span>
+        <span class="live-status" id="live-status">connecting&hellip;</span>
+      </div>
+      <div class="live-tiles">
+        <div class="live-tile"><div class="v" id="lv-tilt">&mdash;</div><div class="l">Panel tilt</div></div>
+        <div class="live-tile"><div class="v" id="lv-batt">&mdash;</div><div class="l">Battery</div></div>
+        <div class="live-tile"><div class="v" id="lv-soil">&mdash;</div><div class="l">Soil moisture</div></div>
+        <div class="live-tile"><div class="v" id="lv-power">&mdash;</div><div class="l">Panel power</div></div>
+        <div class="live-tile"><div class="v" id="lv-state">&mdash;</div><div class="l">Controller</div></div>
+        <div class="live-tile"><div class="v" id="lv-valve">&mdash;</div><div class="l">Solenoid</div></div>
+      </div>
+      <p class="live-note" id="live-note"></p>
+    </div>
+
     <div class="live-cta">
       <div class="live-cta-text">
         <strong>Live control panel</strong> &mdash; toggle the solenoid, set the tilt, run a self-calibration,
         and read every sensor in real time over the wattplot's native API.
-        Run a small Python server on the booth laptop and the panel is at <code>http://localhost:8765/</code>.
+        The readings above are public; the controls are behind a sign-in and open on
+        <code>control.phxtraffic.com</code>.
       </div>
-      <pre class="live-cta-cmd"><code>python tools/wattplot_control.py</code></pre>
-      <a class="live-cta-btn" href="control.html" target="_blank" rel="noopener">Open panel &rarr;</a>
+      <a class="live-cta-btn" href="https://control.phxtraffic.com/control.html" target="_blank" rel="noopener">Open control panel &rarr;</a>
     </div>
 
     <div class="toolbar">
@@ -349,6 +422,11 @@ function generateSampleData() {
   let motorA = 0;
   let soilPct = 0.45 + rng() * 0.2;
   let lastWaterMs = 0;
+  // Loop-carried like motorA: the battery draw below reads the previous
+  // step's solenoid state. Declaring it inside the loop put it in the
+  // temporal dead zone at that read and threw on the first iteration,
+  // which aborted this whole script block and left the page chartless.
+  let solenoidOn = 0;
 
   for (let i = 0; i < points; i++) {
     const t = start + i * stepMs;
@@ -382,7 +460,7 @@ function generateSampleData() {
       motorA = 0;
     }
     // Solenoid is "on" briefly when watering
-    const solenoidOn = (t - lastWaterMs < 30000) ? 1 : 0;
+    solenoidOn = (t - lastWaterMs < 30000) ? 1 : 0;
     // Temperatures: panel hot, soil cooler, battery warm
     const panelTempC = 25 + 40 * sun + gauss(rng) * 1.2;
     const soilTempC = 18 + 10 * sun + gauss(rng) * 0.8;
@@ -675,6 +753,9 @@ function updateKPIs(rows) {
 function buildCards() {
   const root = document.getElementById('charts');
   root.innerHTML = '';
+  // Hoisted out of the per-card loop: updateKPIs() below needs it in
+  // scope, and filtering 43k rows once beats doing it per card.
+  const filtered = filterByRange();
   CHART_DEFS.forEach(def => {
     const card = document.createElement('div');
     card.className = 'chart-card';
@@ -722,7 +803,6 @@ function buildCards() {
 
     // Build chart
     const ctx = card.querySelector('canvas').getContext('2d');
-    const filtered = filterByRange();
     const cfg = makeChartConfig(def, filtered, def.type);
     state.charts[def.id] = new Chart(ctx, cfg);
   });
@@ -797,6 +877,97 @@ function loadChartJsDateAdapter() {
 loadChartJsDateAdapter().then(() => {
   buildCards();
 });
+
+/* ---------------------------------------------------------------
+   Live telemetry strip.
+
+   Reads the public, uncredentialed /api/state on the control host.
+   Deliberately no control actions here: the CF_Authorization cookie
+   is third-party from github.io and browsers block it, so anything
+   requiring auth belongs on control.phxtraffic.com itself.
+
+   The rule this code exists to enforce: never render a frozen
+   snapshot as if it were current. Three states, always distinguished
+   -- live, stale (server up, wattplot link silent), down (no answer).
+   --------------------------------------------------------------- */
+(function () {
+  const CONTROL_HOST = 'https://control.phxtraffic.com';
+  const POLL_MS = 5000;
+  const STALE_WARN_S = 10;
+
+  const el = id => document.getElementById(id);
+  const box = el('live-now'), dot = el('live-dot');
+  const status = el('live-status'), note = el('live-note');
+  if (!box) return;
+
+  const num = (v, unit, digits = 1) =>
+    (typeof v === 'number' && isFinite(v))
+      ? `${v.toFixed(digits)}<span class="u">${unit}</span>` : '&mdash;';
+
+  function fmtAge(s) {
+    if (s == null) return 'unknown';
+    if (s < 60) return `${s.toFixed(0)} s`;
+    if (s < 3600) return `${(s / 60).toFixed(0)} min`;
+    return `${(s / 3600).toFixed(1)} h`;
+  }
+
+  function setState(kind, msg, noteHtml) {
+    dot.className = 'live-dot ' + kind;
+    status.textContent = msg;
+    box.classList.toggle('is-stale', kind === 'warn');
+    box.classList.toggle('is-down', kind === 'down');
+    note.innerHTML = noteHtml || '';
+  }
+
+  async function tick() {
+    let s;
+    try {
+      const r = await fetch(CONTROL_HOST + '/api/state', { cache: 'no-store' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      s = await r.json();
+    } catch (e) {
+      // Booth laptop asleep, tunnel down, or the operator simply
+      // isn't running the server. Not an error worth alarming over.
+      setState('down', 'offline',
+        'The wattplot control server is not reachable right now, so these ' +
+        'readings are not current. It runs on the booth laptop and is not ' +
+        'online around the clock.');
+      return;
+    }
+
+    const meta = s._meta || {};
+    const age = meta.stale_for_s;
+
+    el('lv-tilt').innerHTML  = num(s['Panel Tilt'], '&deg;', 0);
+    el('lv-batt').innerHTML  = num(s['Battery Voltage'], 'V', 2);
+    el('lv-soil').innerHTML  = num(s['Soil Moisture'], '%', 0);
+    el('lv-power').innerHTML = num(s['Panel Power'], 'W', 1);
+    el('lv-state').innerHTML = s['Controller State'] || '&mdash;';
+    el('lv-valve').innerHTML =
+      s['Solenoid Valve'] === true ? 'open'
+      : s['Solenoid Valve'] === false ? 'closed' : '&mdash;';
+
+    if (!meta.connected) {
+      setState('warn', 'link down',
+        `The control server is up but has lost its link to the wattplot ` +
+        `(last reading ${fmtAge(age)} ago). It retries automatically; ` +
+        `the values above are the last known state, not live.`);
+    } else if (age != null && age > STALE_WARN_S) {
+      setState('warn', `stale ${fmtAge(age)}`,
+        `No fresh reading for ${fmtAge(age)}. The values above are the ` +
+        `last known state, not live.`);
+    } else {
+      setState('up', 'live · ' + new Date().toLocaleTimeString(), '');
+    }
+  }
+
+  tick();
+  setInterval(tick, POLL_MS);
+  // Don't poll a hidden tab; pick straight back up on return.
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) tick();
+  });
+})();
 </script>
 </body>
 </html>

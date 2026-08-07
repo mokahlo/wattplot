@@ -640,8 +640,8 @@ const STATES = {
   // and adds a procedural solar panel on top. The wood is stationary;
   // only the panel tilts via its own pivot group.
   // "wood" loads the same STL but no panel.
-  power: { file: 'wattplot.stl', label: '35°', mode: 'assembly (joists + panel)', kind: 'tilt' },
-  wood:  { file: 'wattplot.stl', label: 'wood', mode: 'wood frame only (no panel)',     kind: 'wood' },
+  power: { file: 'booth/wattplot.stl', label: '35°', mode: 'assembly (joists + panel)', kind: 'tilt' },
+  wood:  { file: 'booth/wattplot.stl', label: 'wood', mode: 'wood frame only (no panel)',     kind: 'wood' },
 };
 
 function loadState(stateKey, withTransition = true) {
