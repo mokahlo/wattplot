@@ -57,6 +57,42 @@ CORS_ORIGINS = {
 }
 CORS_PATHS = {"/api/state", "/api/logs", "/api/whoami"}
 
+# Token-bucket rate limit on the WRITE endpoints. Cloudflare Access
+# is the primary auth gate (the Access policy sits in front of every
+# POST and runs the email-OTP flow); this is the secondary defense
+# against a compromised token, a runaway UI script, or the Access
+# policy accidentally being removed. Per-IP buckets so a noisy
+# legitimate browser doesn't block other operators.
+#
+# Capacity: 30 tokens. Refill: 1 token / 2 seconds = 30 req/min
+# sustained, with a 30-request burst.
+WRITE_PATHS = {"/api/switch", "/api/number", "/api/select", "/api/button"}
+WRITE_BUCKET_CAPACITY = 30
+WRITE_BUCKET_REFILL_PER_S = 0.5    # 1 token every 2 s
+
+
+class _TokenBucket:
+    """Simple per-IP token bucket for the write endpoints."""
+
+    __slots__ = ("tokens", "last_refill")
+
+    def __init__(self, capacity: float):
+        self.tokens = float(capacity)
+        self.last_refill = time.monotonic()
+
+    def allow(self, capacity: float, refill_per_s: float) -> bool:
+        now = time.monotonic()
+        elapsed = now - self.last_refill
+        self.tokens = min(capacity, self.tokens + elapsed * refill_per_s)
+        self.last_refill = now
+        if self.tokens >= 1.0:
+            self.tokens -= 1.0
+            return True
+        return False
+
+
+_write_buckets: dict[str, _TokenBucket] = {}
+
 # Entity keys (stable, computed from entity name). The control panel
 # references labels, the server maps labels -> keys.
 ENTITY_KEYS = {
@@ -465,6 +501,31 @@ async def cors_middleware(request, handler):
 
 
 @web.middleware
+async def rate_limit_middleware(request, handler):
+    """Throttle the write endpoints per client IP.
+
+    Cloudflare Access is the primary auth gate. This middleware is
+    belt-and-suspenders: it limits what a single IP can do even if
+    it has a valid token. The read endpoints (`/api/state`,
+    `/api/logs`, `/api/whoami`) are NOT throttled -- the panel polls
+    `/api/state` every 2 s and the booth's own monitoring reads
+    `/api/logs` continuously.
+    """
+    if request.method == "POST" and request.path in WRITE_PATHS:
+        ip = request.headers.get("CF-Connecting-IP") or request.remote or "unknown"
+        bucket = _write_buckets.get(ip)
+        if bucket is None:
+            bucket = _TokenBucket(WRITE_BUCKET_CAPACITY)
+            _write_buckets[ip] = bucket
+        if not bucket.allow(WRITE_BUCKET_CAPACITY, WRITE_BUCKET_REFILL_PER_S):
+            return web.json_response({
+                "ok": False,
+                "error": "rate limit exceeded (max 30 burst, 1 per 2s sustained)",
+            }, status=429)
+    return await handler(request)
+
+
+@web.middleware
 async def link_down_middleware(request, handler):
     """Turn a dead wattplot link into an honest 503 rather than a 500."""
     try:
@@ -484,7 +545,9 @@ async def on_shutdown(app):
 
 
 async def make_app():
-    app = web.Application(middlewares=[cors_middleware, link_down_middleware])
+    app = web.Application(middlewares=[cors_middleware,
+                                      rate_limit_middleware,
+                                      link_down_middleware])
     wp = WattplotClient(WATTPLOT_HOST, WATTPLOT_KEY)
     app["wp"] = wp
     print(f"Connecting to wattplot @ {WATTPLOT_HOST} (auto-reconnecting) ...")

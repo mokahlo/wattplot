@@ -1,5 +1,11 @@
 # Wattplot
 
+[![Tests](https://github.com/mokahlo/wattplot/actions/workflows/test.yml/badge.svg)](https://github.com/mokahlo/wattplot/actions/workflows/test.yml)
+[![Lint](https://img.shields.io/badge/lint-ruff-blue)](https://github.com/astral-sh/ruff)
+[![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)](https://www.python.org)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Status](https://img.shields.io/badge/status-prototype-orange)](https://github.com/mokahlo/wattplot#status--roadmap)
+
 **Give an old solar panel a second life.**
 
 A raised garden bed whose canopy is a working solar panel — the same

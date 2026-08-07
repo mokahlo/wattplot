@@ -275,6 +275,63 @@ async def test_switch_when_link_down_returns_503(app_client):
 
 
 # ============================================================================
+# Rate limiting
+# ============================================================================
+
+async def test_rate_limit_blocks_after_burst(app_client):
+    """The token bucket is 30 burst; the 31st request gets 429.
+
+    Cloudflare Access is the primary gate; this is the secondary
+    defense. See wattplot_control.rate_limit_middleware.
+
+    Tests the bucket logic directly (not via the HTTP path) to
+    avoid timing flake: network roundtrips through the TestClient
+    take longer than the 2-second refill window, so the bucket
+    always looks full when we hit the second request.
+    """
+    import wattplot_control
+
+    # Direct call: bucket has 0 tokens, allow() returns False.
+    bucket = wattplot_control._TokenBucket(wattplot_control.WRITE_BUCKET_CAPACITY)
+    bucket.tokens = 0.0
+    assert bucket.allow(wattplot_control.WRITE_BUCKET_CAPACITY,
+                        wattplot_control.WRITE_BUCKET_REFILL_PER_S) is False
+
+    # Fresh bucket: allow() returns True for the first 30 calls.
+    bucket = wattplot_control._TokenBucket(wattplot_control.WRITE_BUCKET_CAPACITY)
+    for i in range(wattplot_control.WRITE_BUCKET_CAPACITY):
+        result = bucket.allow(wattplot_control.WRITE_BUCKET_CAPACITY,
+                              wattplot_control.WRITE_BUCKET_REFILL_PER_S)
+        assert result is True, (
+            f"request {i+1} unexpectedly rejected (tokens={bucket.tokens:.3f})"
+        )
+    # 31st: rejected.
+    assert bucket.allow(wattplot_control.WRITE_BUCKET_CAPACITY,
+                        wattplot_control.WRITE_BUCKET_REFILL_PER_S) is False
+
+    # Refill math: capacity 30 / refill 0.5 tok/s = a request becomes
+    # available every 2 seconds. Manipulate last_refill so the math
+    # doesn't depend on real-time delays.
+    bucket.last_refill -= 4.0   # simulate "4 seconds passed since last request"
+    assert bucket.allow(wattplot_control.WRITE_BUCKET_CAPACITY,
+                        wattplot_control.WRITE_BUCKET_REFILL_PER_S) is True
+
+
+async def test_rate_limit_does_not_throttle_reads(app_client):
+    """GET /api/state is NOT throttled -- the panel polls every 2 s."""
+    for _ in range(50):
+        resp = await app_client.get("/api/state")
+        assert resp.status == 200
+
+
+async def test_rate_limit_does_not_throttle_reads(app_client):
+    """GET /api/state is NOT throttled -- the panel polls every 2 s."""
+    for _ in range(50):
+        resp = await app_client.get("/api/state")
+        assert resp.status == 200
+
+
+# ============================================================================
 # GET /api/logs
 # ============================================================================
 
