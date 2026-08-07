@@ -87,7 +87,7 @@ def compute_frame_dimensions(bed_L_in, bed_W_in, wall_thk_in=1.5, rail_thk_in=1.
 
 def compute_bed_dimensions(bed_L_in, bed_W_in, wall_thk_in=1.5,
                             skid_h_in=3.0, post_t_in=3.5,
-                            wall_h_in=22.0, cap_t_in=1.5):
+                            wall_h_in=27.5, cap_t_in=1.5):
     """Derive the bed (planter) wall and skid dimensions.
 
     The bed is built as: 4 corner posts (4x4) at the outside corners,
@@ -100,7 +100,8 @@ def compute_bed_dimensions(bed_L_in, bed_W_in, wall_thk_in=1.5,
         wall_thk_in: bed wall thickness in inches
         skid_h_in: skid height in inches (bed sits on top of skids)
         post_t_in: corner post thickness in inches (4x4 actual = 3.5)
-        wall_h_in: wall height in inches (1x6 cedar, 4 courses = 22.0)
+        wall_h_in: wall height in inches (1x6 cedar, 5 courses = 27.5
+                    for the full-size build; was 4 courses = 22.0 in v1)
         cap_t_in: 2x6 cap thickness in inches (1.5)
 
     Returns:

@@ -98,7 +98,7 @@ residential.
   Off-white reads better in daylight. Matte black pops under spotlights.
 - **Title font:** 96pt, sans-serif bold, dark.
 - **Body font:** 24-32pt, sans-serif regular.
-- **Numbers ($193, 2,240 kWh, 124 kg):** 64pt, bold, accent color.
+- **Numbers ($193, 2,240 kWh, 84 kg):** 64pt, bold, accent color.
 - **QR code:** 4"×4" minimum, high-contrast, in the bottom corner.
 
 ## Source files

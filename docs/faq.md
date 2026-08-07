@@ -37,7 +37,8 @@ not just read.
 ### 3. "Does it actually grow food?"
 
 > The full-size has been simulated to grow about a hundred and twenty
-> kilos of tomatoes a year. That's two hundred and fifty pounds, from
+> eighty-four kilos of tomatoes a year. That's about a hundred
+> and eighty-five pounds, from four plants,
 > four plants. The trick is the tilt: morning and evening sun gets to
 > the bed, midday is shaded, the soil doesn't cook. The mini on the
 > table is a validation prototype, not a production garden, but the

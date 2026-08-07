@@ -55,15 +55,17 @@ def derive_cut_list(bed_L_in, bed_W_in, wall_thk=1.5, rail_thk=1.5,
     cuts = []
 
     # ---- Bed walls: 1x6 cedar skin over 2x4 cleats, 2x6 caps ----
-    # (see BED_WALL in wattplot_params.py). 4 courses of 1x6 per wall.
+    # (see BED_WALL in wattplot_params.py). Course count and per-
+    # course height come from BED_WALL; for v3 the bed is 5 courses
+    # × 5.5" = 27.5" walls (was 4 × 5.5" = 22" in v1).
     from wattplot_params import BED_WALL
     courses = BED_WALL['courses']
     skin_thk = BED_WALL['skin_thk_in']
     wall_h = courses * BED_WALL['course_h_in']
     long_wall_L = bed_L_in                          # skin boards, full bed length
     short_wall_L = bed_W_in - 2.0 * skin_thk        # between the long-wall skins
-    cuts.append(Cut(2 * courses, "1x6", long_wall_L, "long wall skin (N/S), 4 courses", STOCK_8FT_IN, STOCK_8FT_IN - long_wall_L))
-    cuts.append(Cut(2 * courses, "1x6", short_wall_L, "short wall skin (W/E), 4 courses", STOCK_8FT_IN, STOCK_8FT_IN - 2 * short_wall_L))
+    cuts.append(Cut(2 * courses, "1x6", long_wall_L, f"long wall skin (N/S), {courses} courses", STOCK_8FT_IN, STOCK_8FT_IN - long_wall_L))
+    cuts.append(Cut(2 * courses, "1x6", short_wall_L, f"short wall skin (W/E), {courses} courses", STOCK_8FT_IN, STOCK_8FT_IN - 2 * short_wall_L))
     # Vertical cleats carry the soil pressure (skin alone would bow).
     n_cleats = 2 * BED_WALL['cleats_long_wall'] + 2 * BED_WALL['cleats_short_wall']
     cuts.append(Cut(n_cleats, "2x4", wall_h, "wall cleat (vertical, <=24\" o.c.)", STOCK_8FT_IN, STOCK_8FT_IN - 4 * wall_h))

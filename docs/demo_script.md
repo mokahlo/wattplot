@@ -48,7 +48,8 @@ the maker who wants to see the firmware. Read the room.
 > "What it does is grow food and make power from the same square
 > footage. A full-size build in Phoenix makes about 850 kilowatt-hours
 > a year with a salvage panel, or 2,200 with a new bifacial. A
-> hundred and twenty-four kilos of tomatoes a year. The trade-off
+> about eighty-four kilos of tomatoes a year at 35° tilt (about
+> 185 pounds, from four plants). The trade-off
 > is engineered: the panel tilts so the bed gets morning and
 > evening sun, but the harsh midday is shaded, which actually
 > helps the plants."

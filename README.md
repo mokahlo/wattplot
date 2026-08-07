@@ -300,8 +300,10 @@ available). Hardware (hinges, panel clamps) is metal where the load demands.
   The bed depth is set by dry-soil risk: at 4 wall courses a bone-dry bed
   falls to SF 1.53, so the build ships 5 courses.
 - **Power (azimuth tracking 35° tilt, Phoenix 2025):** 2,240 kWh/year.
-- **Tomato yield (35° tilt):** ~124 kg/year from 4 plants. Vertical (90°)
-  gives full bed sun but ~50% less power and more heat stress.
+- **Tomato yield (35° tilt):** ~84 kg/year from 4 plants (the sun
+  simulator caps at 83.8 kg at 35° tilt, seasonal 90/35°, and
+  azimuth tracking 35°; the 90° "bed sun" schedule gives 52.7 kg
+  with much more heat stress and ~63% less power).
 - **Best balance:** static 35° or azimuth tracking 35°, depending on whether
   you value simplicity or kWh.
 
