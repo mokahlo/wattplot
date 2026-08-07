@@ -196,7 +196,7 @@ Add your photos to `renders/build_photos/` and link them in this section.
 wattplot.py                            ← top-level pipeline:  python wattplot.py
 wattplot_params.py                     ← single source of truth for ALL parameters
 models/
-  freecad/                             ← FreeCAD parametric 3D model
+  freecad/                             ← FreeCAD parametric 3D model (authoritative)
     materials.py                       ← wood species, fasteners, hardware
     parts/                             ← one file per part (bed_wall, frame,
       _helpers.py, bed_wall.py,        ←   hinge, panel_clamp, actuator_mount,
@@ -205,6 +205,9 @@ models/
       actuator_mount.py
     assemble.py                         ← imports all parts, exports STEP+STL+FCStd
     _run.py                             ← freecadcmd entry point
+  openscad/                             ← OpenSCAD text model (no GUI, no Python)
+    wattplot.scad                       ← full assembly, 35° tilt, LONGi preset
+    wattplot_params.scad                ← mirror of wattplot_params.py (CI parity)
   shadow_raycaster.py                  ← geometric bed-shadow from 3D panel
   render_3d_views.py, render_svg_views.py
 analysis/
