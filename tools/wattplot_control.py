@@ -28,10 +28,12 @@ import aioesphomeapi
 from aiohttp import web
 from zeroconf.asyncio import AsyncZeroconf
 
+from _secrets import get_api_key
+
 
 # ---- Config ----
 WATTPLOT_HOST = "wattplot-controller.local"
-WATTPLOT_KEY  = "cz0STvY6M+0ob9ydfsi28MDAL9b5P8VsmXsnZv3t7BU="
+WATTPLOT_KEY  = get_api_key()
 LOCAL_PORT    = 8765
 
 # The fastest sensors push every 100 ms and several push every 1 s, so a

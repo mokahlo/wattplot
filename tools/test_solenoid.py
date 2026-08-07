@@ -12,8 +12,10 @@ directly. Logs all relevant sensors.
 import asyncio
 import aioesphomeapi
 
+from _secrets import get_api_key
+
 HOST = "wattplot-controller.local"
-KEY  = "cz0STvY6M+0ob9ydfsi28MDAL9b5P8VsmXsnZv3t7BU="
+KEY  = get_api_key()
 
 # entity keys (stable across firmware)
 SOL_MODE_KEY   = 3792266734  # Solenoid Mode (Off / Auto / Manual)

@@ -9,9 +9,11 @@ import time
 
 import aioesphomeapi
 
+from _secrets import get_api_key
+
 
 HOST = "wattplot-controller.local"
-KEY = "cz0STvY6M+0ob9ydfsi28MDAL9b5P8VsmXsnZv3t7BU="
+KEY = get_api_key()
 
 CAL_BTN_KEY       = 3817736166   # Calibrate Actuator
 CAL_RUNNING_KEY   = 2872278387   # Calibration In Progress
