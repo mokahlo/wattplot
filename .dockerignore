@@ -1,0 +1,69 @@
+# Exclude from the Docker build context anything that's not source.
+# Mirrors .gitignore for the runtime paths, plus adds the build /
+# cache paths Docker is most likely to need.
+
+.git/
+.gitignore
+.github/
+.gitattributes
+.dockerignore
+.editorconfig
+.pre-commit-config.yaml
+Dockerfile
+
+# Build / cache artifacts that don't need to ship
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.benchmarks/
+
+# Generated render outputs (regenerable)
+renders/*.png
+renders/*.svg
+
+# Generated FreeCAD outputs (regenerable)
+models/*.stl
+models/*.step
+models/*.3mf
+models/*.wrl
+models/*.vrml
+models/*.tjs
+models/*.fcstd
+models/*.FCBak
+
+# ESPHome build cache (regenerable, hundreds of MB)
+firmware/.esphome/
+
+# Generated logs
+logs/
+*.log
+*.log.gz
+
+# Runtime artifacts
+booth/wattplot.stl
+booth/wattplot_v2.stl
+booth/wattplot_v2_flat.stl
+booth/viewer.html
+booth/sim_dashboard.html
+
+# Generated docs (only the source files matter)
+docs/_site/
+
+# Vendor reference PDFs (per-user, not source)
+parts/
+
+# Python packaging
+build/
+dist/
+*.egg-info/
+.venv/
+venv/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store

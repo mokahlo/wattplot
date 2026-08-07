@@ -6,6 +6,23 @@
   <title>{% if page.title %}{{ page.title }} · {% endif %}Wattplot</title>
   {% if page.description %}<meta name="description" content="{{ page.description }}">{% endif %}
   <link rel="canonical" href="https://mokahlo.github.io/wattplot{{ page.url }}">
+
+  {# Open Graph + Twitter cards. The repo description doubles as
+     the og:description. The favicon is also the og:image. #}
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Wattplot">
+  <meta property="og:title" content="{% if page.title %}{{ page.title }} · {% endif %}Wattplot">
+  <meta property="og:description" content="{{ page.description | default: 'A raised garden bed whose canopy is a working solar panel. Open-source solar + ag hardware, MIT-licensed.' }}">
+  <meta property="og:url" content="https://mokahlo.github.io/wattplot{{ page.url }}">
+  <meta property="og:image" content="https://mokahlo.github.io/wattplot/favicon.png">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="{% if page.title %}{{ page.title }} · {% endif %}Wattplot">
+  <meta name="twitter:description" content="{{ page.description | default: 'A raised garden bed whose canopy is a working solar panel. Open-source solar + ag hardware, MIT-licensed.' }}">
+  <meta name="twitter:image" content="https://mokahlo.github.io/wattplot/favicon.png">
+
+  {# Sitemap link for search engines. #}
+  <link rel="sitemap" type="application/xml" title="Sitemap" href="{{ '/sitemap.xml' | relative_url }}">
+
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
