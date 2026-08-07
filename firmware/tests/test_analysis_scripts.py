@@ -23,7 +23,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 ANALYSIS_DIR = REPO_ROOT / "analysis"
@@ -45,6 +44,7 @@ def _run(script_name: str, expected_outputs: list[Path], timeout: int = 240) -> 
         text=True,
         timeout=timeout,
         env={**os.environ, "MPLBACKEND": "Agg"},
+        check=False,
     )
     assert proc.returncode == 0, (
         f"{script_name} exited {proc.returncode}.\n"
@@ -146,6 +146,7 @@ print(f'OK: 35° noon summer bed sunlit = {f*100:.1f}%')
         text=True,
         timeout=60,
         env={**os.environ, "MPLBACKEND": "Agg"},
+        check=False,
     )
     assert proc.returncode == 0, (
         f"shadow_raycaster smoke failed: {proc.stdout[-1000:]} {proc.stderr[-1000:]}"

@@ -1,0 +1,46 @@
+# Wattplot funding
+
+Wattplot is an MIT-licensed open-source project. If you'd like to
+support continued development, here's how:
+
+## GitHub Sponsors
+
+The simplest option. Set up at <https://github.com/sponsors/mokahlo>.
+
+Funding tiers (suggested):
+
+| Monthly | What it covers |
+|---|---|
+| $5 | Coffee for booth prep +Faire travel |
+| $20 | One PCB revision (JLCPCB 5-board run is ~$80) |
+| $100 | One Maker Faire booth registration + materials |
+
+Sponsors get a "Sponsors" mention in the README + a one-time
+thank-you in the next CHANGELOG entry (unless you'd rather stay
+anonymous — just say so).
+
+## In-kind
+
+- **PCBs:** JLCPCB / PCBWay coupons go a long way. The full-size
+  Smart tier uses the rev B PCB; a future rev C (adding surge
+  protection, fixing the LED + EN + IN2 compat-only stubs) would
+  burn another 5-board run.
+- **Components:** INA219 chips, DRV8871 drivers, ESP32-S3 boards,
+  Sunapex 10A MPPTs, 12 V LiFePO4 cells. Most useful in
+  quantity-of-3 (one for the bench, one for the booth, one as a
+  spare).
+- **Time:** PE review for the full-size structural design. The
+  README and ROADMAP both call this out as a hard requirement
+  before any full-size build goes in the ground. A structural PE
+  in Exp C / Phoenix Cat II / 700-yr return reading this repo
+  end-to-end is the highest-value contribution that money can't
+  easily buy.
+
+## Booth sponsorship
+
+If your company makes solar + ag hardware (panels, MPPT, drip
+irrigation, soil sensors) and you'd like a wattplot build at your
+next booth event with your logo on the cut-list cards, get in
+touch. The repo's MIT license covers derivative works including
+hardware builds; we'd just need a written note about what you'd
+like branded.

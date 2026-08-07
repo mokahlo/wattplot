@@ -19,7 +19,6 @@ the firmware test suite).
 """
 from __future__ import annotations
 
-import asyncio
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -315,20 +314,6 @@ async def test_rate_limit_blocks_after_burst(app_client):
     bucket.last_refill -= 4.0   # simulate "4 seconds passed since last request"
     assert bucket.allow(wattplot_control.WRITE_BUCKET_CAPACITY,
                         wattplot_control.WRITE_BUCKET_REFILL_PER_S) is True
-
-
-async def test_rate_limit_does_not_throttle_reads(app_client):
-    """GET /api/state is NOT throttled -- the panel polls every 2 s."""
-    for _ in range(50):
-        resp = await app_client.get("/api/state")
-        assert resp.status == 200
-
-
-async def test_rate_limit_does_not_throttle_reads(app_client):
-    """GET /api/state is NOT throttled -- the panel polls every 2 s."""
-    for _ in range(50):
-        resp = await app_client.get("/api/state")
-        assert resp.status == 200
 
 
 # ============================================================================

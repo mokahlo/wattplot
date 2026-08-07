@@ -530,9 +530,34 @@ You are free to use, modify, and sell products based on this design. Attribution
 
 ## Contributing
 
-Issues, PRs, and forks welcome. The system is small enough that you should be able to read the whole codebase in an afternoon.
+Issues, PRs, and forks welcome. See [CONTRIBUTING.md](CONTRIBUTING.md)
+for the workflow, conventional-commit style, and how to run the
+firmware + analysis test suite locally. Pre-commit hooks (ruff +
+the firmware pytest smoke) run on every commit.
 
 If you build one, send photos.
+
+## What this isn't
+
+- **Not a turn-key product.** No PE-stamped design, no UL-listed
+  inverter, no warranty. You build it; you own the risk.
+- **Not a replacement for an electrician.** The LiFePO4 / MPPT /
+  microinverter chain needs to be installed per local code. See
+  [disclaimers.html](docs/disclaimers.html) §5.
+- **Not certified for sale.** MIT-licensed hardware with no
+  regulatory pathway. Selling units requires your own compliance
+  work (UL 61730 for the panel, UL 1741 for the inverter, NDS / PE
+  review for the structure).
+- **Not a "smart solar tracker" product.** It's a single-axis
+  tilt actuator with a 35° structural cap, not a dual-axis
+  tracker. The "azimuth tracking" schedules in the sun simulator
+  are sim-only — no firmware implements them yet.
+- **Not a replacement for an off-grid solar kit.** No battery
+  monitoring app, no remote firmware updates beyond ESPHome's
+  OTA, no commercial support.
+- **Not free of upfront work.** The Mini v2.4 has ~3-4 hours of
+  build time + a custom PCB order. The full-size has 10-15 hours
+  + a PE review.
 
 ## Acknowledgments
 
