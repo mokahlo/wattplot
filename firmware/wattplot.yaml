@@ -63,7 +63,7 @@ substitutions:
 esphome:
   name: ${device_name}
   friendly_name: ${friendly_name}
-  comment: "Wattplot v2 — PI on motor current, IMU feedback, panel-side energy monitoring, soil-aware tilt. Charge control: external Sunapex 10A MPPT."
+  comment: "Wattplot v3.2 — PI on motor current, IMU feedback, panel-side energy monitoring, soil-aware tilt. Charge control: external Sunapex 10A MPPT."
   min_version: 2024.6.0
   on_boot:
     priority: -100
@@ -72,6 +72,27 @@ esphome:
           id: status_led
           brightness: 30%
       - delay: 1s
+      # v3.2: rich boot log — captures firmware version, restart
+      # reason, free heap, IP, and the build timestamp into the
+      # Last Event text sensor + emits structured ESP_LOGI lines.
+      # Every one of these lines is forwarded to the MQTT log
+      # topic (wattplot/log) by the existing mqtt: config.
+      - lambda: |-
+          // v3.2 boot log. ESPHome lambdas in 2026.7.2 don't have
+          // access to the WiFi global or ESP.getResetReason() wrapper;
+          // we use ESP-IDF's esp_reset_reason() and skip WiFi info
+          // (visible via web UI / HA's device tracker).
+          char buf[160];
+          snprintf(buf, sizeof(buf),
+                   "Boot: %s reason=%d heap=%u",
+                   __DATE__ " " __TIME__,
+                   (int)esp_reset_reason(),
+                   (unsigned)ESP.getFreeHeap());
+          id(g_last_event) = buf;
+          ESP_LOGI("boot", "=== Wattplot v3.2 ===");
+          ESP_LOGI("boot", "  build:       %s %s", __DATE__, __TIME__);
+          ESP_LOGI("boot", "  reason:      %d", (int)esp_reset_reason());
+          ESP_LOGI("boot", "  free heap:   %u bytes", (unsigned)ESP.getFreeHeap());
       - script.execute: actuator_stop
       - script.execute: state_to_folding
 
@@ -421,16 +442,25 @@ sensor:
   # motor_current × 0.5 V/A. Used by the state machine to detect
   # end-stop arrival via current spike (replaces the limit switches
   # removed in schematic rev B).
+  #
+  # v3.2 logging fix: this pin and its derived current used to be
+  # `name:`d (published to the API/MQTT/HA) at update_interval 100ms.
+  # At 10 Hz that alone drove ~294 MB/day of MQTT log traffic (see
+  # docs/logging.md, which budgets ~10 MB/day) — 29x over budget the
+  # day these landed. The 100ms cadence is real and needed, but only
+  # for the endstop-spike script below, not for a dashboard. Fix:
+  # keep the fast path `internal: true` (still fully readable via
+  # `id(...).state` from C++, just not published), and add a slower,
+  # throttled, publicly-named sensor underneath for the API/HA/logs.
   - platform: adc
     pin: GPIO4
     id: motor_ipropi_raw
-    name: "Motor IPROPI (raw V)"
-    attenuation: auto
+    internal: true
     update_interval: 100ms
 
   - platform: template
     id: motor_current_ipropi
-    name: "Motor IPROPI Current"
+    internal: true
     unit_of_measurement: "A"
     accuracy_decimals: 3
     update_interval: 100ms
@@ -448,21 +478,34 @@ sensor:
       if (i < 0.0f) i = 0.0f;
       return i;
 
+  # Dashboard/API-facing copy of the above, at a sane publish rate.
+  # Entity name is unchanged ("Motor IPROPI Current") so
+  # tools/wattplot_control.py's ENTITY_KEYS map and docs/control.html
+  # (which both key off this exact string) keep working untouched.
+  - platform: template
+    id: motor_current_ipropi_display
+    name: "Motor IPROPI Current"
+    unit_of_measurement: "A"
+    accuracy_decimals: 3
+    update_interval: 2s
+    lambda: return id(motor_current_ipropi).state;
+
   # ===== v3: Solenoid IPROPI (jam detect) =====
   # Same DRV8871 IPROPI feature, on U5b. A free-running irrigation
   # solenoid draws ~1.0 A continuous; a jammed one pulls ~1.5 A+ and
   # trips the DRV8871's internal current limit. Reading IPROPI lets the
   # state machine detect a stuck valve without waiting for nFAULT.
+  # Same fast-internal / throttled-display split as the motor IPROPI
+  # above, for the same logging-volume reason.
   - platform: adc
     pin: GPIO5
     id: solenoid_ipropi_raw
-    name: "Solenoid IPROPI (raw V)"
-    attenuation: auto
+    internal: true
     update_interval: 100ms
 
   - platform: template
     id: solenoid_current_ipropi
-    name: "Solenoid IPROPI Current"
+    internal: true
     unit_of_measurement: "A"
     accuracy_decimals: 3
     update_interval: 100ms
@@ -480,6 +523,16 @@ sensor:
       float i = v * 2.0f - 0.24f;
       if (i < 0.0f) i = 0.0f;
       return i;
+
+  # Dashboard/API-facing copy, entity name unchanged ("Solenoid IPROPI
+  # Current") for the same reason as the motor sensor above.
+  - platform: template
+    id: solenoid_current_ipropi_display
+    name: "Solenoid IPROPI Current"
+    unit_of_measurement: "A"
+    accuracy_decimals: 3
+    update_interval: 2s
+    lambda: return id(solenoid_current_ipropi).state;
 
   - platform: template
     id: battery_voltage

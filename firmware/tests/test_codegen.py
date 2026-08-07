@@ -222,14 +222,14 @@ def test_state_machine_has_four_states(compiled_main_cpp):
 
 @requires_esphome
 def test_folding_state_has_60s_timeout(compiled_main_cpp):
-    """Folding state waits up to 60s for the limit switch, then Locked.
+    """Folding state waits up to 60s to reach the 0° endstop, then Locked.
 
     The 60_000 ms is the magic number in the control loop lambda.
     """
     assert "60000" in compiled_main_cpp, (
         "60_000 ms Folding timeout not found in generated code. "
-        "The state machine should fall back to Locked if the limit "
-        "switch doesn't fire in 60s."
+        "The state machine should fall back to Locked if the endstop "
+        "isn't detected within 60s."
     )
 
 
@@ -307,93 +307,178 @@ def _build_pin_map(generated: str) -> dict[str, int]:
 
 
 @requires_esphome
-def test_h_bridge_in1_is_gpio0(compiled_main_cpp):
+def test_h_bridge_in1_is_gpio1(compiled_main_cpp):
     pin_map = _build_pin_map(compiled_main_cpp)
-    assert pin_map.get("hb_in1_out") == 0, (
-        f"H-bridge IN1 is on GPIO{pin_map.get('hb_in1_out')}, expected GPIO0. "
+    assert pin_map.get("hb_in1_out") == 1, (
+        f"H-bridge IN1 is on GPIO{pin_map.get('hb_in1_out')}, expected GPIO1. "
         f"Pin map: {pin_map}"
     )
 
 
 @requires_esphome
-def test_h_bridge_in2_is_gpio1(compiled_main_cpp):
+def test_h_bridge_in2_is_gpio2(compiled_main_cpp):
     pin_map = _build_pin_map(compiled_main_cpp)
-    assert pin_map.get("hb_in2_out") == 1, (
-        f"H-bridge IN2 is on GPIO{pin_map.get('hb_in2_out')}, expected GPIO1"
+    assert pin_map.get("hb_in2_out") == 2, (
+        f"H-bridge IN2 is on GPIO{pin_map.get('hb_in2_out')}, expected GPIO2"
     )
 
 
 @requires_esphome
-def test_h_bridge_en_is_gpio2(compiled_main_cpp):
-    """H-bridge EN on GPIO2 — a strapping pin (see README)."""
+def test_h_bridge_en_is_gpio11(compiled_main_cpp):
+    """H-bridge EN on GPIO11.
+
+    Rev B ties the DRV8871 EN to 3V3 (always on). The output is kept in
+    the firmware so the state machine's `hb_en_sw` references still
+    resolve, reassigned to a schematic "free" pin. Toggling it has no
+    physical effect.
+    """
     pin_map = _build_pin_map(compiled_main_cpp)
-    assert pin_map.get("hb_en_out") == 2, (
-        f"H-bridge EN is on GPIO{pin_map.get('hb_en_out')}, expected GPIO2"
+    assert pin_map.get("hb_en_out") == 11, (
+        f"H-bridge EN is on GPIO{pin_map.get('hb_en_out')}, expected GPIO11"
     )
 
 
 @requires_esphome
-def test_grow_light_relay_is_gpio7(compiled_main_cpp):
+def test_solenoid_in1_is_gpio10(compiled_main_cpp):
+    """Solenoid H-bridge IN1 (U5b) on GPIO10.
+
+    `grow_light_relay` is a pinless template switch (the id is retained
+    so Home Assistant keeps its retained state across the entity rename);
+    the pin it actually drives is this output.
+    """
     pin_map = _build_pin_map(compiled_main_cpp)
-    assert pin_map.get("grow_light_relay") == 7
+    assert pin_map.get("solenoid_in1_out") == 10, (
+        f"solenoid IN1 on GPIO{pin_map.get('solenoid_in1_out')}, expected GPIO10"
+    )
 
 
 @requires_esphome
-def test_status_led_pwm_is_gpio8(compiled_main_cpp):
-    """Status LED is on GPIO8 (strapping pin, drives on-board LED)."""
+def test_solenoid_in2_is_gpio12(compiled_main_cpp):
+    """Solenoid IN2 preserved on a free pin (schematic ties it to GND)."""
     pin_map = _build_pin_map(compiled_main_cpp)
-    assert pin_map.get("status_led_pwm") == 8
+    assert pin_map.get("solenoid_in2_out") == 12, (
+        f"solenoid IN2 on GPIO{pin_map.get('solenoid_in2_out')}, expected GPIO12"
+    )
 
 
 @requires_esphome
-def test_limit_switch_0_is_gpio10(compiled_main_cpp):
+def test_status_led_pwm_is_gpio17(compiled_main_cpp):
+    """Status LED preserved on GPIO17 (rev B removed the LED from the board)."""
     pin_map = _build_pin_map(compiled_main_cpp)
-    assert pin_map.get("limit_0") == 10
+    assert pin_map.get("status_led_pwm") == 17, (
+        f"status_led_pwm on GPIO{pin_map.get('status_led_pwm')}, expected GPIO17"
+    )
 
 
 @requires_esphome
-def test_limit_switch_35_is_gpio21(compiled_main_cpp):
+def test_no_limit_switch_pins_in_generated_code(compiled_main_cpp):
+    """v3 has no limit-switch binary sensors at all.
+
+    Schematic rev B removed the physical switches; homing is now done by
+    watching the motor current spike (Motor IPROPI on GPIO4) in the
+    `endpoint_detector` interval, which sets `g_at_zero` / `g_at_max`.
+    If limit_* entities reappear, either the YAML regressed or the
+    current-based homing was reverted — see wattplot.yaml's
+    "v3.1: Current-based endstop state" globals.
+    """
     pin_map = _build_pin_map(compiled_main_cpp)
-    assert pin_map.get("limit_90") == 21
+    stray = sorted(k for k in pin_map if k.startswith("limit_"))
+    assert not stray, (
+        f"limit-switch entities found in generated code: {stray}. "
+        f"v3 replaced them with current-spike homing (g_at_zero/g_at_max)."
+    )
+    assert "g_at_zero" in compiled_main_cpp and "g_at_max" in compiled_main_cpp, (
+        "current-based endstop globals (g_at_zero/g_at_max) missing from "
+        "generated code — the v3 homing replacement is gone"
+    )
+
+
+# --- v3 current sense + fault lines (new in rev B) --------------------------
+
+
+@requires_esphome
+def test_motor_ipropi_adc_is_gpio4(compiled_main_cpp):
+    """Actuator IPROPI (ADC1_CH4) — drives current-based endstop detection."""
+    pin_map = _build_pin_map(compiled_main_cpp)
+    assert pin_map.get("motor_ipropi_raw") == 4, (
+        f"motor_ipropi_raw on GPIO{pin_map.get('motor_ipropi_raw')}, expected GPIO4"
+    )
+
+
+@requires_esphome
+def test_solenoid_ipropi_adc_is_gpio5(compiled_main_cpp):
+    """Solenoid IPROPI (ADC1_CH5) — jam detection."""
+    pin_map = _build_pin_map(compiled_main_cpp)
+    assert pin_map.get("solenoid_ipropi_raw") == 5, (
+        f"solenoid_ipropi_raw on GPIO{pin_map.get('solenoid_ipropi_raw')}, "
+        f"expected GPIO5"
+    )
+
+
+@requires_esphome
+def test_actuator_nfault_is_gpio21(compiled_main_cpp):
+    """U5a nFAULT reads a direct GPIO in v3 (the MCP23017 expander is gone)."""
+    pin_map = _build_pin_map(compiled_main_cpp)
+    assert pin_map.get("actuator_nfault") == 21, (
+        f"actuator_nfault on GPIO{pin_map.get('actuator_nfault')}, expected GPIO21"
+    )
+
+
+@requires_esphome
+def test_solenoid_nfault_is_gpio13(compiled_main_cpp):
+    """U5b nFAULT reads a direct GPIO in v3 (was MCP.1)."""
+    pin_map = _build_pin_map(compiled_main_cpp)
+    assert pin_map.get("solenoid_nfault") == 13, (
+        f"solenoid_nfault on GPIO{pin_map.get('solenoid_nfault')}, expected GPIO13"
+    )
+
+
+@requires_esphome
+def test_one_wire_bus_is_gpio16(compiled_main_cpp):
+    """DS18B20 1-Wire data line (was GPIO15 on the C3)."""
+    pin_map = _build_pin_map(compiled_main_cpp)
+    assert pin_map.get("panel_temp_bus") == 16, (
+        f"panel_temp_bus on GPIO{pin_map.get('panel_temp_bus')}, expected GPIO16"
+    )
 
 
 # --- I²C / sensors ---------------------------------------------------------
 
 
 @requires_esphome
-def test_i2c_bus_uses_gpio5_gpio6(compiled_main_cpp):
-    """I²C SDA=GPIO5, SCL=GPIO6 on the C3.
+def test_i2c_bus_uses_gpio8_gpio18(compiled_main_cpp):
+    """I²C SDA=GPIO8, SCL=GPIO18 on the S3 (was GPIO5/GPIO6 on the C3).
 
-    Generated code uses `set_sda_pin(5)` (bare int) in 2026.7.
+    Generated code uses `set_sda_pin(8)` (bare int) in 2026.7.
     """
     sda_m = re.search(
         r"i2c_main->set_sda_pin\((?:::?GPIO_NUM_)?(\d+)\)",
         compiled_main_cpp,
     )
     assert sda_m, "i2c_main SDA pin not set"
-    assert int(sda_m.group(1)) == 5, f"I²C SDA on GPIO{sda_m.group(1)}, expected GPIO5"
+    assert int(sda_m.group(1)) == 8, f"I²C SDA on GPIO{sda_m.group(1)}, expected GPIO8"
 
     scl_m = re.search(
         r"i2c_main->set_scl_pin\((?:::?GPIO_NUM_)?(\d+)\)",
         compiled_main_cpp,
     )
     assert scl_m, "i2c_main SCL pin not set"
-    assert int(scl_m.group(1)) == 6, f"I²C SCL on GPIO{scl_m.group(1)}, expected GPIO6"
+    assert int(scl_m.group(1)) == 18, f"I²C SCL on GPIO{scl_m.group(1)}, expected GPIO18"
 
 
 @requires_esphome
-def test_battery_voltage_adc_is_gpio4(compiled_main_cpp):
+def test_battery_voltage_adc_is_gpio7(compiled_main_cpp):
     pin_map = _build_pin_map(compiled_main_cpp)
-    assert pin_map.get("battery_v_raw") == 4, (
-        f"battery_v_raw on GPIO{pin_map.get('battery_v_raw')}, expected GPIO4"
+    assert pin_map.get("battery_v_raw") == 7, (
+        f"battery_v_raw on GPIO{pin_map.get('battery_v_raw')}, expected GPIO7"
     )
 
 
 @requires_esphome
-def test_soil_moisture_adc_is_gpio3(compiled_main_cpp):
+def test_soil_moisture_adc_is_gpio6(compiled_main_cpp):
     pin_map = _build_pin_map(compiled_main_cpp)
-    assert pin_map.get("soil_moisture_raw") == 3, (
-        f"soil_moisture_raw on GPIO{pin_map.get('soil_moisture_raw')}, expected GPIO3"
+    assert pin_map.get("soil_moisture_raw") == 6, (
+        f"soil_moisture_raw on GPIO{pin_map.get('soil_moisture_raw')}, expected GPIO6"
     )
 
 
@@ -548,20 +633,42 @@ def test_poa_lambda_does_not_have_buggy_lon_correction(compiled_main_cpp):
 # --- Pin map summary --------------------------------------------------------
 
 
+# Pins the ESP32-S3-DevKitC-1-N16R8 cannot expose as GPIO. See the
+# "S3-specific notes" block in wattplot.yaml's header.
+S3_RESERVED_PINS = (
+    {19, 20}                 # native USB D-/D+
+    | set(range(26, 33))     # SPI flash on the WROOM module
+    | set(range(33, 38))     # PSRAM on the N16R8 variant
+)
+
+
+@requires_esphome
+def test_no_reserved_s3_pins_used(compiled_main_cpp):
+    """No component may land on a USB / flash / PSRAM pin.
+
+    Using one of these bricks USB serial or crashes the module at boot,
+    and `esphome compile` will not catch it — the pin is electrically
+    valid, just spoken for.
+    """
+    used = {int(g) for g in re.findall(r"GPIO_NUM_(\d+)", compiled_main_cpp)}
+    collisions = sorted(used & S3_RESERVED_PINS)
+    assert not collisions, (
+        f"firmware assigns reserved S3 pins: {collisions}. "
+        f"GPIO19/20 are native USB, GPIO26-32 are SPI flash, GPIO33-37 are "
+        f"PSRAM on the N16R8. Pick from the free list in wattplot.yaml's header."
+    )
+
+
 @requires_esphome
 def test_total_unique_gpios_used_is_within_budget(compiled_main_cpp):
-    """C3 has 22 usable GPIOs (GPIO0-10, GPIO18-21, plus strapping pins).
+    """The S3-DevKitC-1 exposes plenty of GPIO, but the pin map is finite.
 
-    Wattplot uses 13. If a refactor accidentally adds more, this catches it.
+    v3 binds 13 pins via GPIO_NUM_ (I²C SDA/SCL are emitted as bare ints
+    by the i2c component, so they don't show up here). If a refactor
+    quietly adds a pile more, this catches it.
     """
-    used = set(re.findall(r"GPIO_NUM_(\d+)", compiled_main_cpp))
-    c3_usable = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 18, 19, 20, 21}  # 15 GPIO pins (excl 11-17 which don't exist on C3)
-    # C3 also has GPIO11-17 reserved, GPIO8 is a strapping pin
-    used_real = {int(g) for g in used}
-    # Filter out non-pin GPIO references (some are reserved constants)
-    real_pins = used_real & c3_usable
-    # Sanity: we should use more than 5 and fewer than 15
-    assert 5 < len(real_pins) < 15, (
-        f"Wattplot uses {len(real_pins)} unique GPIOs ({sorted(real_pins)}). "
-        f"C3 has 15 usable GPIOs. Out of budget — check pin map."
+    used = {int(g) for g in re.findall(r"GPIO_NUM_(\d+)", compiled_main_cpp)}
+    assert 5 < len(used) < 25, (
+        f"Wattplot binds {len(used)} unique GPIOs ({sorted(used)}). "
+        f"Out of the expected range — check the pin map in wattplot.yaml."
     )
