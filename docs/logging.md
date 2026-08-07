@@ -156,10 +156,10 @@ You should see:
 
 When the ESP32 boots, you'll start seeing log lines like:
 ```
-2026-07-29 09:00:00  [wattplot/log]  [09:00:00][D][wifi:373]: WiFi Connected...
-2026-07-29 09:00:00  [wattplot/log]  [09:00:00][I][app:029]: Running through callback...
-2026-07-29 09:00:05  [wattplot/log]  [09:00:05][I][mppt:42]: MPPT step: V=17.2V, I=0.42A, P=7.2W
-2026-07-29 09:00:10  [wattplot/log]  [09:00:10][D][imu:218]: ax=0.12 ay=0.98 az=0.05, tilt=2.3°
+2026-08-06 09:00:00  [wattplot/log]  [09:00:00][D][wifi:373]: WiFi Connected...
+2026-08-06 09:00:00  [wattplot/log]  [09:00:00][I][app:029]: Running through callback...
+2026-08-06 09:00:05  [wattplot/log]  [09:00:05][I][boot:092]: === Wattplot v3.2 ===
+2026-08-06 09:00:05  [wattplot/log]  [09:00:05][I][endpoint:099]: Extended 0° — g_at_zero SET
 ```
 
 **Run as a background service** (so it survives reboot):
@@ -202,13 +202,13 @@ sudo systemctl enable --now wattplot-log.service
 `logs/wattplot.log` is plain text, one line per MQTT message:
 
 ```
-2026-07-29 09:00:00  [wattplot/log]  [09:00:00][D][wifi:373]: WiFi Connected...
-2026-07-29 09:00:00  [wattplot/log]  [09:00:00][I][app:029]: Running through callback...
-2026-07-29 09:00:05  [wattplot/log]  [09:00:05][I][mppt:42]: MPPT step: V=17.2V, I=0.42A, P=7.2W
-2026-07-29 09:00:10  [wattplot/log]  [09:00:10][I][watering:87]: Watered: moisture=27%, events_today=1
-2026-07-29 09:00:30  [wattplot/log]  [09:00:30][W][solenoid:102]: Safety watchdog killed solenoid after 30s
-2026-07-29 09:01:00  [wattplot/log]  [wattplot/status]  online
-2026-07-29 09:01:00  [wattplot/log]  [wattplot/log_subscriber/status]  online
+2026-08-06 09:00:00  [wattplot/log]  [09:00:00][D][wifi:373]: WiFi Connected...
+2026-08-06 09:00:00  [wattplot/log]  [09:00:00][I][app:029]: Running through callback...
+2026-08-06 09:00:05  [wattplot/log]  [09:00:05][I][boot:092]: === Wattplot v3.2 ===
+2026-08-06 09:00:05  [wattplot/log]  [09:00:05][I][endpoint:099]: Extended 0° — g_at_zero SET
+2026-08-06 09:00:30  [wattplot/log]  [09:00:30][W][solenoid:102]: Safety watchdog killed solenoid after 300s
+2026-08-06 09:01:00  [wattplot/log]  [wattplot/status]  online
+2026-08-06 09:01:00  [wattplot/log]  [wattplot/log_subscriber/status]  online
 ```
 
 The first column is the wall-clock time on the PC (subscriber side).
@@ -270,6 +270,19 @@ grep "2026-07-29 09:00:" logs/wattplot.log
 At 1 INFO line per second from a busy ESP32, a single day is ~5 MB
 plaintext, ~1 MB gzipped. 30 days = ~30 MB. Fits on any PC.
 
+> **v3.2 regression + fix (2026-08-06):** the four IPROPI current-sense
+> sensors (motor + solenoid, raw + derived) shipped at `update_interval:
+> 100ms` and were `name:`d, i.e. published to MQTT at 10 Hz each. That
+> alone drove one day's log to ~294 MB — about 29x this budget. The
+> 100ms cadence is genuinely needed for the endstop-spike detection
+> script, just not for the API/HA/log stream. Fixed by splitting each
+> sensor into an `internal: true` fast copy (100ms, C++-only, used by
+> the control logic) and a publicly-named copy that reads from it at
+> `update_interval: 2s`. Entity names are unchanged, so nothing
+> downstream (`tools/wattplot_control.py`, `docs/control.html`) needed
+> updating. If you add another high-frequency sensor, use this same
+> split rather than publishing raw at its native rate.
+
 ---
 
 ## Troubleshooting
@@ -310,18 +323,29 @@ zcat logs/wattplot.*.log.gz | grep "MPPT step" | less
 ## What gets logged by default
 
 The firmware uses `ESP_LOGI`, `ESP_LOGW`, `ESP_LOGE`, `ESP_LOGD` in the
-following places (in v2.4/v2.5):
+following places (in v3.2):
 
 | Component | What's logged | Level |
 |---|---|---|
-| `mppt` | Each MPPT step (V, I, P, setpoint change) | INFO |
-| `watering` | Watering events, safety blocks fired | INFO |
-| `solenoid` | Solenoid on/off, watchdog kills | INFO / WARN |
-| `controller` | State transitions (Normal→Folding→Locked) | INFO |
-| `imu` | Tilt reading (DEBUG only, chatty) | DEBUG |
+| `boot` | Firmware version, restart reason, free heap on boot | INFO |
+| `state` | State machine transitions (Normal → Folding → Locked) | INFO |
+| `nfault` | Actuator / solenoid nFAULT events | WARN |
+| `solenoid` | Valve on/off + auto-water guard events | INFO |
+| `endpoint` | Endstop hits (g_at_zero / g_at_max) | INFO |
+| `calib` | Self-calibration events | INFO |
+| `alarm` | Watering alarms | INFO |
+| `control` | 1 Hz control loop events | INFO |
 | `wifi` | WiFi connect/disconnect | INFO |
 | `api` | Home Assistant API client connect | INFO |
-| `mqtt` | MQTT connect/disconnect | INFO |
+| `ota` | OTA start/finish | INFO |
+| `mqtt.log` | MQTT log forwarding (every line, every level) | DEBUG |
+
+> **Note:** the v2.4/v2.5 logger tags `mppt`, `watering`, `imu`, and
+> `controller` were renamed/removed in v3.2: `mppt` is gone (the MPPT
+> loop was retired — the Sunapex 10A runs standalone); `imu` is gone
+> (BMI160 disabled); `watering` became `solenoid` (the "grow light"
+> that drives the solenoid uses the same tag); and the state machine
+> log became `state` (and `control` for the 1 Hz tick events).
 
 The full ESPHome startup banner (component init, GPIO assignments, etc.)
 is also logged at INFO.
@@ -352,6 +376,7 @@ publishes; you just stop writing them to disk.
 
 - `docs/watering.md` — what the watering state machine logs
 - `docs/control_law.md` — what the controller state machine logs
-- `firmware/wattplot.yaml` — the firmware config (lines 73-92: logger
-  + mqtt sections)
+- `firmware/wattplot.yaml` — the firmware config (lines 106-153: logger
+  + mqtt sections; see the `logger.logs:` map for the full list of
+  tags and their levels)
 - `tools/log_subscriber.py` — the subscriber source
