@@ -67,7 +67,7 @@ BED = {
                                     # 4 courses / 20" soil the structure only
                                     # reaches SF_overturning 1.81 at 35° tilt
                                     # (FAIL). 5 courses / 25.5" soil gives
-                                    # SF 2.26, rated ~122 mph. 6 courses would
+                                    # SF 2.55, rated ~130 mph. 6 courses would
                                     # give more margin but puts the rim at
                                     # 34.5", breaking accessibility - so the
                                     # tilt cap (35°, CONTROL below) is what
@@ -128,19 +128,6 @@ POSTS = {
     "rail_nominal": "2x6",             # panel rails laid flat on the post tops
     "rail_thickness_in": 1.5,
     "rail_width_in": 5.5,
-}
-
-# =============================================================================
-# STRUCTURE (posts + beam, hinged at bed)
-# =============================================================================
-STRUCTURE = {
-    "post_side_in": 5.5,               # 6x6 nominal
-    "post_height_in": 120.0,           # 10 ft
-    "post_inset_in": 6.0,              # from bed end
-    "beam_side_in": 5.5,               # 6x6
-    "beam_length_in": 84.0,            # 7 ft between posts
-    "beam_attach_h_in": 108.0,         # height to beam centerline
-    "hinge_d_in": 0.5,                 # 1/2" continuous hinge
 }
 
 # =============================================================================
@@ -500,7 +487,7 @@ CONTROL = {
                                      # lever arm about the bed edge. With
                                      # 25.5" of soil ballast the structure
                                      # passes SF_overturning >= 2.0 only to
-                                     # ~35° (SF 2.26); 45° drops to 1.55 and
+                                     # ~35° (SF 2.55); 45° drops to 1.89 and
                                      # 90° is far below 1. Do not raise this
                                      # without re-running analysis/wind_load.py.
     "target_current_A": 0.5,            # PI setpoint (motor current)
@@ -542,7 +529,6 @@ P = {
     "bed": BED,
     "bed_wall": BED_WALL,
     "posts": POSTS,
-    "structure": STRUCTURE,
     "frame": FRAME,
     "panel": PANEL,
     "soil": SOIL,

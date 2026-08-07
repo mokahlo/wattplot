@@ -171,12 +171,17 @@ def run_simulation():
 
 
 def run_wind_load():
-    """Run the wind load analysis at the current panel tilt."""
-    banner("STEP 3/3 — Wind load analysis (ASCE 7-22)")
+    """Run the wind load + post-bending analyses at the current panel tilt."""
+    banner("STEP 3/3 — Wind load + post bending analysis (ASCE 7-22 / NDS)")
     from wind_load import run_analysis
     runs = run_analysis()
     out_md = os.path.join(HERE, "analysis", "wind_load_report.md")
     print(f"  Report: {out_md}")
+
+    from post_bending import run_analysis as run_post_bending_analysis
+    run_post_bending_analysis()
+    out_md_pb = os.path.join(HERE, "analysis", "post_bending_report.md")
+    print(f"  Report: {out_md_pb}")
     return runs
 
 

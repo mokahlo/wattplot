@@ -462,11 +462,13 @@ def run_analysis():
               f"{POSTS['count']} posts at Cf {POST_DRAG['cf']}, assuming the leeward pair "
               f"is fully shielded. ASCE 7-22 Ch. 29 open-frame provisions would be the "
               f"rigorous route.")
-    md.append("- **The posts themselves are not checked for bending.** This analysis treats "
-              "the structure as a rigid body tipping about the bed edge. The 4x4 posts also "
-              "have to carry the panel drag as a cantilever moment at their base connection — "
-              "that's a separate check that has not been done, and it is the most likely "
-              "real-world failure mode.")
+    md.append("- **The posts themselves are checked separately, in "
+              "`analysis/post_bending.py` / `post_bending_report.md`.** This analysis "
+              "treats the structure as a rigid body tipping about the bed edge; it does "
+              "not model the 4x4 posts as cantilevers carrying panel drag at their base "
+              "connection. That check exists now — and it **fails** the 4x4 posts, "
+              "unbraced, at the 35° operating cap. See the companion report for the two "
+              "remedies (upsize to 6x6, or square-cut lateral bracing).")
     md.append("- The big lever here is **soil depth**. Every extra inch of soil is ~190 lb"
               "of ballast. If you want a margin, go deeper rather than wider.\n")
 
