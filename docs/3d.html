@@ -636,11 +636,14 @@ const loader = new STLLoader();
 let currentMesh = null;
 
 const STATES = {
-  // "power" loads the full-setup STL (bed + joists + slats + posts + rails)
-  // and adds a procedural solar panel on top. The wood is stationary;
-  // only the panel tilts via its own pivot group.
-  // "wood" loads the same STL but no panel.
-  power: { file: 'booth/wattplot.stl', label: '35°', mode: 'assembly (joists + panel)', kind: 'tilt' },
+  // The OpenSCAD-rendered STL (renders/wattplot_longi_620W_nopanel.stl
+  // copied to docs/booth/wattplot.stl) has the bed, posts, frame,
+  // hinges, clamps, and actuator but NO panel. The procedural panel
+  // (created with createProceduralPanel) is added on top for the
+  // "tilt" state so the booth operator can demonstrate the tilt
+  // animation. The "wood" state skips the procedural panel and
+  // shows just the structure.
+  power: { file: 'booth/wattplot.stl', label: '35°', mode: 'assembly (no panel — procedural tilts to 35°)', kind: 'tilt' },
   wood:  { file: 'booth/wattplot.stl', label: 'wood', mode: 'wood frame only (no panel)',     kind: 'wood' },
 };
 
