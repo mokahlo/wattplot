@@ -352,6 +352,31 @@ This installs a Windows service called `Cloudflared` that starts
 automatically on boot. The service runs as `LOCAL SYSTEM`, so it
 doesn't need you to be logged in.
 
+**Gotcha — service runs as LocalSystem, can't see your user config.**
+
+`cloudflared service install` registers the service with no extra
+args. The service runs as LocalSystem, whose home is
+`C:\Windows\System32\config\systemprofile\` — **not** your user
+profile. cloudflared in service mode looks for `config.yml` and
+`tunnel credentials` in `~`, finds nothing in the SYSTEM profile,
+and just sits idle (you'll see "service starting" in Event Log but
+`tunnel info` will show "no active connection").
+
+**Fix:** copy your user `~/.cloudflared/` into the SYSTEM profile:
+
+```powershell
+# Run as Administrator
+$dst = 'C:\Windows\System32\config\systemprofile\.cloudflared'
+New-Item -ItemType Directory -Path $dst -Force | Out-Null
+Copy-Item 'C:\Users\<YOU>\.cloudflared\*' $dst -Force
+Restart-Service Cloudflared
+```
+
+After this, every edit to `config.yml` or every tunnel credential
+rotation also needs to be applied to the SYSTEM copy. Treat the two
+locations as one config. (A symbolic link / junction would be cleaner
+but doesn't survive `cloudflared service install` cycles reliably.)
+
 Verify:
 
 ```powershell
@@ -392,6 +417,39 @@ If you get a Cloudflare error, check:
   "active".
 - DNS tab in Cloudflare: the CNAME for `control.phxtraffic.com`
   should be present and proxied.
+
+### 7h. Gotcha — port 8765 collisions cause 502 (tunnel says "Bad Gateway")
+
+`wattplot_control.py` binds to `0.0.0.0:8765` (all interfaces).
+Windows TCP routing prefers the **most specific** binding for the
+target address. If anything else is bound to `127.0.0.1:8765` (a
+leftover `python -m http.server`, an old process, a different
+test rig), connections to `localhost:8765` go to the more
+specific bind, **not** to the wattplot_control.py.
+
+cloudflared connects to `127.0.0.1:8765`, so it would hit the
+wrong process, get 404s, and Cloudflare returns **502 Bad
+Gateway**. (530 = tunnel not connected, 502 = tunnel up but
+origin returned a bad response — different root causes.)
+
+**Fix:** kill the other listener first.
+
+```powershell
+# Find what's on 8765
+Get-NetTCPConnection -State Listen -LocalPort 8765
+
+# Kill the offending PID
+Stop-Process -Id <PID> -Force
+```
+
+Specifically, any earlier `python -m http.server 8765` started
+from the docs/ dir (for testing the live nav link) will steal
+the port. Stop it, the tunnel then serves the wattplot_control.py
+correctly.
+
+**Prevention:** add a Task Scheduler entry for `wattplot_control.py`
+that auto-starts on logon (see §10) so it always wins the race
+for 127.0.0.1:8765 over any ad-hoc `http.server` you spin up.
 
 ---
 
