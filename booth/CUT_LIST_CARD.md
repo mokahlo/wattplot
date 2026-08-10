@@ -3,6 +3,11 @@
 > A 4×6 take-home card. Source is this markdown; render to a 4×6
 > PDF for printing (Vistaprint, Moo, or your local print shop).
 > Stack 500 of these for the booth.
+>
+> **Last refreshed: 2026-08-09.** Physical build unchanged from v2.4.
+> Controller row updated to ESP32-S3 (the v3.2 firmware dropped
+> C3 support — see `firmware/wattplot.yaml`). PCB v3 for the full-size
+> build is in development; the Mini stays on the Sunapex MPPT.
 
 ---
 
@@ -38,12 +43,12 @@ github.com/mokahlo/wattplot
 - 1 × Sunapex 10A MPPT
 - 1 × ECO-WORTHY 10W panel
 - 1 × 12V 7Ah LiFePO4 battery
-- 1 × ESP32-C3 dev board
+- 1 × ESP32-S3 DevKitC-1 (N16R8, 16 MB flash / 8 MB PSRAM)
 - 1 × BMI160 IMU
 - 1 × INA219
 - 3 × DS18B20
 - 1 × capacitive soil sensor
-- 1 × 12V solenoid (NC) + relay
+- 1 × 12V solenoid (NC) + DRV8871 H-bridge driver (replaces the old 5V relay)
 - 16 × #6 × 1.5" wood screws
 -  8 × #6 × 1" wood screws
 -  4 × M8 × 1.5" bolts
@@ -59,8 +64,8 @@ github.com/mokahlo/wattplot
 6. Mount panel (4 mid-clamps)
 7. Kickstand mounts + actuator
 8. Wire panel → MPPT → battery
-9. Wire controller (ESP32, IMU, INA219, sensors)
-10. Flash ESPHome (`firmware/wattplot.yaml`)
+9. Wire controller (ESP32-S3, IMU, INA219, sensors, DRV8871)
+10. Flash ESPHome (`firmware/wattplot.yaml` v3.2)
 11. Calibrate IMU
 12. Add watering system
 13. Fill + plant

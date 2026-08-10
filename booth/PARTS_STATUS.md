@@ -1,46 +1,60 @@
-# Mini v2.4, Parts Status & Order-Now List
+# Mini v2.4, Parts Status & Build Tracker
 
-**Target:** Working Mini v2.4, fully assembled, on the booth table by
-**Aug 5** (week 2). The faire is Sept 25, 64 days from project start,
-and the build is the critical path.
+**Target:** Working Mini v2.4, fully assembled, on the booth table.
+Faire: **Sept 25–27, 2026** (47 days from 2026-08-09).
 
-> **Status as of 2026-07-23:** Some parts ordered, more to go. Items
-> below are split into "on hand / confirmed ordered" and "order this
-> week." Confirm against your own records before ordering.
+> **Status as of 2026-08-09 (W3 of 9):** Mini v2.4 build is on the
+> bench. Calibrating IMU and running closed-loop tilt tests. Original
+> electronics list (below) is kept as a record of what shipped. **The
+> controller row was updated to ESP32-S3 in W3** — the v3.2 ESPHome
+> firmware dropped C3 support, so anything you build fresh needs the
+> S3 DevKitC-1. PCB v3 (a custom carrier that replaces the Sunapex
+> + breadboard) is in development, targeting post-faire. The Mini
+> stays on the discrete-component path because it's the booth demo
+> and it has to work *now*.
 
 ## On hand / confirmed ordered (per `docs/build_guide_mini.md`)
 
-These were the original order list. **Verify you actually have them.**
-
-- [ ] 12V 7Ah LiFePO4 battery (with BMS)
-- [ ] 100mm (3.94") stroke 12V linear actuator, 70N
-- [ ] ESP32-C3 PRO Mini dev board (or any ESP32)
-- [ ] ECO-WORTHY 10W 12V solar panel, 13.3" × 8.1"
+- [x] 12V 7Ah LiFePO4 battery (with BMS) — installed
+- [x] 100mm (3.94") stroke 12V linear actuator, 70N — installed
+- [x] ESP32-S3 DevKitC-1 (N16R8) — installed (sub for the original C3)
+- [x] ECO-WORTHY 10W 12V solar panel, 13.3" × 8.1" — installed
 
 ## Order this week, electronics (Amazon + Mouser, ~3-5 day shipping)
 
-| Qty | Item | Source | ~Cost | Why |
-|---|---|---|---|---|
-| 1 | **Sunapex 10A MPPT** charge controller, IP67, LiFePO4-aware | Amazon | $25 | Replaces the CN3791 (incompatible with 12V LiFePO4) |
-| 1 | BMI160 IMU breakout | Mouser | $2 | Tilt feedback (closed loop) |
-| 1 | INA219 current sensor breakout | Mouser | $2 | Battery / panel current |
-| 3 | DS18B20 waterproof temperature sensor (5-pack) | Amazon | $11 | Panel, soil, battery temp |
-| 1 | Capacitive soil moisture sensor V1.2 (5-pack) | Amazon | $9 | Soil water content |
-| 1 | Breadboard or perfboard | Amazon | $5 | Wiring |
-| 1 | USB-C cable | Amazon | $3 | ESP32 programming |
-| 1 | 12V DC normally-closed solenoid valve, 1/4" barb | Amazon | $10 | Watering system |
-| 1 | 1-channel 5V relay module, low-level trigger | Amazon | $4 | ESP32 → solenoid |
-| 1 | Pressure regulator 5-30 PSI, 1/4" NPT | Amazon | $10 | Safe drip pressure |
-| 10 ft | 1/4" vinyl tubing (food-safe) | Amazon | $8 | Drip line |
-| 1 | Pressure-compensating drip emitter, 2 GPH | Amazon | $5 | Dripper |
-| 2 | 1/4" tubing barb fittings | Amazon | $3 | Solenoid connections |
-| 1 | 1/4" cold-water tee, brass | Home Depot | $3 | Tap-line tee |
-| 4 | Zip ties | Home Depot | $2 | Tubing |
-| ~30 | Jumper wires (M-F, M-M, F-F) | Amazon | $3 | Prototyping |
-| 1 | 1.5" butt hinges w/ ⅜" pin (2-pack) | Home Depot | $6 | Frame to bed hinge |
-| 1 | ⅜" × 22" steel rod (continuous hinge pin) | Home Depot | $3 | Hinge pin |
-| 4 | 1" aluminum mid-clamps for 18mm panel channel | Amazon | $8 | Panel mounting |
-| 2 | ⅜" clevis pins + cotter pins | Hardware | $2 | Actuator mount |
+> **As of 2026-08-09:** all items below were received in W1–W2 and
+> are installed in the bench build, with the following substitutions
+> relative to the original order:
+>
+> - **ESP32-S3 DevKitC-1** in place of the planned ESP32-C3 (W3
+>   sub — required by the v3.2 ESPHome firmware)
+> - **DRV8871 H-bridge carrier** in place of the 5V relay (W3
+>   sub — required for direction-controlled actuator; relay was
+>   single-direction and the v3 firmware uses both polarities
+>   for current-based homing)
+
+| Qty | Item | Source | ~Cost | Why | Status |
+|---|---|---|---|---|---|
+| 1 | **Sunapex 10A MPPT** charge controller, IP67, LiFePO4-aware | Amazon | $25 | Replaces the CN3791 (incompatible with 12V LiFePO4) | installed |
+| 1 | BMI160 IMU breakout | Mouser | $2 | Tilt feedback (closed loop) | installed |
+| 1 | INA219 current sensor breakout | Mouser | $2 | Battery / panel current | installed |
+| 3 | DS18B20 waterproof temperature sensor (5-pack) | Amazon | $11 | Panel, soil, battery temp | installed |
+| 1 | Capacitive soil moisture sensor V1.2 (5-pack) | Amazon | $9 | Soil water content | installed |
+| 1 | Breadboard or perfboard | Amazon | $5 | Wiring | installed (W3 → replaced by PCB v3 prototype once available) |
+| 1 | USB-C cable | Amazon | $3 | ESP32 programming | installed |
+| 1 | 12V DC normally-closed solenoid valve, 1/4" barb | Amazon | $10 | Watering system | installed |
+| 1 | ~~1-channel 5V relay module~~ → **DRV8871 H-bridge carrier** | Amazon | $5 | ESP32 → solenoid (bidirectional for current homing) | installed (W3 sub) |
+| 1 | Pressure regulator 5-30 PSI, 1/4" NPT | Amazon | $10 | Safe drip pressure | installed |
+| 10 ft | 1/4" vinyl tubing (food-safe) | Amazon | $8 | Drip line | installed |
+| 1 | Pressure-compensating drip emitter, 2 GPH | Amazon | $5 | Dripper | installed |
+| 2 | 1/4" tubing barb fittings | Amazon | $3 | Solenoid connections | installed |
+| 1 | 1/4" cold-water tee, brass | Home Depot | $3 | Tap-line tee | installed |
+| 4 | Zip ties | Home Depot | $2 | Tubing | installed |
+| ~30 | Jumper wires (M-F, M-M, F-F) | Amazon | $3 | Prototyping | installed |
+| 1 | 1.5" butt hinges w/ ⅜" pin (2-pack) | Home Depot | $6 | Frame to bed hinge | installed |
+| 1 | ⅜" × 22" steel rod (continuous hinge pin) | Home Depot | $3 | Hinge pin | installed |
+| 4 | 1" aluminum mid-clamps for 18mm panel channel | Amazon | $8 | Panel mounting | installed |
+| 2 | ⅜" clevis pins + cotter pins | Hardware | $2 | Actuator mount | installed |
 
 **Electronics + watering + hardware subtotal: ~$124**
 
@@ -65,15 +79,27 @@ These were the original order list. **Verify you actually have them.**
 
 **~$151** (plus tax, plus shipping)
 
-## Order timing
+## Order timing (historical — for the W1 order)
 
-| Today (Jul 23) | Action |
-|---|---|
-| Tonight | Walk the list above. Cross off what you already have. |
-| Tomorrow | Place the Amazon + Mouser orders. |
-| Tomorrow | Drive to Home Depot for lumber + brass tee + hinges. |
-| Sat/Sun | All parts in hand. Begin build. |
-| By end of W2 (Aug 5) | Mini v2.4 assembled, on the table, talking to the laptop. |
+| Today (Jul 23) | Action | Actual |
+|---|---|---|
+| Tonight | Walk the list above. Cross off what you already have. | done |
+| Tomorrow | Place the Amazon + Mouser orders. | done (W1) |
+| Tomorrow | Drive to Home Depot for lumber + brass tee + hinges. | done (W1) |
+| Sat/Sun | All parts in hand. Begin build. | done (W2 weekend) |
+| By end of W2 (Aug 5) | Mini v2.4 assembled, on the table, talking to the laptop. | done (Aug 4) |
+
+## Current phase (W3, 2026-08-09)
+
+- **Build:** assembled, on the bench, talking to the laptop.
+- **Tuning:** calibrating IMU, verifying closed-loop tilt against
+  the 0–35° range, validating the soil-moisture dry/wet trigger
+  thresholds against `docs/test_checklist.md` Phase A.
+- **Risk:** the bench MPPT (Sunapex) is a known-good part; the
+  DRV8871 swap (W3) needs a current-limit sanity check before
+  the 70N actuator is connected for the first time in-circuit.
+- **Booth collateral:** cards and poster (W4). One-pager, FAQ,
+  demo script in `docs/` are up to date.
 
 ## Build sequence (full guide in `docs/build_guide_mini.md`)
 
@@ -92,13 +118,16 @@ These were the original order list. **Verify you actually have them.**
 
 ## Firmware note
 
-The Mini uses the same `firmware/wattplot.yaml` as the full-size, but
-verify the pin map. The Mini's actuator is much lighter (70N vs 330 lbf
-full-size) and the IMU offset will be different. The `control_law.md`
-constants (I_safe, deadband) need to be re-tuned.
+The Mini uses the same `firmware/wattplot.yaml` v3.2 as the full-size
+(ESP32-S3-DevKitC-1, GPIO6/7/10/12/16, DRV8871 for the actuator +
+solenoid). Verify the pin map against `docs/pinmap.html` before
+wiring — the v2.x C3-era pinouts are stale and won't compile. The
+Mini's actuator is much lighter (70N vs 330 lbf full-size) and the
+IMU offset will be different. The `control_law.md` constants
+(I_safe, deadband) need to be re-tuned for the smaller actuator.
 
-A separate `firmware/wattplot_mini.yaml` is on the to-do list for after
-the booth if we have time.
+A separate `firmware/wattplot_mini.yaml` is on the to-do list for
+after the booth if we have time.
 
 ## What NOT to do
 

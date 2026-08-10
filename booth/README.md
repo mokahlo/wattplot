@@ -1,10 +1,14 @@
 # Wattplot, Maker Faire Bay Area 2026, Booth Package
 
-> **Show:** Sept 25–27, 2026 (Fri–Sun), 64 days from project start.
+> **Show:** Sept 25–27, 2026 (Fri–Sun), 47 days from today (2026-08-09).
 > **Venue:** Historic Mare Island Naval Shipyard, Vallejo CA.
 > **Booth:** 10×10 ft (typical BA Faire Maker space).
 > **Demo shape:** Working Mini v2.4 on a table, 24" live-sim screen next to it,
 >   printed poster, take-home cut-list cards.
+>
+> **Project week: W3 of 9.** Mini is built and on the bench. Calibrating
+> IMU + running closed-loop tilt tests this week. Collateral (poster,
+> cards) prints W4. Dry runs W5–W7. Travel/pack W8. Final fixes W9.
 
 ## Why this booth
 
