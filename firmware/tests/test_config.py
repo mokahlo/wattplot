@@ -139,6 +139,7 @@ REQUIRED_IDS = [
     "frost_warm_above_c",
     "frost_max_runtime_min",
     "frost_min_battery_soc",
+    "frost_forecast_threshold_c",
     # Switches / outputs / binary sensors
     "grow_light_relay",
     "hb_in1_sw",
@@ -172,6 +173,7 @@ REQUIRED_IDS = [
     "g_frost_sensor_error",
     "g_frost_watchdog_trips",
     "g_frost_state",
+    "g_nws_min_temp_tonight",
     "is_night_flag",
     # v3.1: current-spike endstop flags that replaced the limit switches.
     "g_at_zero",

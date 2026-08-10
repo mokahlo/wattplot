@@ -64,6 +64,75 @@ would oscillate every tick.
 The deadband is asymmetric (4°C threshold, 6°C warm_above) so the
 load has hysteresis even on slow temperature trends.
 
+## Forecast preheat (NWS)
+
+The `nws_poll` script runs every 15 min and pulls the NWS
+forecast for the wattplot's gridpoint (Phoenix
+PSR/153,87). The frost tick consumes the forecast and engages
+the load **before** the sensors say cold — saves the heater's
+first hour of warmup.
+
+### How it works
+
+Every 60 s, the tick computes:
+
+```
+forecast_preheat = (
+    NWS poll is fresh (< 4 h old)
+    AND forecast_min_tonight < frost_forecast_threshold_c
+)
+```
+
+If `forecast_preheat` is true:
+
+- **Engage**: turn ON the load, even if current sensors are warm.
+- **Hold**: keep the load ON overnight, even when the afternoon
+  hysteresis arm would release. The forecast committed us to a
+  cold night, so we don't release just because it's 7°C at 6 pm.
+- **Subject to**: Mode select (off when `Frost Mode = Off`),
+  battery floor, watchdog. Forecast does NOT bypass the
+  battery floor — a wrong forecast shouldn't kill the pack.
+
+### Why the hysteresis arm is suppressed
+
+A typical scenario: it's 6 pm, the soil is 7°C (above
+`warm_above = 6°C`), and the forecast says 0°C tonight. Without
+the forecast arm, the hysteresis would release the heater (both
+temps > 6°C). Then when temps drop to 4°C at 1 am, the sensor
+arm engages, but the heater takes 30+ minutes to warm up the
+bed. Plants are already cold by then.
+
+With the forecast arm, the heater stays on from 6 pm through
+morning, holding the bed at a warmer temperature. The preheat is
+the entire point of consuming the forecast.
+
+### Stale-forecast handling
+
+NWS updates forecasts roughly every 6 hours. A poll that's
+older than 4 hours is considered stale and ignored. This
+prevents the preheat from running on day-old data (the
+forecast was for yesterday's overnight, not tonight's).
+
+A failing NWS poll leaves the previous forecast value intact
+(rather than clearing it). Better to act on stale data than
+on no data.
+
+### Sensors broken? Forecast still works.
+
+If both DS18B20s return NaN, the sensor-error path normally
+force-off. **But** if the forecast is preheating, the tick
+drives the load on the forecast alone. The weather outside
+doesn't care about our wiring — and the user is more likely
+to be troubleshooting the sensors in the morning than in a
+cold snap, so the forecast keeps things running until they
+can fix the sensor.
+
+### Disable forecast preheat
+
+Set `Frost Forecast Threshold (°C)` to -100. The comparison
+`forecast < threshold` is then always false, and the preheat
+arm never fires. The tick falls back to sensor-only logic.
+
 ## Hardware
 
 The firmware does NOT include the relay or the load. The ESP32
@@ -150,6 +219,7 @@ plants.
 | `Frost Warm-Above (°C)` | 6.0 | 0 to 15 | Above this (both) → turn OFF |
 | `Frost Max Runtime (min)` | 30 | 5 to 240 | Watchdog force-off |
 | `Frost Min Battery SOC (%)` | 50 | 10 to 80 | Force off below this |
+| `Frost Forecast Threshold (°C)` | 2.0 | -20 to 10 | NWS forecast preheat trigger |
 
 ## Frost State text sensor
 
@@ -189,11 +259,12 @@ from HA and the tick will leave them alone. Useful for:
 
 ## Limitations
 
-- **No forecast awareness yet.** The tick reacts to current
-  sensor readings, not the NWS forecast. The `nws_poll_interval`
-  does pull the forecast (wind + rain) every 15 min but the frost
-  automation doesn't read those globals. A "preheat if NWS says
-  < 0°C tonight" feature is a clean follow-on.
+- **NWS forecast errors cost the battery.** The forecast is
+  sometimes wrong. If NWS says -5°C and the actual low is +2°C,
+  the heater runs for hours for nothing. The watchdog caps this
+  at `frost_max_runtime_min` (default 30). For overnight
+  preheat, raise the max to 480 (8h) or 600 (10h) — see
+  the watchdog section above.
 - **No flat-panel-on-frost optimization.** At 35° tilt the
   panel shades most of the bed, which slows solar heating the
   next morning. The frost tick doesn't change tilt; the user
@@ -207,25 +278,38 @@ from HA and the tick will leave them alone. Useful for:
 ## Tests
 
 `firmware/tests/test_frost_state.py` ports the C++ lambda to
-Python and pins the behavior with 31 tests:
+Python and pins the behavior with 45 tests:
 
 - Mode select (Off / Heater / Grow Light / Both)
 - Threshold + hysteresis logic
+- Forecast preheat (engages, holds against hysteresis, ignores
+  stale forecasts, respects battery floor and mode gating,
+  drives load with sensors broken, subjected to watchdog)
 - NaN guards (single + both sensors)
 - Battery floor (low SOC, NaN SOC, at-floor)
 - Watchdog (under, at, over, per-output independence)
 - End-to-end overnight cycle, cold snap with sensor dropout,
   battery-during-event
 
+`firmware/tests/test_nws_parser.py` ports the C++ JSON parser
+in the `nws_poll` script and pins the behavior with 15 tests:
+
+- Wind speed extraction (basic, range, max across periods,
+  missing field)
+- Rain forecast detection (Rain, Showers, no rain, partial
+  match quirk)
+- Min temp extraction (first overnight, subsequent ignored,
+  no overnight in 12 periods, missing isDaytime quirk)
+
 Run with:
 
 ```bash
-pytest firmware/tests/test_frost_state.py -v
+pytest firmware/tests/test_frost_state.py firmware/tests/test_nws_parser.py -v
 ```
 
 The wattplot.yaml is the source of truth — if you change the C++
-in the `frost_tick` lambda, update the Python port and add a
-test for the new behavior.
+in the `frost_tick` lambda or `nws_poll` script, update the
+Python port and add a test for the new behavior.
 
 ## Wiring up the canopy sensor (third DS18B20)
 

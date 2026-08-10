@@ -1290,6 +1290,22 @@ number:
     initial_value: "50"
     optimistic: true
     restore_value: true
+  # v3.3: NWS forecast preheat. If the forecast low for tonight
+  # is below this value, the frost_tick engages the load BEFORE
+  # the sensors say "cold" — saves the heater's first hour of
+  # warmup. Set higher than frost_soil_threshold_c to preheat
+  # earlier (and longer); set to -100 to disable forecast preheat.
+  # Default 2.0°C = preheat whenever the forecast says it'll
+  # drop below 2°C tonight, regardless of current sensor reading.
+  - platform: template
+    id: frost_forecast_threshold_c
+    name: "Frost Forecast Threshold (°C)"
+    min_value: -20.0
+    max_value: 10.0
+    step: 0.5
+    initial_value: "2.0"
+    optimistic: true
+    restore_value: true
 
 # ===== State machine =====
 select:
@@ -1398,6 +1414,21 @@ globals:
   - id: g_nws_last_poll_ms
     type: int
     initial_value: "0"
+    restore_value: false
+  # ===== v3.3: Frost forecast preheat =====
+  # NWS forecast low temperature for the current/next overnight
+  # period. Extracted by nws_poll from the first non-daytime
+  # period in the forecast. The frost_tick uses this to preheat
+  # BEFORE the sensors say "cold" — saves the heater's first
+  # hour of warmup.
+  #
+  # initial_value = 999.0 means "no forecast yet" — high enough
+  # that the comparison `forecast < threshold` is always false,
+  # so the forecast arm never triggers until the first NWS
+  # poll lands.
+  - id: g_nws_min_temp_tonight
+    type: float
+    initial_value: "999.0"
     restore_value: false
   - id: g_state_entered_ms
     type: int
@@ -1810,6 +1841,14 @@ script:
                   json::parse_json(body, [](JsonObject root) -> bool {
                     float max_wind = 0.0;
                     bool rain = false;
+                    // v3.3: extract tonight's forecast low. NWS periods
+                    // are 12-hour blocks; the FIRST non-daytime period
+                    // in the forecast is always the current/next
+                    // overnight low. `temperature` is the forecast
+                    // temperature for that period (high for daytime,
+                    // low for overnight).
+                    float min_temp = 999.0;
+                    bool found_overnight = false;
                     for (int i = 0; i < 12 && i < root["properties"]["periods"].size(); i++) {
                       const char* ws = root["properties"]["periods"][i]["windSpeed"];
                       const char* fc = root["properties"]["periods"][i]["shortForecast"];
@@ -1821,11 +1860,34 @@ script:
                       if (fc != nullptr && (strstr(fc, "Rain") != nullptr || strstr(fc, "Showers") != nullptr)) {
                         rain = true;
                       }
+                      // Look for the first non-daytime period — its
+                      // temperature is tonight's forecast low. NWS
+                      // stores isDaytime as a bool; the JSON parser
+                      // returns it as a JsonVariant; we check truthiness.
+                      if (!found_overnight) {
+                        bool is_daytime = root["properties"]["periods"][i]["isDaytime"];
+                        if (!is_daytime) {
+                          const char* t = root["properties"]["periods"][i]["temperature"];
+                          if (t != nullptr) {
+                            min_temp = atof(t);
+                            found_overnight = true;
+                          }
+                        }
+                      }
                     }
                     id(g_nws_max_wind_mph) = max_wind;
                     id(g_nws_rain_forecast) = rain;
+                    if (found_overnight) {
+                      id(g_nws_min_temp_tonight) = min_temp;
+                    }
+                    // else: leave the previous forecast value alone.
+                    // A poll that returns no overnight period (rare)
+                    // doesn't clear the cached forecast — better to
+                    // act on stale data than on no data.
                     id(g_nws_last_poll_ms) = millis();
-                    ESP_LOGI("nws", "max wind=%.0f mph, rain=%d", max_wind, rain);
+                    ESP_LOGI("nws", "max wind=%.0f mph, rain=%d, min tonight=%.1f°C",
+                             max_wind, rain,
+                             found_overnight ? min_temp : -999.0);
                     return true;
                   });
 
@@ -2257,6 +2319,29 @@ interval:
           int min_soc = (int)id(frost_min_battery_soc).state;
           bool soil_bad = isnan(soil);
           bool canopy_bad = isnan(canopy);
+          // ---- v3.3: NWS forecast preheat ----
+          // If the NWS forecast for tonight is cold (below
+          // frost_forecast_threshold_c) and the forecast is fresh
+          // (< 4h old), engage the load BEFORE the sensors say cold.
+          // Saves the heater's first hour of warmup. The preheat
+          // arm also blocks the hysteresis release — once we
+          // commit to a cold night, we hold the load on through
+          // the warm afternoon.
+          float forecast_th = id(frost_forecast_threshold_c).state;
+          float forecast_min = id(g_nws_min_temp_tonight);
+          unsigned long last_poll_ms = id(g_nws_last_poll_ms);
+          bool forecast_fresh = false;
+          if (last_poll_ms != 0) {
+            unsigned long age_ms = millis() - last_poll_ms;
+            // 4h = 14,400,000 ms. NWS updates every ~6h so anything
+            // older is suspect.
+            if (age_ms < 4UL * 3600UL * 1000UL) {
+              forecast_fresh = true;
+            }
+          }
+          bool forecast_preheat = forecast_fresh
+                                  && !isnan(forecast_min)
+                                  && forecast_min < forecast_th;
           // ---- Mode "Off": both switches off, exit ----
           if (strcmp(mode, "Off") == 0) {
             if (id(frost_heater_sw).state) id(frost_heater_sw).turn_off();
@@ -2264,11 +2349,12 @@ interval:
             id(g_frost_state) = "Off";
             return;
           }
-          // ---- Sensor error path ----
-          // If BOTH temps are bad we can't make a decision. Latch
-          // the error and force off; the next tick with at least
-          // one valid reading clears the latch.
-          if (soil_bad && canopy_bad) {
+          // ---- Sensor error path: BOTH NaN ----
+          // If BOTH temps are bad AND no forecast, we have no
+          // signal at all. Latch the error and force off. If
+          // forecast is preheating, drive on the forecast alone —
+          // the weather outside doesn't care about our wiring.
+          if (soil_bad && canopy_bad && !forecast_preheat) {
             if (!id(g_frost_sensor_error)) {
               ESP_LOGE("frost", "Both temp sensors NaN — disabling frost");
               id(g_frost_sensor_error) = true;
@@ -2278,15 +2364,27 @@ interval:
             id(g_frost_state) = "Sensor error";
             return;
           }
+          if (soil_bad && canopy_bad && forecast_preheat) {
+            // Sensors bad but forecast says cold — fall back to
+            // forecast. Don't latch sensor_error (we have a valid
+            // signal: the forecast).
+            if (id(g_frost_sensor_error)) {
+              ESP_LOGW("frost", "Sensors bad, falling back to NWS forecast preheat");
+              id(g_frost_sensor_error) = false;
+            }
+          }
           // One sensor recovered — clear the latch.
-          if (id(g_frost_sensor_error)) {
+          if (id(g_frost_sensor_error) && (!soil_bad || !canopy_bad)) {
             ESP_LOGW("frost", "Temp sensors recovered");
             id(g_frost_sensor_error) = false;
           }
           // ---- Battery floor check ----
           // Force-off if SOC is known and below floor. NaN SOC
-          // (no recent INA219 read) is treated as "assume low"
-          // so we don't run a heater blindly overnight.
+          // (no recent INA219 read) is treated as "assume low" so
+          // we don't run a heater blindly overnight. The forecast
+          // preheat does NOT bypass this — a forecast can be
+          // wrong, and a depleted pack that can't be recharged is
+          // worse than a few frozen plants.
           bool battery_low = (isnan(soc) || soc < (float)min_soc);
           if (battery_low) {
             if (id(frost_heater_sw).state || id(frost_grow_light_sw).state) {
@@ -2305,40 +2403,51 @@ interval:
           //   - soil_bad: ignore soil (canopy-only mode)
           //   - canopy_bad: ignore canopy (soil-only mode)
           //   - both valid: standard OR rule
-          // The hysteresis arm turns OFF when BOTH temps are above
-          // warm_above. We use the same NaN-tolerant logic.
+          //   - forecast_preheat: engage (or hold) regardless of
+          //     current sensor readings. The preheat arm also
+          //     blocks the hysteresis release — once committed to
+          //     a cold night, we hold through the warm afternoon.
           bool want_on_heater = false;
           bool want_on_light = false;
           auto compute_want = [&](bool is_on, bool bad_a, bool bad_b,
                                   float a, float b,
-                                  float th_a, float th_b, float warm) -> bool {
+                                  float th_a, float th_b, float warm,
+                                  bool preheat) -> bool {
             if (is_on) {
-              // Currently ON: turn OFF only when BOTH temps are above
-              // warm_above (and at least one of them is valid).
+              // Currently ON: turn OFF only when (a) BOTH valid
+              // temps are above warm_above, AND (b) forecast is
+              // not preheating. The preheat arm holds the relay
+              // on overnight even when afternoon temps are warm.
               bool a_warm = bad_a || a > warm;
               bool b_warm = bad_b || b > warm;
-              return !(a_warm && b_warm);
+              bool sensor_released = a_warm && b_warm;
+              return !(sensor_released && !preheat);
             }
-            // Currently OFF: turn ON if EITHER valid temp is below
-            // its threshold. If only one sensor is valid, use it
-            // (it counts as both below and above as needed).
+            // Currently OFF: turn ON if (a) EITHER valid temp is
+            // below its threshold, OR (b) forecast is preheating.
             bool a_cold = !bad_a && a < th_a;
             bool b_cold = !bad_b && b < th_b;
-            return a_cold || b_cold;
+            return a_cold || b_cold || preheat;
           };
           want_on_heater = compute_want(
               id(frost_heater_sw).state,
               soil_bad, canopy_bad,
               soil, canopy,
-              soil_th, canopy_th, warm_above);
+              soil_th, canopy_th, warm_above,
+              forecast_preheat);
           want_on_light = compute_want(
               id(frost_grow_light_sw).state,
               soil_bad, canopy_bad,
               soil, canopy,
-              soil_th, canopy_th, warm_above);
+              soil_th, canopy_th, warm_above,
+              forecast_preheat);
           // Mask by mode select.
           if (!heater_enabled)     want_on_heater = false;
           if (!grow_light_enabled) want_on_light  = false;
+          if (forecast_preheat && (want_on_heater || want_on_light)) {
+            ESP_LOGI("frost", "NWS preheat: min tonight %.1f°C < threshold %.1f°C",
+                     forecast_min, forecast_th);
+          }
           // ---- Watchdog enforcement ----
           // If a switch is on and the elapsed time exceeds the
           // max-runtime limit, force it off. This is the "stuck
