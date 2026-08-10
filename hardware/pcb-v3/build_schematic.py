@@ -479,6 +479,83 @@ def pin_pos(cache, lib_id, pin_num, instance_x, instance_y, angle=0):
 
 
 # ----------------------------------------------------------------------------
+# Subsystem: Sensor interfaces (1-Wire, soil moisture, panel temp)
+# ----------------------------------------------------------------------------
+#
+# External sensor connectors:
+#   J5  3-pin JST-XH 1-Wire bus   (GND, DATA, 3V3) — DS18B20 chain
+#   J6  3-pin JST-XH soil sensor (GND, AOUT, 3V3) — capacitive moisture
+#   4.7kΩ pull-up from DATA to 3V3 (required for 1-Wire)
+
+def place_sensors(sch: Schematic, cache: SymbolCache, x0=750, y0=200):
+    """1-Wire (DS18B20) + soil moisture sensor interfaces."""
+    jst_id   = LIB["jst_xh_3"]
+    res_id   = LIB["res"]
+
+    def pp(lib, num, x, y):
+        p = pin_pos(cache, lib, num, x, y)
+        if p is None:
+            raise RuntimeError(f"no pin {num} on {lib}")
+        return p
+
+    def lbl(net, pos, shape="bidirectional"):
+        sch.add(make_global_label(net, pos[0], pos[1], shape))
+
+    # J5: 1-Wire connector (3 pins: GND=1, DATA=2, 3V3=3)
+    j5_x, j5_y = x0, y0
+    sch.reference(jst_id)
+    sch.add(make_symbol_instance(
+        jst_id, "J5", "1-WIRE",
+        "Connector_JST:JST_XH_B3B-PH-K_1x03_P2.50mm_Vertical", j5_x, j5_y
+    ))
+    j5_p1 = pp(jst_id, '1', j5_x, j5_y)  # GND
+    j5_p2 = pp(jst_id, '2', j5_x, j5_y)  # DATA
+    j5_p3 = pp(jst_id, '3', j5_x, j5_y)  # 3V3
+
+    lbl("GND", j5_p1)
+    lbl("DS18B20_DATA", j5_p2)
+    lbl("+3V3", j5_p3)
+
+    # 4.7kΩ pull-up resistor on DATA to 3V3 (placed above the connector)
+    r_x, r_y = x0, y0 - 18
+    sch.reference(res_id)
+    sch.add(make_symbol_instance(
+        res_id, "R12", "4.7k",
+        "Resistor_SMD:R_0603_1608Metric", r_x, r_y
+    ))
+    r_top = pp(res_id, '1', r_x, r_y)  # top of resistor (connects to 3V3)
+    r_bot = pp(res_id, '2', r_x, r_y)  # bottom (connects to DATA)
+
+    # Wire from DATA (j5_p2) up to r_bot
+    sch.add(make_wire(j5_p2[0], j5_p2[1], j5_p2[0], r_bot[1]))
+    sch.add(make_wire(j5_p2[0], r_bot[1], r_bot[0], r_bot[1]))
+    sch.add(make_junction(j5_p2[0], r_bot[1]))
+    # Wire from r_top to 3V3 (j5_p3)
+    sch.add(make_wire(r_top[0], r_top[1], r_top[0], j5_p3[1]))
+    sch.add(make_wire(r_top[0], j5_p3[1], j5_p3[0], j5_p3[1]))
+    sch.add(make_junction(r_top[0], j5_p3[1]))
+
+    # J6: Soil moisture connector (3 pins: GND=1, AOUT=2, 3V3=3)
+    j6_x, j6_y = x0, y0 + 50
+    sch.reference(jst_id)
+    sch.add(make_symbol_instance(
+        jst_id, "J6", "SOIL",
+        "Connector_JST:JST_XH_B3B-PH-K_1x03_P2.50mm_Vertical", j6_x, j6_y
+    ))
+    j6_p1 = pp(jst_id, '1', j6_x, j6_y)  # GND
+    j6_p2 = pp(jst_id, '2', j6_x, j6_y)  # AOUT
+    j6_p3 = pp(jst_id, '3', j6_x, j6_y)  # 3V3
+
+    lbl("GND", j6_p1)
+    lbl("SOIL_AOUT", j6_p2)
+    lbl("+3V3", j6_p3)
+
+    # Annotation
+    sch.add(make_text("Sensor interfaces (J5 1-Wire, J6 soil)",
+                      x0 - 20, y0 - 40, size=1.8))
+
+
+# ----------------------------------------------------------------------------
 # Subsystem: 2x INA219 current/power monitors
 # ----------------------------------------------------------------------------
 #
@@ -1459,6 +1536,7 @@ def main():
     place_esp32_s3(sch, cache)
     place_drv8871s(sch, cache)
     place_ina219s(sch, cache)
+    place_sensors(sch, cache)
     sch.save(SCH_PATH)
     print(f"\n[sch] wrote {SCH_PATH}")
 
