@@ -35,6 +35,8 @@ table is at the top of `wattplot.yaml`.
 | **Soil moisture** (capacitive) | ADC1_CH6 | GPIO6 |
 | **Battery V** (100k / 10k divider, ×11.0) | ADC1_CH7 | GPIO7 |
 | **Status LED** (monochromatic, LEDC) | output | GPIO17 (compat-only, removed from rev B schematic) |
+| **Frost heater** (relay drive, v3.3) | GPIO | GPIO39 (relay coil required) |
+| **Frost grow light** (relay drive, v3.3) | GPIO | GPIO40 (relay coil required) |
 
 **Reserved / unused (do not reassign):** GPIO 19, 20 (native USB);
 GPIO 26–32 (SPI flash on the WROOM module); GPIO 33–37 (PSRAM on the
@@ -82,6 +84,7 @@ All driven from a single YAML file (`wattplot.yaml`):
 | `energy_integration` | 1 s | Sums panel V × I → `Energy Today`, `Energy Total`. |
 | `endpoint_detector` | 100 ms | Looks for the IPROPI current spike that signals end-of-travel. |
 | `grow_light_tick` | 60 s | Auto-water logic (the "grow light" name was retained from when this drove a light; the load is now a 12 V solenoid valve). |
+| `frost_tick` | 60 s | v3.3 frost protection: reads soil + canopy temps, applies threshold/hysteresis/watchdog/battery-floor, drives `frost_heater_sw` and/or `frost_grow_light_sw` per `Frost Mode`. See [`../docs/frost_protection.md`](../docs/frost_protection.md). |
 | `alive_tick` | 5 s | DEBUG ping only (does not gate actuation). |
 
 State machine and tuning constants are exposed in Home Assistant as

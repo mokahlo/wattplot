@@ -132,6 +132,25 @@ ENTITY_KEYS = {
     "Free Memory":                2070763131,
     "MCU Temperature":            487821941,
     "Last Event":                 1381377912,
+    # ===== v3.3: Frost protection (heater + USB grow light) =====
+    # Entity keys below are PLACEHOLDERS (0). Update with the real
+    # keys after the first flash by running:
+    #   python -c "from tools.dump_state import main; main()"
+    # and copying the integer keys for each new entity into this
+    # dict. Until then the live /api/state response won't include
+    # the frost sensors — the entities are still on the device and
+    # visible to Home Assistant via the native API.
+    "Frost Mode":                 0,   # select: Off / Heater / Grow Light / Both
+    "Frost Heater":               0,   # switch (output)
+    "Frost Grow Light":           0,   # switch (output)
+    "Frost State":                0,   # text sensor (Off / Standby / Heater / Grow Light / Both / Battery low / Sensor error)
+    "Soil Temperature":           0,   # sensor (DS18B20, 5cm depth)
+    "Canopy Air Temperature":     0,   # sensor (DS18B20, in canopy)
+    "Frost Soil Threshold (°C)":  0,   # number, default 4.0
+    "Frost Canopy Threshold (°C)":0,   # number, default 2.0
+    "Frost Warm-Above (°C)":      0,   # number, default 6.0
+    "Frost Max Runtime (min)":    0,   # number, default 30
+    "Frost Min Battery SOC (%)":  0,   # number, default 50
 }
 
 BUTTON_LABELS = {"Calibrate Actuator", "Water Now"}

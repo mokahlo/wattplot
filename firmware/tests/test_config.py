@@ -93,6 +93,7 @@ REQUIRED_IDS = [
     "controller_state",
     "controller_mode",
     "grow_light_mode",
+    "frost_mode",
     "actuator_extend",
     "actuator_retract",
     "actuator_stop",
@@ -118,6 +119,8 @@ REQUIRED_IDS = [
     "battery_soc",
     "soil_moisture_raw",
     "soil_moisture_pct",
+    "soil_temperature",
+    "canopy_temperature",
     # v3 current sense (rev B): IPROPI analog taps on both DRV8871s.
     "motor_ipropi_raw",
     "motor_current_ipropi",
@@ -131,11 +134,23 @@ REQUIRED_IDS = [
     "kp_value",
     "ki_value",
     "max_step_per_sec",
+    "frost_soil_threshold_c",
+    "frost_canopy_threshold_c",
+    "frost_warm_above_c",
+    "frost_max_runtime_min",
+    "frost_min_battery_soc",
     # Switches / outputs / binary sensors
     "grow_light_relay",
     "hb_in1_sw",
     "hb_in2_sw",
     "hb_en_sw",
+    # v3.3: Frost protection (heater + USB grow light).
+    # Two parallel outputs — wire one to a 12V heating mat, the
+    # other to a 5V USB grow light, depending on what you have.
+    "frost_heater_out",
+    "frost_grow_light_out",
+    "frost_heater_sw",
+    "frost_grow_light_sw",
     # v3 (rev B) removed the limit switches — `limit_0` / `limit_90` are gone.
     # Homing is current-based; the nFAULT lines moved off the MCP23017 onto
     # direct GPIO.
@@ -152,6 +167,11 @@ REQUIRED_IDS = [
     "g_daily_dli_mol",
     "g_dli_target_mol",
     "g_energy_total_kwh",
+    "g_frost_heater_on_since_ms",
+    "g_frost_light_on_since_ms",
+    "g_frost_sensor_error",
+    "g_frost_watchdog_trips",
+    "g_frost_state",
     "is_night_flag",
     # v3.1: current-spike endstop flags that replaced the limit switches.
     "g_at_zero",
@@ -161,6 +181,9 @@ REQUIRED_IDS = [
     # Light
     "status_led",
     "status_led_pwm",
+    # Text sensors
+    "wp_last_event",
+    "wp_frost_state",
 ]
 
 
