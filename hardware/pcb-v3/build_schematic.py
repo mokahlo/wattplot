@@ -479,6 +479,106 @@ def pin_pos(cache, lib_id, pin_num, instance_x, instance_y, angle=0):
 
 
 # ----------------------------------------------------------------------------
+# Subsystem: 2x INA219 current/power monitors
+# ----------------------------------------------------------------------------
+#
+# INA219BxD pinout (extends INA219AxD):
+#   Pin 1: A1         (10.16, -2.54)   ← I2C address bit 1
+#   Pin 2: A0         (10.16, -5.08)   ← I2C address bit 0
+#   Pin 3: SDA        (10.16, 5.08)    ← I2C SDA
+#   Pin 4: SCL        (10.16, 2.54)    ← I2C SCL
+#   Pin 5: VS         (0, 10.16)       ← power supply (3.3V)
+#   Pin 6: GND        (0, -10.16)
+#   Pin 7: IN-        (-10.16, -2.54)  ← current sense -
+#   Pin 8: IN+        (-10.16, 2.54)   ← current sense +
+#
+# Wattplot wiring:
+#   U7 (0x41) INA219 panel:   measures panel V/A via solar MPPT shunt
+#   U8 (0x40) INA219 actuator: measures actuator + battery bus current
+#   Both share I2C bus (GPIO8/18 on ESP32)
+#   I2C addresses: U7 A0=VS(1), A1=GND(0) → 0x41
+#                  U8 A0=GND(0), A1=GND(0) → 0x40
+
+def place_ina219s(sch: Schematic, cache: SymbolCache, x0=600, y0=200):
+    """Two INA219 current monitors (U7 panel, U8 actuator/battery)."""
+    ina_id   = LIB["ina219"]
+    res_id   = LIB["res"]
+    cap_id   = LIB["cap"]
+
+    def pp(lib, num, x, y):
+        p = pin_pos(cache, lib, num, x, y)
+        if p is None:
+            raise RuntimeError(f"no pin {num} on {lib}")
+        return p
+
+    def place_one_ina(idx, name, ref_prefix, x, y,
+                      a0_net, a1_net, label_prefix, shunt_label):
+        """Place one INA219 + 100nF bypass cap + a virtual shunt."""
+        sch.reference(ina_id)
+        sch.add(make_symbol_instance(
+            ina_id, ref_prefix, f"INA219 ({name})",
+            "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm", x, y
+        ))
+
+        # Resolve pin positions
+        p_a1  = pp(ina_id, '1', x, y)
+        p_a0  = pp(ina_id, '2', x, y)
+        p_sda = pp(ina_id, '3', x, y)
+        p_scl = pp(ina_id, '4', x, y)
+        p_vs  = pp(ina_id, '5', x, y)
+        p_gnd = pp(ina_id, '6', x, y)
+        p_inm = pp(ina_id, '7', x, y)
+        p_inp = pp(ina_id, '8', x, y)
+
+        # 100nF VS bypass cap (right of the chip)
+        cap_x, cap_y = x + 30, y + 10
+        sch.reference(cap_id)
+        sch.add(make_symbol_instance(
+            cap_id, f"C{12+idx}", "100nF",
+            "Capacitor_SMD:C_0402_1005Metric", cap_x, cap_y
+        ))
+        c_pos = pp(cap_id, '1', cap_x, cap_y)
+        c_neg = pp(cap_id, '2', cap_x, cap_y)
+
+        # Net labels at every pin
+        def lbl(net, pos, shape="bidirectional"):
+            sch.add(make_global_label(net, pos[0], pos[1], shape))
+        lbl("+3V3",  p_vs)        # chip power
+        lbl("GND",   p_gnd)       # ground
+        lbl("I2C_SDA", p_sda)     # I2C bus
+        lbl("I2C_SCL", p_scl)     # I2C bus
+        lbl("ACT_IN+",  p_inp) if name == "ACT" else lbl("PANEL_IN+", p_inp)
+        lbl("ACT_IN-" if name == "ACT" else "PANEL_IN-", p_inm)
+        lbl(a0_net, p_a0)
+        lbl(a1_net, p_a1)
+
+        # Bypass cap: VS to GND
+        # Place label on the cap's wires (so they form a clear stub)
+        sch.add(make_wire(c_pos[0], c_pos[1], p_vs[0], c_pos[1]))
+        sch.add(make_wire(p_vs[0], c_pos[1], p_vs[0], p_vs[1]))
+        sch.add(make_junction(p_vs[0], c_pos[1]))
+        sch.add(make_wire(c_neg[0], c_neg[1], c_neg[0], y - 30))
+        lbl("GND", (c_neg[0], y - 30))
+        lbl("+3V3", (p_vs[0], c_pos[1]))  # redundant but ensures ERC sees it
+
+        # Annotation
+        sch.add(make_text(f"{shunt_label} (1mΩ)",
+                          x - 25, y - 25, size=1.0))
+
+    # U7 (panel) at (x0, y0), I2C addr 0x41 → A0=VS, A1=GND
+    place_one_ina(0, "PAN", "U7", x0, y0,
+                  a0_net="+3V3", a1_net="GND",
+                  label_prefix="PANEL", shunt_label="PV_SHUNT")
+    # U8 (actuator) at (x0, y0+100), I2C addr 0x40 → A0=GND, A1=GND
+    place_one_ina(1, "ACT", "U8", x0, y0 + 100,
+                  a0_net="GND", a1_net="GND",
+                  label_prefix="ACT", shunt_label="BATT_SHUNT")
+
+    sch.add(make_text("INA219 current monitors (U7 panel / U8 actuator+battery)",
+                      x0 - 30, y0 - 50, size=2.0))
+
+
+# ----------------------------------------------------------------------------
 # Subsystem: 2x DRV8871 H-bridges (actuator + solenoid drivers)
 # ----------------------------------------------------------------------------
 #
@@ -1358,6 +1458,7 @@ def main():
     place_power_tree(sch, cache)
     place_esp32_s3(sch, cache)
     place_drv8871s(sch, cache)
+    place_ina219s(sch, cache)
     sch.save(SCH_PATH)
     print(f"\n[sch] wrote {SCH_PATH}")
 
