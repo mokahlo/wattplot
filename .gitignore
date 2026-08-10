@@ -92,6 +92,18 @@ tools/sim_inline_*.html
 # Draft commit messages staged for `git commit -F`
 tools/commit_msg_*.txt
 
+# Test artifacts accidentally created at the repo root during dev
+# (e.g. `test_cube3.png` from a FreeCAD export). Anything matching this
+# pattern in `renders/` is already ignored by the `renders/*.png` rule
+# above; this anchors the pattern to the root only.
+/test_*.png
+
+# KiCad project exports (Gerber, SVG, ERC logs, etc.). All regenerable
+# from the .kicad_pcb / .kicad_sch. Keep the project files, not the
+# build outputs.
+hardware/*/exports/
+hardware/pcb-v3/exports/
+
 # Vendor reference PDFs (datasheets, application notes). Per-person
 # references; the canonical "where to download" list is in
 # models/freecad/parts/vendor/README.md.

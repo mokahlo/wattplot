@@ -1176,45 +1176,17 @@
     "body": "## Build checklist (final, before considering the build \"done\") - [ ] Bed is level, square, and full of soil - [ ] Frame hinges smoothly from 0\u00b0 to 90\u00b0 - [ ] Hinge pin is fully seated - [ ] Panel is firmly clamped to the frame - [ ] Actuator is mounted and pinned - [ ] IMU is reading tilt correctly - [ ] Limit switches trigger at 0\u00b0 and 90\u00b0 - [ ] Soil sensors are reading - [ ] Battery is connected and charging - [ ] Solar panel is producing power (MPPT output is 14.4V) - [ ] Microinverter is grid-tied (240 VAC out) - [ ] ESP32 is online in Home Assistant - [ ] State machine transitions are working - [ ] DLI grow light is operating correctly - [ ] All grommets are sealed - [ ] Conformal coating is applied to the PCB (optional but recommended) Build complete. Enjoy the tomatoes and the kWh."
   },
   {
-    "title": "Wattplot Mini v2.4 \u2014 Build Guide",
+    "title": "Wattplot Mini v2.4 \u2014 Physical Build Guide",
     "url": "/build_guide_mini.html",
-    "excerpt": "# Wattplot Mini v2.4 \u2014 Build Guide > STALE \u2014 written for the v2.4 / ESP32-C3 + BMI160 IMU + relay + GPIO4/5/10 architecture. Pin numbers, sensor names, and entity IDs in > this doc do not match v3.2...",
+    "excerpt": "# Wattplot Mini v2.4 \u2014 Physical Build Guide > This guide covers the physical build only \u2014 Phases 1\u20134 below > (bed, frame, panel, kickstand). The Mini's electronics moved on > with the v3.2 firmware...",
     "section": "(top)",
-    "body": "# Wattplot Mini v2.4 \u2014 Build Guide > STALE \u2014 written for the v2.4 / ESP32-C3 + BMI160 IMU + relay + GPIO4/5/10 architecture. Pin numbers, sensor names, and entity IDs in > this doc do not match v3.2 (ESP32-S3, > DRV8871 for solenoid, GPIO6/7/10/12/16). The Mini's physical > build is still described accurately here (bed, panel, kickstand > actuator), but the electronics steps (Phase 6 onward) need > cross-checking against: > > - Pin map: > - Schematic: (rev B, 2026-08-03) > - Firmware config: > - Firmware quick-start: > > A future pass will regenerate this doc against the current YAML. > Tracked in ROADMAP.md. Benchtop design-validation prototype. 18\"\u00d714\" bed, ECO-WORTHY 10W panel, 100mm kickstand linear actuator \u2014 sized to match the parts you already ordered. Tilt range: 0-35\u00b0 (limited by the kickstand geometry; matches the power-optimal range per the Phoenix sun sim). Build time: ~3-4 hours Build cost: ~$193 (new parts: Sunapex 10A MPPT, sensors, lumber, hardware, solenoid watering). Already have: $50 (battery, ESP32, actuator, panel). ---"
-  },
-  {
-    "title": "Phase 0: Order parts (Day 0, ~30 min)",
-    "url": "/build_guide_mini.html",
-    "excerpt": "## Phase 0: Order parts (Day 0, ~30 min)",
-    "section": "Wattplot Mini v2.4 \u2014 Build Guide",
-    "body": "## Phase 0: Order parts (Day 0, ~30 min)"
-  },
-  {
-    "title": "Already ordered (Saturday)",
-    "url": "/build_guide_mini.html",
-    "excerpt": "### Already ordered (Saturday) - 1 \u00d7 12V 7Ah LiFePO4 battery (BMS built-in) - 1 \u00d7 100mm (3.94\") stroke 12V linear actuator, 70N (15.7 lbf) - 1 \u00d7 ESP32-C3 PRO Mini dev board - 1 \u00d7 ECO-WORTHY 10W 12V...",
-    "section": "Phase 0: Order parts (Day 0, ~30 min)",
-    "body": "### Already ordered (Saturday) - 1 \u00d7 12V 7Ah LiFePO4 battery (BMS built-in) - 1 \u00d7 100mm (3.94\") stroke 12V linear actuator, 70N (15.7 lbf) - 1 \u00d7 ESP32-C3 PRO Mini dev board - 1 \u00d7 ECO-WORTHY 10W 12V solar panel (13.3\" \u00d7 8.1\" \u00d7 0.7\", 1.88 lb)"
-  },
-  {
-    "title": "Still need to order (one-stop)",
-    "url": "/build_guide_mini.html",
-    "excerpt": "### Still need to order (one-stop) - 1 \u00d7 Sunapex 10A MPPT charge controller (~$25, Amazon) \u2014 REPLACES the HiLetgo CN3791 you ordered (CN3791 is for 1S LiPo, not 12V LiFePO4 \u2014 incompatible with the...",
-    "section": "Phase 0: Order parts (Day 0, ~30 min)",
-    "body": "### Still need to order (one-stop) - 1 \u00d7 Sunapex 10A MPPT charge controller (~$25, Amazon) \u2014 REPLACES the HiLetgo CN3791 you ordered (CN3791 is for 1S LiPo, not 12V LiFePO4 \u2014 incompatible with the battery you have) - 2 \u00d7 1.5\" butt hinges with \u215c\" pin (~$3 ea, Home Depot) - 1 \u00d7 \u215c\" \u00d7 22\" steel rod (continuous hinge pin, ~$3, Home Depot) - 4 \u00d7 1\" aluminum mid-clamps for 18mm panel frame channel (~$2 ea, Amazon) - 1 \u00d7 BMI160 IMU breakout (~$2, Mouser) - 1 \u00d7 INA219 current sensor breakout (~$2, Mouser) - 1 \u00d7 DS18B20 waterproof temp sensor (~$3, Amazon) - 1 \u00d7 Capacitive soil moisture sensor (~$3, Amazon) - 1 \u00d7 Breadboard or perfboard + jumper wires (~$8, Amazon) - 1 \u00d7 USB-C cable (~$3, Amazon) - Fasteners: 16 \u00d7 #6 \u00d7 1.5\" wood screws, 8 \u00d7 #6 \u00d7 1\" screws, 4 \u00d7 M8 \u00d7 1.5\" stainless bolts, 8 \u00d7 5/64\" \u00d7 1\" hinge screws, 2 \u00d7 \u215c\" clevis pins"
-  },
-  {
-    "title": "Lumber (all PT DF, all from 8ft stock)",
-    "url": "/build_guide_mini.html",
-    "excerpt": "### Lumber (all PT DF, all from 8ft stock) - 1 \u00d7 1x4x8ft (bed walls: 2 long + 2 short, all from 1 board) - 2 \u00d7 1x2x8ft (1 for frame rails, 1 for skids + kickstand mount blocks) - 1 \u00d7 2x4x8ft...",
-    "section": "Phase 0: Order parts (Day 0, ~30 min)",
-    "body": "### Lumber (all PT DF, all from 8ft stock) - 1 \u00d7 1x4x8ft (bed walls: 2 long + 2 short, all from 1 board) - 2 \u00d7 1x2x8ft (1 for frame rails, 1 for skids + kickstand mount blocks) - 1 \u00d7 2x4x8ft (diagonal brace offcut) If pre-cut at the lumber yard: - 2 \u00d7 1x4 @ 18\" (long walls) - 2 \u00d7 1x4 @ 12.5\" (short walls) - 2 \u00d7 1x2 @ 18\" (long rails) - 2 \u00d7 1x2 @ 12.5\" (cross rails) - 2 \u00d7 1x2 @ 18\" (skids) - 2 \u00d7 1x2 @ 3\" (kickstand mount blocks) - 1 \u00d7 2x4 @ 21\" (diagonal brace) Total lumber cost: ~$19 ---"
+    "body": "# Wattplot Mini v2.4 \u2014 Physical Build Guide > This guide covers the physical build only \u2014 Phases 1\u20134 below > (bed, frame, panel, kickstand). The Mini's electronics moved on > with the v3.2 firmware (ESP32-C3 \u2192 ESP32-S3, 5V relay \u2192 DRV8871 > H-bridge, GPIO retuned). The electronics steps that used to live in > this file are now in the canonical references listed at the end. > > Why the split: the physical assembly hasn't changed in three > revs; the wiring has. Keeping them in one file meant every firmware > bump had to also update this build guide. Easier to keep the wood > separate from the wires. Benchtop design-validation prototype. 18\"\u00d714\" bed, ECO-WORTHY 10W panel, 100mm kickstand linear actuator. Tilt range: 0\u201335\u00b0 (limited by the kickstand geometry; matches the power-optimal range per the Phoenix sun sim). Build time: ~3\u20134 hours (physical only \u2014 add ~2 hours for electronics per the canonical references at the end). Build cost (physical only): ~$42 (lumber + hinges + clamps + fasteners). Add ~$151 for the electronics \u2014 see for the full, up-to-date order list. Lumber (all PT DF, all from 8 ft stock): - 1 \u00d7 1\u00d74\u00d78 ft (bed walls: 2 long + 2 short, all from 1 board) - 2 \u00d7 1\u00d72\u00d78 ft (1 for frame rails, 1 for skids + kickstand mount blocks) - 1 \u00d7 2\u00d74\u00d78 ft (diagonal brace offcut) Fasteners: 16 \u00d7 #6 \u00d7 1.5\" wood screws, 8 \u00d7 #6 \u00d7 1\" screws, 4 \u00d7 M8 \u00d7 1.5\" stainless bolts, 8 \u00d7 5/64\" \u00d7 1\" hinge screws, 2 \u00d7 \u215c\" clevis pins. (Full list in .) ---"
   },
   {
     "title": "Phase 1: Bed (Day 1, ~1 hour)",
     "url": "/build_guide_mini.html",
     "excerpt": "## Phase 1: Bed (Day 1, ~1 hour)",
-    "section": "Wattplot Mini v2.4 \u2014 Build Guide",
+    "section": "Wattplot Mini v2.4 \u2014 Physical Build Guide",
     "body": "## Phase 1: Bed (Day 1, ~1 hour)"
   },
   {
@@ -1242,7 +1214,7 @@
     "title": "Phase 2: Frame (Day 1, ~1 hour)",
     "url": "/build_guide_mini.html",
     "excerpt": "## Phase 2: Frame (Day 1, ~1 hour)",
-    "section": "Wattplot Mini v2.4 \u2014 Build Guide",
+    "section": "Wattplot Mini v2.4 \u2014 Physical Build Guide",
     "body": "## Phase 2: Frame (Day 1, ~1 hour)"
   },
   {
@@ -1277,7 +1249,7 @@
     "title": "Phase 3: Panel (Day 1, ~10 min)",
     "url": "/build_guide_mini.html",
     "excerpt": "## Phase 3: Panel (Day 1, ~10 min)",
-    "section": "Wattplot Mini v2.4 \u2014 Build Guide",
+    "section": "Wattplot Mini v2.4 \u2014 Physical Build Guide",
     "body": "## Phase 3: Panel (Day 1, ~10 min)"
   },
   {
@@ -1312,7 +1284,7 @@
     "title": "Phase 4: Kickstand Actuator Mount (Day 1, ~20 min)",
     "url": "/build_guide_mini.html",
     "excerpt": "## Phase 4: Kickstand Actuator Mount (Day 1, ~20 min)",
-    "section": "Wattplot Mini v2.4 \u2014 Build Guide",
+    "section": "Wattplot Mini v2.4 \u2014 Physical Build Guide",
     "body": "## Phase 4: Kickstand Actuator Mount (Day 1, ~20 min)"
   },
   {
@@ -1337,221 +1309,18 @@
     "body": "### 4.3 Mount the kickstand actuator between the pins Tools: \u215c\" clevis pin + cotter pin, rubber mallet Process: 1. The 100mm (3.94\") stroke 12V 70N (15.7 lbf) linear actuator has a \u215c\" clevis pin hole on each end (body side and rod side). 2. Pin the body-side clevis to the bottom pin (on the bed's south wall, low position). 3. Pin the rod-side clevis to the top pin (on the panel's underside bracket). 4. Use cotter pins to keep the clevis pins from sliding out. Geometry check: at 0\u00b0 panel tilt, the actuator is at its collapsed length (~5\" between pin centers). When the panel tilts up, the top pin moves up and inward, and the actuator extends by ~0.7\" to reach the 35\u00b0 tilt position. Verification: actuator is pinned at both ends. Manually extend and retract the rod \u2014 the panel should tilt up and down. Test the range: - At fully retracted rod, panel should be flat (0\u00b0) - At fully extended rod, panel should be at ~35\u00b0 tilt If the panel binds before reaching 35\u00b0, the actuator's top bracket may need to be repositioned. If the actuator doesn't have enough stroke, you've hit the geometry limit. ---"
   },
   {
-    "title": "Phase 5: Sensors and Wiring (Day 1, ~45 min)",
+    "title": "Electronics (v3.2 firmware)",
     "url": "/build_guide_mini.html",
-    "excerpt": "## Phase 5: Sensors and Wiring (Day 1, ~45 min)",
-    "section": "Wattplot Mini v2.4 \u2014 Build Guide",
-    "body": "## Phase 5: Sensors and Wiring (Day 1, ~45 min)"
+    "excerpt": "## Electronics (v3.2 firmware) The physical build is done. For the controller, sensors, and wiring, use these canonical references \u2014 the wiring chapter in this doc used to live here, but the firmware...",
+    "section": "Wattplot Mini v2.4 \u2014 Physical Build Guide",
+    "body": "## Electronics (v3.2 firmware) The physical build is done. For the controller, sensors, and wiring, use these canonical references \u2014 the wiring chapter in this doc used to live here, but the firmware has moved on (ESP32-C3 \u2192 ESP32-S3, 5V relay \u2192 DRV8871 H-bridge, GPIO retuned) and the wiring has to move with it. | Reference | What's in it | |---|---| | | Rev B (2026-08-03). 14 sections, 5 V/3.3 V power tree, dual H-bridge. The single source of truth for the controller schematic. | | | Visual diff between the schematic and the firmware. Every wire, every pin, on the ESP32-S3-DevKitC-1. | | | Cable lengths, AWG, JST pinouts, pre-power checklist. | | | DS18B20 + capacitive soil + BMI160 placement. Full-size build's guidance applies to the Mini too. | | | Flash + log-stream + MQTT quick-start. The Mini and the full-size use the same firmware. | | | The YAML itself. The v3.2 revision history is in the header comment. | | | The current parts list (W3 2026-08-09), with status of each item. The Mini's electronics list is the source of truth here, not in this build guide. |"
   },
   {
-    "title": "5.1 Install the IMU on the frame",
+    "title": "Mini-specific gotchas (read these)",
     "url": "/build_guide_mini.html",
-    "excerpt": "### 5.1 Install the IMU on the frame Follow the same principle as the full-size build (see \u00a7 1): mount the BMI160 breakout on the underside of the frame's north rail, centered, with the X axis along...",
-    "section": "Phase 5: Sensors and Wiring (Day 1, ~45 min)",
-    "body": "### 5.1 Install the IMU on the frame Follow the same principle as the full-size build (see \u00a7 1): mount the BMI160 breakout on the underside of the frame's north rail, centered, with the X axis along the bed's long axis. Tools: drill, #4 wood screws, foam adhesive pad"
-  },
-  {
-    "title": "5.2 Install the soil sensors",
-    "url": "/build_guide_mini.html",
-    "excerpt": "### 5.2 Install the soil sensors If using the bed for plants: - DS18B20: 3\" deep in soil, 6\" from south wall - Soil moisture: 2\" deep in soil, 9\" from south wall",
-    "section": "Phase 5: Sensors and Wiring (Day 1, ~45 min)",
-    "body": "### 5.2 Install the soil sensors If using the bed for plants: - DS18B20: 3\" deep in soil, 6\" from south wall - Soil moisture: 2\" deep in soil, 9\" from south wall"
-  },
-  {
-    "title": "5.3 Mount the breadboard",
-    "url": "/build_guide_mini.html",
-    "excerpt": "### 5.3 Mount the breadboard For the mini, you can use a breadboard or perfboard for the ESP32 circuit instead of the full-size PCB. Mount the breadboard on the bed's east short wall, near the...",
-    "section": "Phase 5: Sensors and Wiring (Day 1, ~45 min)",
-    "body": "### 5.3 Mount the breadboard For the mini, you can use a breadboard or perfboard for the ESP32 circuit instead of the full-size PCB. Mount the breadboard on the bed's east short wall, near the battery. Tools: #4 wood screws, double-sided tape (alternative)"
-  },
-  {
-    "title": "5.4 Wire the breadboard",
-    "url": "/build_guide_mini.html",
-    "excerpt": "### 5.4 Wire the breadboard Follow (the same wiring works for the mini, just with shorter cables). Tools: jumper wires, wire stripper, multimeter",
-    "section": "Phase 5: Sensors and Wiring (Day 1, ~45 min)",
-    "body": "### 5.4 Wire the breadboard Follow (the same wiring works for the mini, just with shorter cables). Tools: jumper wires, wire stripper, multimeter"
-  },
-  {
-    "title": "5.5 Continuity check",
-    "url": "/build_guide_mini.html",
-    "excerpt": "### 5.5 Continuity check Before applying power, verify: - [ ] No shorts between 12V and GND - [ ] No shorts between 3V3 and GND - [ ] No shorts between 5V and GND - [ ] All sensors connected and...",
-    "section": "Phase 5: Sensors and Wiring (Day 1, ~45 min)",
-    "body": "### 5.5 Continuity check Before applying power, verify: - [ ] No shorts between 12V and GND - [ ] No shorts between 3V3 and GND - [ ] No shorts between 5V and GND - [ ] All sensors connected and addressed correctly ---"
-  },
-  {
-    "title": "Phase 6: Battery and First Power-On (Day 1, ~20 min)",
-    "url": "/build_guide_mini.html",
-    "excerpt": "## Phase 6: Battery and First Power-On (Day 1, ~20 min)",
-    "section": "Wattplot Mini v2.4 \u2014 Build Guide",
-    "body": "## Phase 6: Battery and First Power-On (Day 1, ~20 min)"
-  },
-  {
-    "title": "6.1 Connect the battery",
-    "url": "/build_guide_mini.html",
-    "excerpt": "### 6.1 Connect the battery Tools: multimeter, 3A fuse For the mini (small 10W panel), use a 3A fuse (the actuator stall current is well below this). Process: 1. Place the 12V 7Ah LiFePO4 battery...",
-    "section": "Phase 6: Battery and First Power-On (Day 1, ~20 min)",
-    "body": "### 6.1 Connect the battery Tools: multimeter, 3A fuse For the mini (small 10W panel), use a 3A fuse (the actuator stall current is well below this). Process: 1. Place the 12V 7Ah LiFePO4 battery next to the bed. 2. Connect the battery negative to the breadboard's ground bus. 3. Connect the battery positive through a 3A fuse, then to the 12V rail on the breadboard. 4. Do not install the fuse yet."
-  },
-  {
-    "title": "6.2 Install the fuse and power on",
-    "url": "/build_guide_mini.html",
-    "excerpt": "### 6.2 Install the fuse and power on Process: 1. Connect the laptop via USB to the ESP32. 2. Install the fuse. 3. The ESP32 should boot. The status LED should light up. 4. Flash the firmware: .",
-    "section": "Phase 6: Battery and First Power-On (Day 1, ~20 min)",
-    "body": "### 6.2 Install the fuse and power on Process: 1. Connect the laptop via USB to the ESP32. 2. Install the fuse. 3. The ESP32 should boot. The status LED should light up. 4. Flash the firmware: ."
-  },
-  {
-    "title": "6.3 Verify boot",
-    "url": "/build_guide_mini.html",
-    "excerpt": "### 6.3 Verify boot Process: 1. Open the serial monitor (115200 baud). 2. Look for ESPHome boot messages. Verify: - \"Wattplot Controller\" branding - IMU detected - State: FOLDING (safe default) >...",
-    "section": "Phase 6: Battery and First Power-On (Day 1, ~20 min)",
-    "body": "### 6.3 Verify boot Process: 1. Open the serial monitor (115200 baud). 2. Look for ESPHome boot messages. Verify: - \"Wattplot Controller\" branding - IMU detected - State: FOLDING (safe default) > Note: the v2.4 firmware does not connect to a charge controller over > UART \u2014 the Sunapex is a standalone waterproof MPPT. There is no > \"DPS5005 detected\" line anymore."
-  },
-  {
-    "title": "6.4 Configure max tilt",
-    "url": "/build_guide_mini.html",
-    "excerpt": "### 6.4 Configure max tilt The firmware should be configured to cap tilt at 35\u00b0 (the kickstand's mechanical limit). Set this in the ESPHome :",
-    "section": "Phase 6: Battery and First Power-On (Day 1, ~20 min)",
-    "body": "### 6.4 Configure max tilt The firmware should be configured to cap tilt at 35\u00b0 (the kickstand's mechanical limit). Set this in the ESPHome :"
-  },
-  {
-    "title": "6.5 Test each sensor",
-    "url": "/build_guide_mini.html",
-    "excerpt": "### 6.5 Test each sensor For each sensor, verify it's reading sensible values (see Phase A for the full list). ---",
-    "section": "Phase 6: Battery and First Power-On (Day 1, ~20 min)",
-    "body": "### 6.5 Test each sensor For each sensor, verify it's reading sensible values (see Phase A for the full list). ---"
-  },
-  {
-    "title": "Phase 7: Solar Panel and Sunapex MPPT (Day 1-2, ~20 min)",
-    "url": "/build_guide_mini.html",
-    "excerpt": "## Phase 7: Solar Panel and Sunapex MPPT (Day 1-2, ~20 min)",
-    "section": "Wattplot Mini v2.4 \u2014 Build Guide",
-    "body": "## Phase 7: Solar Panel and Sunapex MPPT (Day 1-2, ~20 min)"
-  },
-  {
-    "title": "7.1 Connect the solar panel",
-    "url": "/build_guide_mini.html",
-    "excerpt": "### 7.1 Connect the solar panel Tools: wire stripper, #1 Phillips, heat-shrink (if cutting SAE leads) Process: 1. The 10W panel has MC4 connectors on the back. The Sunapex 10A MPPT ships with SAE...",
-    "section": "Phase 7: Solar Panel and Sunapex MPPT (Day 1-2, ~20 min)",
-    "body": "### 7.1 Connect the solar panel Tools: wire stripper, #1 Phillips, heat-shrink (if cutting SAE leads) Process: 1. The 10W panel has MC4 connectors on the back. The Sunapex 10A MPPT ships with SAE connectors on both sides and a polarity reversal adapter \u2014 connect the panel's MC4 directly to the Sunapex's included SAE adapter. No MC4 crimper or pigtails needed. 2. Mount the Sunapex 10A MPPT on the bed's east wall (next to the PCB enclosure). The Sunapex is IP67 \u2014 no separate enclosure needed, but mount it under the panel edge so the grommet for the panel cables can enter the bed wall close by. 3. The Sunapex's battery lead comes with an SAE connector on the controller end and bare wire on the other. Either cut the SAE end off and crimp ring terminals, or buy a separate SAE-to-bare-wire pigtail. Run 14 AWG from the Sunapex BAT+ through a 3 A in-line fuse (within 6\" of the battery +) to battery +. 4. Run 14 AWG from the Sunapex BAT\u2212 to battery \u2212."
-  },
-  {
-    "title": "7.2 Power up the Sunapex",
-    "url": "/build_guide_mini.html",
-    "excerpt": "### 7.2 Power up the Sunapex Process: 1. Connect the battery first (BAT+ and BAT\u2212). The Sunapex is powered by the battery, not the panel. Its LCD should light up. 2. Press the MODE button on the...",
-    "section": "Phase 7: Solar Panel and Sunapex MPPT (Day 1-2, ~20 min)",
-    "body": "### 7.2 Power up the Sunapex Process: 1. Connect the battery first (BAT+ and BAT\u2212). The Sunapex is powered by the battery, not the panel. Its LCD should light up. 2. Press the MODE button on the Sunapex until the LCD shows the LiFePO4 chemistry mode (usually labelled \"Li\" or \"LiFePO4\" \u2014 depends on firmware rev). Default out-of-box is sometimes sealed lead-acid. 3. Connect the panel MC4 to the Sunapex PV input via the included SAE adapter. The Sunapex will detect PV and start charging; the charging LED should come on."
-  },
-  {
-    "title": "7.3 Test the MPPT",
-    "url": "/build_guide_mini.html",
-    "excerpt": "### 7.3 Test the MPPT Process: 1. With the panel in sun, the Sunapex should be in bulk charge (charging LED on, LCD shows ~14.4 V output to the battery). 2. Watch the battery voltage rise slowly...",
-    "section": "Phase 7: Solar Panel and Sunapex MPPT (Day 1-2, ~20 min)",
-    "body": "### 7.3 Test the MPPT Process: 1. With the panel in sun, the Sunapex should be in bulk charge (charging LED on, LCD shows ~14.4 V output to the battery). 2. Watch the battery voltage rise slowly during the day on the ESPHome entity. The Sunapex will hold at ~14.4 V during bulk, drop to absorption, then ~13.4 V float once full. 3. Expected power: 8-9 W peak at noon in full sun (after 15% derate for the 10 W panel and ~96% MPPT efficiency). 4. Verify reads roughly the same as the Sunapex is pushing into the battery (within ~0.5 W \u2014 the small difference is the INA219 shunt tolerance and the Sunapex's own ~6 mA quiescent draw). ---"
-  },
-  {
-    "title": "Phase 8: Soil and Planting (Day 2, ~10 min)",
-    "url": "/build_guide_mini.html",
-    "excerpt": "## Phase 8: Soil and Planting (Day 2, ~10 min)",
-    "section": "Wattplot Mini v2.4 \u2014 Build Guide",
-    "body": "## Phase 8: Soil and Planting (Day 2, ~10 min)"
-  },
-  {
-    "title": "8.1 Fill the bed with soil",
-    "url": "/build_guide_mini.html",
-    "excerpt": "### 8.1 Fill the bed with soil Process: 1. Fill the bed with 4\" of soil (interior 16.5\" \u00d7 12.5\" \u00d7 4\" = 0.48 cu ft, ~3.5 gallons). 2. Use a potting mix (not native soil \u2014 too heavy for a small...",
-    "section": "Phase 8: Soil and Planting (Day 2, ~10 min)",
-    "body": "### 8.1 Fill the bed with soil Process: 1. Fill the bed with 4\" of soil (interior 16.5\" \u00d7 12.5\" \u00d7 4\" = 0.48 cu ft, ~3.5 gallons). 2. Use a potting mix (not native soil \u2014 too heavy for a small planter)."
-  },
-  {
-    "title": "8.2 Plant something",
-    "url": "/build_guide_mini.html",
-    "excerpt": "### 8.2 Plant something Process: 1. Plant 1 small herb (basil, parsley) or a small flower. 2. Use a starter fertilizer. ---",
-    "section": "Phase 8: Soil and Planting (Day 2, ~10 min)",
-    "body": "### 8.2 Plant something Process: 1. Plant 1 small herb (basil, parsley) or a small flower. 2. Use a starter fertilizer. ---"
-  },
-  {
-    "title": "Phase 9: Test and Validate (Day 2, ongoing)",
-    "url": "/build_guide_mini.html",
-    "excerpt": "## Phase 9: Test and Validate (Day 2, ongoing)",
-    "section": "Wattplot Mini v2.4 \u2014 Build Guide",
-    "body": "## Phase 9: Test and Validate (Day 2, ongoing)"
-  },
-  {
-    "title": "9.1 Bench test (1 week)",
-    "url": "/build_guide_mini.html",
-    "excerpt": "### 9.1 Bench test (1 week) Run the mini on your workbench for a week. Monitor: - State machine transitions (NORMAL, BEDSUN, FOLDING) - IMU accuracy (does the firmware tilt to the right angle?) -...",
-    "section": "Phase 9: Test and Validate (Day 2, ongoing)",
-    "body": "### 9.1 Bench test (1 week) Run the mini on your workbench for a week. Monitor: - State machine transitions (NORMAL, BEDSUN, FOLDING) - IMU accuracy (does the firmware tilt to the right angle?) - MPPT efficiency (panel power \u2192 battery power) - DLI computation (is the bed DLI sensible for plants?) - WiFi connectivity (does HA see the device?) - Actuator travel (does the kickstand reach 0\u00b0 and 35\u00b0?)"
-  },
-  {
-    "title": "9.2 What to learn from the mini",
-    "url": "/build_guide_mini.html",
-    "excerpt": "### 9.2 What to learn from the mini After a week, you'll know: - Whether the kickstand geometry is right (does the panel bind?) - Whether the 100mm actuator has enough travel (does it reach 35\u00b0?) -...",
-    "section": "Phase 9: Test and Validate (Day 2, ongoing)",
-    "body": "### 9.2 What to learn from the mini After a week, you'll know: - Whether the kickstand geometry is right (does the panel bind?) - Whether the 100mm actuator has enough travel (does it reach 35\u00b0?) - Whether the IMU is accurate enough (or needs filtering) - Whether the MPPT loop converges (or oscillates) - Whether the state machine behaves as expected - Whether the 10W panel produces expected power (~8-9W peak) - Whether the Sunapex holds the LiFePO4 charge profile correctly (bulk \u2192 absorption \u2192 float, no BMS intervention) - Whether the system runs unattended for a week without issues If the mini works for a week, the full-size build will work too. Apply any tuning you discovered (Kp, Ki, deadband, target_current) to the full-size firmware. ---"
-  },
-  {
-    "title": "Phase 10: Watering System (solenoid on tap) (Day 2, ~45 min)",
-    "url": "/build_guide_mini.html",
-    "excerpt": "## Phase 10: Watering System (solenoid on tap) (Day 2, ~45 min) The mini v2.4 is a smart planter: it reads soil moisture + temps, decides when to water, and energizes a 12V solenoid to drip-feed the...",
-    "section": "Wattplot Mini v2.4 \u2014 Build Guide",
-    "body": "## Phase 10: Watering System (solenoid on tap) (Day 2, ~45 min) The mini v2.4 is a smart planter: it reads soil moisture + temps, decides when to water, and energizes a 12V solenoid to drip-feed the bed from your house's cold water tap. No pump, no reservoir, no refilling. The full design spec is in ."
-  },
-  {
-    "title": "10.1 Tee into the cold water supply",
-    "url": "/build_guide_mini.html",
-    "excerpt": "### 10.1 Tee into the cold water supply Tools: adjustable wrench, tube cutter (or hacksaw), Teflon tape Process: 1. Pick your tie-in point. The easiest options are: - Outdoor hose bib (e.g. on a...",
-    "section": "Phase 10: Watering System (solenoid on tap) (Day 2, ~45 min)",
-    "body": "### 10.1 Tee into the cold water supply Tools: adjustable wrench, tube cutter (or hacksaw), Teflon tape Process: 1. Pick your tie-in point. The easiest options are: - Outdoor hose bib (e.g. on a patio wall): screw a 1/4\" barb adapter directly into the faucet spout - Under-sink cold water line: cut the 3/8\" or 1/2\" copper pipe, install a 1/4\" tee, restore flow 2. Shut off the water first. Open the closest faucet to drain residual pressure. 3. Cut the pipe (or unscrew the hose bib spout if going that route). 4. Wrap the tee threads with 2-3 layers of Teflon tape, install the tee, hand-tighten, then snug with the wrench (don't over-torque on plastic fittings). 5. Restore water pressure and check for leaks. Wait 5 minutes, check again. 6. Attach a 1/4\" barb to the tee's 1/4\" outlet. Verification: no leaks at the tee after 5 min under pressure."
-  },
-  {
-    "title": "10.2 Run the supply line to the bed",
-    "url": "/build_guide_mini.html",
-    "excerpt": "### 10.2 Run the supply line to the bed Tools: scissors, 1/4\" tubing cutter (or sharp knife) Process: 1. Cut a length of 1/4\" vinyl tubing (typically 5-20 ft depending on the run from tee to bed). 2....",
-    "section": "Phase 10: Watering System (solenoid on tap) (Day 2, ~45 min)",
-    "body": "### 10.2 Run the supply line to the bed Tools: scissors, 1/4\" tubing cutter (or sharp knife) Process: 1. Cut a length of 1/4\" vinyl tubing (typically 5-20 ft depending on the run from tee to bed). 2. Push one end onto the tee's 1/4\" barb. 3. Route the tubing from the tee to the bed (along the wall, across the floor, up to the workbench level). Use zip ties every 2-3 ft to keep it tidy. 4. (Optional) Install a 5-30 PSI pressure regulator in the line, set to ~15 PSI for the drip emitter. Not strictly required if your emitter is rated for full house pressure (40-80 PSI), but it gives you a more consistent flow rate. 5. Leave the other end of the supply line at the bed, ready to connect to the solenoid inlet. Verification: briefly open the upstream valve (or unscrew the supply tubing from where the solenoid will go) and confirm water flows. Reconnect and leave the system pressurized but the solenoid closed."
-  },
-  {
-    "title": "10.3 Mount the solenoid",
-    "url": "/build_guide_mini.html",
-    "excerpt": "### 10.3 Mount the solenoid Tools: screwdriver, drill, zip ties (or screws) Process: 1. Mount the 12V DC normally-closed solenoid valve on the bed's east short wall, at ~6\" height (above any...",
-    "section": "Phase 10: Watering System (solenoid on tap) (Day 2, ~45 min)",
-    "body": "### 10.3 Mount the solenoid Tools: screwdriver, drill, zip ties (or screws) Process: 1. Mount the 12V DC normally-closed solenoid valve on the bed's east short wall, at ~6\" height (above any potential splash zone). Zip-tie it to the bed's frame, or screw it to a small block of 1x2 first and then screw the block to the bed wall. 2. The solenoid has a flow direction arrow \u2014 make sure INLET faces the supply tubing, OUTLET faces the drip line. 3. Connect the supply tubing to the solenoid INLET. 4. Cut ~3-4 ft of 1/4\" tubing, connect to the solenoid OUTLET, run it to the bed's soil surface. 5. Attach a pressure-compensating drip emitter (2 GPH) to the other end, insert the emitter 1\" deep into the soil near the plant. Verification: with the solenoid DE-energized (no relay trigger), no water should flow (NC = normally closed). With the relay on manually, water should drip from the emitter at ~2 mL/sec."
-  },
-  {
-    "title": "10.4 Wire the relay and solenoid",
-    "url": "/build_guide_mini.html",
-    "excerpt": "### 10.4 Wire the relay and solenoid Tools: wire stripper, small screwdriver (for relay terminals) Process: 1. Mount the 1-channel relay module on the bed's east short wall, near the breadboard. 2....",
-    "section": "Phase 10: Watering System (solenoid on tap) (Day 2, ~45 min)",
-    "body": "### 10.4 Wire the relay and solenoid Tools: wire stripper, small screwdriver (for relay terminals) Process: 1. Mount the 1-channel relay module on the bed's east short wall, near the breadboard. 2. Connect: - Battery 12V+ \u2192 relay COM terminal - Relay NO (normally open) \u2192 solenoid + (red wire) - Solenoid - (black wire) \u2192 battery 12V- (GND bus) - Relay VCC \u2192 ESP32 5V (or 3.3V, depending on relay module) - Relay GND \u2192 ESP32 GND - Relay IN \u2192 ESP32 GPIO 5 3. Test: in Home Assistant, toggle ON for 10 seconds. Solenoid should click open, water should flow, then auto-stop at the 30-second watchdog. Important: if the solenoid wires are reversed, no harm done (it's a DC coil, not polarized), but the flow direction arrow on the body MUST be correct \u2014 reversed flow will leak through the diaphragm when closed."
-  },
-  {
-    "title": "10.5 Install the temperature + soil moisture sensors",
-    "url": "/build_guide_mini.html",
-    "excerpt": "### 10.5 Install the temperature + soil moisture sensors Tools: wire stripper, small screwdriver, thermal tape (or zip ties) Process (DS18B20 sensors, all on the same 1-Wire bus on GPIO 10): 1. Panel...",
-    "section": "Phase 10: Watering System (solenoid on tap) (Day 2, ~45 min)",
-    "body": "### 10.5 Install the temperature + soil moisture sensors Tools: wire stripper, small screwdriver, thermal tape (or zip ties) Process (DS18B20 sensors, all on the same 1-Wire bus on GPIO 10): 1. Panel temp: attach a DS18B20 to the back of the panel with thermal tape. Route the wire along the panel edge to the bed's hinge area, then to the breadboard. 2. Soil temp: bury a DS18B20 2\" deep in the soil (next to the soil moisture sensor). 3. Battery temp: tape a DS18B20 to the side of the battery with Kapton tape (handles the heat). 4. All 3 sensors share VCC (3.3V), GND, and the data line (GPIO 10) with a single 4.7k\u03a9 pullup resistor. 5. Soil moisture: Insert the Stemedu V1.2 capacitive sensor 2\" deep into the bed soil, near the center. Connect: VCC \u2192 3.3V, GND \u2192 GND, AOUT \u2192 ESP32 GPIO 4 (ADC). Verification: in Home Assistant, verify all 4 sensors show reasonable values (panel ~20-40\u00b0C, soil ~15-30\u00b0C, battery ~15-30\u00b0C, moisture 30-60%)."
-  },
-  {
-    "title": "10.6 Verify energy + SOC + POA monitoring",
-    "url": "/build_guide_mini.html",
-    "excerpt": "### 10.6 Verify energy + SOC + POA monitoring Process: 1. The INA219 (panel V/I), Sunapex (charge status, visible on its own LCD), and BMI160 (tilt) are already wired from Phase 5. The Sunapex does...",
-    "section": "Phase 10: Watering System (solenoid on tap) (Day 2, ~45 min)",
-    "body": "### 10.6 Verify energy + SOC + POA monitoring Process: 1. The INA219 (panel V/I), Sunapex (charge status, visible on its own LCD), and BMI160 (tilt) are already wired from Phase 5. The Sunapex does not export telemetry to the ESP32, so charge state is read from the Sunapex's own LCD. Verify these entities in HA: - (should read ~17-21V in sun) - (should read 0-0.58A in sun) - (V \u00d7 I, should peak ~8-10W in full sun) - (should read ~12-13.6V) - (should follow the LiFePO4 curve) - (should match panel angle) - (should peak ~900-1000 W/m\u00b2 at solar noon on a clear day) - (should be 12-18% on a good day) - (should accumulate ~30-50 Wh/day in good sun, = 0.03-0.05 kWh/day) - (lifetime counter) 2. If reads 0 or wildly off, check the latitude/longitude in the firmware config (should be 33.45, -112.07 for Phoenix) and the time sync (NTP or manual). 3. If reads >20%, the panel area calculation is wrong \u2014 double check in ."
-  },
-  {
-    "title": "10.7 Test the watering automation",
-    "url": "/build_guide_mini.html",
-    "excerpt": "### 10.7 Test the watering automation Process: 1. In Home Assistant, verify these entities exist: - - / / - / - - - (manual toggle) - (auto mode) 2. Force a watering event: in HA, set to 25 (below...",
-    "section": "Phase 10: Watering System (solenoid on tap) (Day 2, ~45 min)",
-    "body": "### 10.7 Test the watering automation Process: 1. In Home Assistant, verify these entities exist: - - / / - / - - - (manual toggle) - (auto mode) 2. Force a watering event: in HA, set to 25 (below the 30% threshold), wait 15 seconds. The solenoid should click open for 50 seconds (~100 mL water). 3. Verify increments by ~100 mL. 4. Verify increments by 1. 5. Test safety blocks: - Set to 50\u00b0C \u2192 watering is blocked - Set to 11.0V \u2192 watering is blocked - Set to 15 \u2192 watering is blocked - At night ( < 0.5W) \u2192 watering is blocked ---"
-  },
-  {
-    "title": "Final build checklist",
-    "url": "/build_guide_mini.html",
-    "excerpt": "## Final build checklist - [ ] Bed is level, square, and full of soil - [ ] Frame hinges smoothly from 0\u00b0 to ~35\u00b0 tilt - [ ] Hinge pin is fully seated - [ ] Panel is firmly clamped to the frame (4...",
-    "section": "Wattplot Mini v2.4 \u2014 Build Guide",
-    "body": "## Final build checklist - [ ] Bed is level, square, and full of soil - [ ] Frame hinges smoothly from 0\u00b0 to ~35\u00b0 tilt - [ ] Hinge pin is fully seated - [ ] Panel is firmly clamped to the frame (4 mid-clamps) - [ ] Top kickstand bracket is mounted on panel's underside, 2\" north of south edge - [ ] Bottom kickstand block is mounted on bed's south wall, low position - [ ] Kickstand actuator is pinned at both ends - [ ] Panel reaches 0\u00b0 when actuator is fully retracted - [ ] Panel reaches ~35\u00b0 when actuator is fully extended - [ ] IMU is reading tilt correctly - [ ] Battery is connected to Sunapex BAT+/BAT\u2212 with 3 A fuse - [ ] Panel MC4 is connected to Sunapex PV+/PV\u2212 (red to +, black to \u2212) - [ ] Sunapex LCD is in Li / LiFePO4 mode (not sealed lead-acid) - [ ] Sunapex charging LED is on when the panel is in sun - [ ] Solar panel is producing 8-9 W peak in full sun - [ ] ESP32 is online in Home Assistant - [ ] State machine transitions are working - [ ] Battery voltage on matches Sunapex LCD reading - [ ] Firmware has configured - [ ] Solenoid is mounted, tee is in the cold water line, drip emitter is in soil - [ ] Solenoid wiring through relay is correct (test in HA, click on/off) - [ ] 3 DS18B20 sensors are reading (panel, soil, battery) - [ ] Soil moisture sensor is reading 30-60% - [ ] INA219 reads panel V\u00d7I; panelpowerw peaks at 8-10W in full sun - [ ] batterysocpct follows the LiFePO4 curve - [ ] poairradiancewm2 peaks at ~900-1000 W/m\u00b2 at solar noon - [ ] panelefficiencypc"
+    "excerpt": "### Mini-specific gotchas (read these) - Solenoid driver: the v3.2 firmware uses a DRV8871 H-bridge (not the 5V relay in the original v2.4 design). The Mini bench build has both for transition; the...",
+    "section": "Electronics (v3.2 firmware)",
+    "body": "### Mini-specific gotchas (read these) - Solenoid driver: the v3.2 firmware uses a DRV8871 H-bridge (not the 5V relay in the original v2.4 design). The Mini bench build has both for transition; the PCB v3 will only have the DRV8871. - Pin map: the Mini uses the same ESP32-S3-DevKitC-1 as the full-size, so the GPIO map is identical. The Mini's actuator is just lighter (70 N vs 330 lbf) \u2014 the same control law, the same current limit constants. - Calibration: the IMU offset is different (the Mini's panel is smaller and tilts less). Re-run the IMU calibration on the Mini's panel after mounting; don't carry over the full-size's values. - Pre-power checklist: the pre-power checklist applies. Verify no shorts before applying 12 V."
   },
   {
     "title": "Wattplot Build Guide: large_format_1m65",
@@ -3682,11 +3451,11 @@
     "body": "# Wattplot"
   },
   {
-    "title": "Give an old solar panel a second life. Shade + food + power, in one raised bed.",
+    "title": "One bed. Two harvests. Shade + food + power, in one raised bed.",
     "url": "/one_pager.html",
-    "excerpt": "### Give an old solar panel a second life. Shade + food + power, in one raised bed. A planter up to 8 ft \u00d7 5 ft with a hinged, ballast-mounted solar canopy. Fits any panel up to 97\" \u00d7 61\", new...",
+    "excerpt": "### One bed. Two harvests. Shade + food + power, in one raised bed. A planter up to 8 ft \u00d7 5 ft with a hinged, ballast-mounted solar canopy. Fits any panel up to 97\" \u00d7 61\", new bifacial from the...",
     "section": "Wattplot",
-    "body": "### Give an old solar panel a second life. Shade + food + power, in one raised bed. A planter up to 8 ft \u00d7 5 ft with a hinged, ballast-mounted solar canopy. Fits any panel up to 97\" \u00d7 61\", new bifacial from the manufacturer, or old salvage from a decommissioned rooftop that would otherwise be landfilled. The smart controller tilts the panel to follow the sun, fold for wind, verticalize for rain, and shut off the motor before it stalls. Full-size build: up to 8 ft \u00d7 5 ft, ~$1,400 in parts (new bifacial) or ~$800 in parts (with a salvage panel), ~10\u201315 hours over a weekend. This table: 18\" \u00d7 14\" mini, ~$193 in parts, ~3\u20134 hours. Same firmware, same MPPT, same sensors, same decision stack. ---"
+    "body": "### One bed. Two harvests. Shade + food + power, in one raised bed. A planter up to 8 ft \u00d7 5 ft with a hinged, ballast-mounted solar canopy. Fits any panel up to 97\" \u00d7 61\", new bifacial from the manufacturer, or old salvage from a decommissioned rooftop that would otherwise be landfilled. The smart controller tilts the panel to follow the sun, fold for wind, verticalize for rain, and shut off the motor before it stalls. Full-size build: up to 8 ft \u00d7 5 ft, ~$1,400 in parts (new bifacial) or ~$800 in parts (with a salvage panel), ~10\u201315 hours over a weekend. This table: 18\" \u00d7 14\" mini, ~$193 in parts, ~3\u20134 hours. Same firmware, same MPPT, same sensors, same decision stack. ---"
   },
   {
     "title": "Why upcycle?",
@@ -3836,11 +3605,11 @@
     "body": "# Wattplot, Poster Concept (24\u00d736 vertical) > STALE \u2014 references the retired (90\u00b0) \"sun\" mode and the > BMI160 IMU. Both are gone in v3.2. Update the mode list before > printing; the rest of the framing is fine. See > for current behavior. > This is the text and layout for the booth poster. Send to a > designer (Fiverr, local student) for visual execution. Print at > FedEx Kinko's on foam core, ~$40."
   },
   {
-    "title": "Headline (re-framed for upcycling)",
+    "title": "Headline (optimization lead, upcycling as a benefit)",
     "url": "/poster.html",
-    "excerpt": "## Headline (re-framed for upcycling) Old solar panels are a growing waste stream. Wattplot gives them a second life: shade + food + some power, in a planter you build from 8-ft lumber stock. Bring...",
+    "excerpt": "## Headline (optimization lead, upcycling as a benefit) One bed. Two harvests. The panel canopy is what the frame would have been lumber for anyway, so the bed is doing more work, not the panel...",
     "section": "Wattplot, Poster Concept (24\u00d736 vertical)",
-    "body": "## Headline (re-framed for upcycling) Old solar panels are a growing waste stream. Wattplot gives them a second life: shade + food + some power, in a planter you build from 8-ft lumber stock. Bring your own panel, 8\u00d75 ft fits any residential."
+    "body": "## Headline (optimization lead, upcycling as a benefit) One bed. Two harvests. The panel canopy is what the frame would have been lumber for anyway, so the bed is doing more work, not the panel displacing the garden. (Upcycling angle: ~10M tons of panel waste by 2050. A Wattplot gives any decommissioned panel a job \u2014 shade + food + some power, in a planter you build from 8-ft lumber stock. Bring your own panel, 8\u00d75 ft fits any residential.)"
   },
   {
     "title": "Layout",

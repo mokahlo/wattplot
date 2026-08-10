@@ -1,72 +1,39 @@
-# Wattplot Mini v2.4 — Build Guide
+# Wattplot Mini v2.4 — Physical Build Guide
 
-> **STALE — written for the v2.4 / ESP32-C3 + BMI160 IMU + relay + GPIO4/5/10 architecture.** Pin numbers, sensor names, and entity IDs in
-> this doc do not match `firmware/wattplot.yaml` v3.2 (ESP32-S3,
-> DRV8871 for solenoid, GPIO6/7/10/12/16). The Mini's **physical
-> build** is still described accurately here (bed, panel, kickstand
-> actuator), but the **electronics steps** (Phase 6 onward) need
-> cross-checking against:
+> **This guide covers the physical build only — Phases 1–4 below
+> (bed, frame, panel, kickstand).** The Mini's *electronics* moved on
+> with the v3.2 firmware (ESP32-C3 → ESP32-S3, 5V relay → DRV8871
+> H-bridge, GPIO retuned). The electronics steps that used to live in
+> this file are now in the canonical references listed at the end.
 >
-> - Pin map: `docs/pinmap.html`
-> - Schematic: `docs/schematic.html` (rev B, 2026-08-03)
-> - Firmware config: `firmware/wattplot.yaml`
-> - Firmware quick-start: `firmware/README.md`
->
-> A future pass will regenerate this doc against the current YAML.
-> Tracked in [ROADMAP.md](../ROADMAP.md).
+> **Why the split:** the physical assembly hasn't changed in three
+> revs; the wiring has. Keeping them in one file meant every firmware
+> bump had to also update this build guide. Easier to keep the wood
+> separate from the wires.
 
 Benchtop design-validation prototype. **18"×14" bed, ECO-WORTHY
-10W panel, 100mm kickstand linear actuator** — sized to match the
-parts you already ordered.
+10W panel, 100mm kickstand linear actuator**.
 
-**Tilt range: 0-35°** (limited by the kickstand geometry; matches the
+**Tilt range:** 0–35° (limited by the kickstand geometry; matches the
 power-optimal range per the Phoenix sun sim).
 
-**Build time:** ~3-4 hours
-**Build cost:** ~$193 (new parts: Sunapex 10A MPPT, sensors, lumber, hardware,
-solenoid watering). Already have: $50 (battery, ESP32, actuator, panel).
+**Build time:** ~3–4 hours (physical only — add ~2 hours for
+electronics per the canonical references at the end).
 
----
+**Build cost (physical only):** ~$42 (lumber + hinges + clamps +
+fasteners). Add ~$151 for the electronics — see
+[`booth/PARTS_STATUS.md`](../booth/PARTS_STATUS.md) for the full,
+up-to-date order list.
 
-## Phase 0: Order parts (Day 0, ~30 min)
+**Lumber (all PT DF, all from 8 ft stock):**
 
-### Already ordered (Saturday)
-- 1 × 12V 7Ah LiFePO4 battery (BMS built-in)
-- 1 × 100mm (3.94") stroke 12V linear actuator, 70N (15.7 lbf)
-- 1 × ESP32-C3 PRO Mini dev board
-- 1 × ECO-WORTHY 10W 12V solar panel (13.3" × 8.1" × 0.7", 1.88 lb)
+- 1 × 1×4×8 ft (bed walls: 2 long + 2 short, all from 1 board)
+- 2 × 1×2×8 ft (1 for frame rails, 1 for skids + kickstand mount blocks)
+- 1 × 2×4×8 ft (diagonal brace offcut)
 
-### Still need to order (one-stop)
-- **1 × Sunapex 10A MPPT charge controller** (~$25, Amazon) — **REPLACES
-  the HiLetgo CN3791** you ordered (CN3791 is for 1S LiPo, not 12V
-  LiFePO4 — incompatible with the battery you have)
-- 2 × 1.5" butt hinges with ⅜" pin (~$3 ea, Home Depot)
-- 1 × ⅜" × 22" steel rod (continuous hinge pin, ~$3, Home Depot)
-- 4 × 1" aluminum mid-clamps for 18mm panel frame channel (~$2 ea, Amazon)
-- 1 × BMI160 IMU breakout (~$2, Mouser)
-- 1 × INA219 current sensor breakout (~$2, Mouser)
-- 1 × DS18B20 waterproof temp sensor (~$3, Amazon)
-- 1 × Capacitive soil moisture sensor (~$3, Amazon)
-- 1 × Breadboard or perfboard + jumper wires (~$8, Amazon)
-- 1 × USB-C cable (~$3, Amazon)
-- Fasteners: 16 × #6 × 1.5" wood screws, 8 × #6 × 1" screws, 4 × M8 × 1.5"
-  stainless bolts, 8 × 5/64" × 1" hinge screws, 2 × ⅜" clevis pins
-
-### Lumber (all PT DF, all from 8ft stock)
-- 1 × 1x4x8ft (bed walls: 2 long + 2 short, all from 1 board)
-- 2 × 1x2x8ft (1 for frame rails, 1 for skids + kickstand mount blocks)
-- 1 × 2x4x8ft (diagonal brace offcut)
-
-If pre-cut at the lumber yard:
-- 2 × 1x4 @ 18" (long walls)
-- 2 × 1x4 @ 12.5" (short walls)
-- 2 × 1x2 @ 18" (long rails)
-- 2 × 1x2 @ 12.5" (cross rails)
-- 2 × 1x2 @ 18" (skids)
-- 2 × 1x2 @ 3" (kickstand mount blocks)
-- 1 × 2x4 @ 21" (diagonal brace)
-
-**Total lumber cost: ~$19**
+**Fasteners:** 16 × #6 × 1.5" wood screws, 8 × #6 × 1" screws,
+4 × M8 × 1.5" stainless bolts, 8 × 5/64" × 1" hinge screws,
+2 × ⅜" clevis pins. (Full list in [`booth/PARTS_STATUS.md`](../booth/PARTS_STATUS.md).)
 
 ---
 
@@ -310,402 +277,36 @@ you've hit the geometry limit.
 
 ---
 
-## Phase 5: Sensors and Wiring (Day 1, ~45 min)
-
-### 5.1 Install the IMU on the frame
-
-Follow the same principle as the full-size build (see
-`docs/sensor_placement.md` § 1): mount the BMI160 breakout on the
-underside of the frame's north rail, centered, with the X axis along
-the bed's long axis.
-
-**Tools:** drill, #4 wood screws, foam adhesive pad
-
-### 5.2 Install the soil sensors
-
-If using the bed for plants:
-- DS18B20: 3" deep in soil, 6" from south wall
-- Soil moisture: 2" deep in soil, 9" from south wall
-
-### 5.3 Mount the breadboard
-
-For the mini, you can use a breadboard or perfboard for the ESP32
-circuit instead of the full-size PCB. Mount the breadboard on the
-bed's east short wall, near the battery.
-
-**Tools:** #4 wood screws, double-sided tape (alternative)
-
-### 5.4 Wire the breadboard
-
-Follow `docs/wiring.md` (the same wiring works for the mini, just with
-shorter cables).
-
-**Tools:** jumper wires, wire stripper, multimeter
-
-### 5.5 Continuity check
-
-Before applying power, verify:
-- [ ] No shorts between 12V and GND
-- [ ] No shorts between 3V3 and GND
-- [ ] No shorts between 5V and GND
-- [ ] All sensors connected and addressed correctly
-
----
-
-## Phase 6: Battery and First Power-On (Day 1, ~20 min)
-
-### 6.1 Connect the battery
-
-**Tools:** multimeter, 3A fuse
-
-For the mini (small 10W panel), use a 3A fuse (the actuator stall
-current is well below this).
-
-**Process:**
-1. Place the 12V 7Ah LiFePO4 battery next to the bed.
-2. Connect the battery negative to the breadboard's ground bus.
-3. Connect the battery positive through a 3A fuse, then to the 12V
-   rail on the breadboard.
-4. **Do not install the fuse yet.**
-
-### 6.2 Install the fuse and power on
-
-**Process:**
-1. Connect the laptop via USB to the ESP32.
-2. Install the fuse.
-3. The ESP32 should boot. The status LED should light up.
-4. Flash the firmware: `esphome run firmware/wattplot.yaml`.
-
-### 6.3 Verify boot
-
-**Process:**
-1. Open the serial monitor (115200 baud).
-2. Look for ESPHome boot messages. Verify:
-   - "Wattplot Controller" branding
-   - IMU detected
-   - State: FOLDING (safe default)
-
-> Note: the v2.4 firmware does not connect to a charge controller over
-> UART — the Sunapex is a standalone waterproof MPPT. There is no
-> "DPS5005 detected" line anymore.
-
-### 6.4 Configure max tilt
-
-The firmware should be configured to cap tilt at **35°** (the
-kickstand's mechanical limit). Set this in the ESPHome `globals`:
-```yaml
-globals:
-  - id: max_tilt_deg
-    type: float
-    initial_value: '35.0'
-```
-
-### 6.5 Test each sensor
-
-For each sensor, verify it's reading sensible values (see
-`docs/test_checklist.md` Phase A for the full list).
-
----
-
-## Phase 7: Solar Panel and Sunapex MPPT (Day 1-2, ~20 min)
-
-### 7.1 Connect the solar panel
-
-**Tools:** wire stripper, #1 Phillips, heat-shrink (if cutting SAE leads)
-
-**Process:**
-1. The 10W panel has MC4 connectors on the back. The **Sunapex 10A MPPT**
-   ships with SAE connectors on both sides and a polarity reversal
-   adapter — connect the panel's MC4 directly to the Sunapex's included
-   SAE adapter. No MC4 crimper or pigtails needed.
-2. Mount the **Sunapex 10A MPPT** on the bed's east wall (next to the
-   PCB enclosure). The Sunapex is IP67 — no separate enclosure needed,
-   but mount it under the panel edge so the grommet for the panel
-   cables can enter the bed wall close by.
-3. The Sunapex's battery lead comes with an SAE connector on the
-   controller end and bare wire on the other. Either cut the SAE end
-   off and crimp ring terminals, or buy a separate SAE-to-bare-wire
-   pigtail. Run 14 AWG from the **Sunapex BAT+** through a 3 A in-line
-   fuse (within 6" of the battery +) to **battery +**.
-4. Run 14 AWG from the **Sunapex BAT−** to **battery −**.
-
-### 7.2 Power up the Sunapex
-
-**Process:**
-1. **Connect the battery first** (BAT+ and BAT−). The Sunapex is
-   powered by the battery, not the panel. Its LCD should light up.
-2. Press the **MODE** button on the Sunapex until the LCD shows the
-   LiFePO4 chemistry mode (usually labelled "Li" or "LiFePO4" — depends
-   on firmware rev). Default out-of-box is sometimes sealed lead-acid.
-3. Connect the panel MC4 to the Sunapex PV input via the included SAE
-   adapter. The Sunapex will detect PV and start charging; the
-   charging LED should come on.
-
-### 7.3 Test the MPPT
-
-**Process:**
-1. With the panel in sun, the Sunapex should be in **bulk charge**
-   (charging LED on, LCD shows ~14.4 V output to the battery).
-2. Watch the battery voltage rise slowly during the day on the ESPHome
-   `sensor.battery_voltage` entity. The Sunapex will hold at ~14.4 V
-   during bulk, drop to absorption, then ~13.4 V float once full.
-3. Expected power: 8-9 W peak at noon in full sun (after 15% derate
-   for the 10 W panel and ~96% MPPT efficiency).
-4. Verify `sensor.panel_power_w` reads roughly the same as the Sunapex
-   is pushing into the battery (within ~0.5 W — the small difference
-   is the INA219 shunt tolerance and the Sunapex's own ~6 mA quiescent
-   draw).
-
----
-
-## Phase 8: Soil and Planting (Day 2, ~10 min)
-
-### 8.1 Fill the bed with soil
-
-**Process:**
-1. Fill the bed with 4" of soil (interior 16.5" × 12.5" × 4" = 0.48
-   cu ft, ~3.5 gallons).
-2. Use a potting mix (not native soil — too heavy for a small planter).
-
-### 8.2 Plant something
-
-**Process:**
-1. Plant 1 small herb (basil, parsley) or a small flower.
-2. Use a starter fertilizer.
-
----
-
-## Phase 9: Test and Validate (Day 2, ongoing)
-
-### 9.1 Bench test (1 week)
-
-Run the mini on your workbench for a week. Monitor:
-- State machine transitions (NORMAL, BEDSUN, FOLDING)
-- IMU accuracy (does the firmware tilt to the right angle?)
-- MPPT efficiency (panel power → battery power)
-- DLI computation (is the bed DLI sensible for plants?)
-- WiFi connectivity (does HA see the device?)
-- Actuator travel (does the kickstand reach 0° and 35°?)
-
-### 9.2 What to learn from the mini
-
-After a week, you'll know:
-- Whether the kickstand geometry is right (does the panel bind?)
-- Whether the 100mm actuator has enough travel (does it reach 35°?)
-- Whether the IMU is accurate enough (or needs filtering)
-- Whether the MPPT loop converges (or oscillates)
-- Whether the state machine behaves as expected
-- Whether the 10W panel produces expected power (~8-9W peak)
-- Whether the Sunapex holds the LiFePO4 charge profile correctly
-  (bulk → absorption → float, no BMS intervention)
-- Whether the system runs unattended for a week without issues
-
-If the mini works for a week, the full-size build will work too.
-Apply any tuning you discovered (Kp, Ki, deadband, target_current)
-to the full-size firmware.
-
----
-
-## Phase 10: Watering System (solenoid on tap) (Day 2, ~45 min)
-
-The mini v2.4 is a **smart planter**: it reads soil moisture + temps,
-decides when to water, and energizes a 12V solenoid to drip-feed the
-bed from your house's cold water tap. No pump, no reservoir, no
-refilling. The full design spec is in `docs/watering.md`.
-
-### 10.1 Tee into the cold water supply
-
-**Tools:** adjustable wrench, tube cutter (or hacksaw), Teflon tape
-
-**Process:**
-1. Pick your tie-in point. The easiest options are:
-   - **Outdoor hose bib** (e.g. on a patio wall): screw a 1/4" barb
-     adapter directly into the faucet spout
-   - **Under-sink cold water line**: cut the 3/8" or 1/2" copper
-     pipe, install a 1/4" tee, restore flow
-2. **Shut off the water first.** Open the closest faucet to drain
-   residual pressure.
-3. Cut the pipe (or unscrew the hose bib spout if going that route).
-4. Wrap the tee threads with 2-3 layers of Teflon tape, install the
-   tee, hand-tighten, then snug with the wrench (don't over-torque
-   on plastic fittings).
-5. Restore water pressure and check for leaks. Wait 5 minutes, check
-   again.
-6. Attach a 1/4" barb to the tee's 1/4" outlet.
-
-**Verification:** no leaks at the tee after 5 min under pressure.
-
-### 10.2 Run the supply line to the bed
-
-**Tools:** scissors, 1/4" tubing cutter (or sharp knife)
-
-**Process:**
-1. Cut a length of 1/4" vinyl tubing (typically 5-20 ft depending on
-   the run from tee to bed).
-2. Push one end onto the tee's 1/4" barb.
-3. Route the tubing from the tee to the bed (along the wall, across
-   the floor, up to the workbench level). Use zip ties every 2-3 ft
-   to keep it tidy.
-4. (Optional) Install a 5-30 PSI pressure regulator in the line, set
-   to ~15 PSI for the drip emitter. Not strictly required if your
-   emitter is rated for full house pressure (40-80 PSI), but it gives
-   you a more consistent flow rate.
-5. Leave the other end of the supply line at the bed, ready to
-   connect to the solenoid inlet.
-
-**Verification:** briefly open the upstream valve (or unscrew the
-supply tubing from where the solenoid will go) and confirm water
-flows. Reconnect and leave the system pressurized but the solenoid
-closed.
-
-### 10.3 Mount the solenoid
-
-**Tools:** screwdriver, drill, zip ties (or screws)
-
-**Process:**
-1. Mount the 12V DC normally-closed solenoid valve on the bed's east
-   short wall, at ~6" height (above any potential splash zone).
-   Zip-tie it to the bed's frame, or screw it to a small block of
-   1x2 first and then screw the block to the bed wall.
-2. The solenoid has a flow direction arrow — make sure INLET faces
-   the supply tubing, OUTLET faces the drip line.
-3. Connect the supply tubing to the solenoid INLET.
-4. Cut ~3-4 ft of 1/4" tubing, connect to the solenoid OUTLET, run
-   it to the bed's soil surface.
-5. Attach a pressure-compensating drip emitter (2 GPH) to the other
-   end, insert the emitter 1" deep into the soil near the plant.
-
-**Verification:** with the solenoid DE-energized (no relay trigger),
-no water should flow (NC = normally closed). With the relay on
-manually, water should drip from the emitter at ~2 mL/sec.
-
-### 10.4 Wire the relay and solenoid
-
-**Tools:** wire stripper, small screwdriver (for relay terminals)
-
-**Process:**
-1. Mount the 1-channel relay module on the bed's east short wall,
-   near the breadboard.
-2. Connect:
-   - **Battery 12V+** → relay COM terminal
-   - **Relay NO (normally open)** → solenoid + (red wire)
-   - **Solenoid - (black wire)** → battery 12V- (GND bus)
-   - **Relay VCC** → ESP32 5V (or 3.3V, depending on relay module)
-   - **Relay GND** → ESP32 GND
-   - **Relay IN** → ESP32 GPIO 5
-3. Test: in Home Assistant, toggle `switch.watering_solenoid` ON
-   for 10 seconds. Solenoid should click open, water should flow,
-   then auto-stop at the 30-second watchdog.
-
-**Important:** if the solenoid wires are reversed, no harm done
-(it's a DC coil, not polarized), but the flow direction arrow on
-the body MUST be correct — reversed flow will leak through the
-diaphragm when closed.
-
-### 10.5 Install the temperature + soil moisture sensors
-
-**Tools:** wire stripper, small screwdriver, thermal tape (or zip ties)
-
-**Process (DS18B20 sensors, all on the same 1-Wire bus on GPIO 10):**
-1. **Panel temp:** attach a DS18B20 to the back of the panel with
-   thermal tape. Route the wire along the panel edge to the bed's
-   hinge area, then to the breadboard.
-2. **Soil temp:** bury a DS18B20 2" deep in the soil (next to the
-   soil moisture sensor).
-3. **Battery temp:** tape a DS18B20 to the side of the battery with
-   Kapton tape (handles the heat).
-4. All 3 sensors share VCC (3.3V), GND, and the data line (GPIO 10)
-   with a single 4.7kΩ pullup resistor.
-5. **Soil moisture:** Insert the Stemedu V1.2 capacitive sensor 2"
-   deep into the bed soil, near the center. Connect: VCC → 3.3V,
-   GND → GND, AOUT → ESP32 GPIO 4 (ADC).
-
-**Verification:** in Home Assistant, verify all 4 sensors show
-reasonable values (panel ~20-40°C, soil ~15-30°C, battery ~15-30°C,
-moisture 30-60%).
-
-### 10.6 Verify energy + SOC + POA monitoring
-
-**Process:**
-1. The INA219 (panel V/I), Sunapex (charge status, visible on its
-   own LCD), and BMI160 (tilt) are already wired from Phase 5. The
-   Sunapex does not export telemetry to the ESP32, so charge state
-   is read from the Sunapex's own LCD. Verify these entities in HA:
-   - `sensor.panel_voltage_v` (should read ~17-21V in sun)
-   - `sensor.panel_current_a` (should read 0-0.58A in sun)
-   - `sensor.panel_power_w` (V × I, should peak ~8-10W in full sun)
-   - `sensor.battery_v` (should read ~12-13.6V)
-   - `sensor.battery_soc_pct` (should follow the LiFePO4 curve)
-   - `sensor.current_tilt_deg` (should match panel angle)
-   - `sensor.poa_irradiance_w_m2` (should peak ~900-1000 W/m²
-     at solar noon on a clear day)
-   - `sensor.panel_efficiency_pct` (should be 12-18% on a good day)
-   - `sensor.energy_today_kwh` (should accumulate ~30-50 Wh/day
-     in good sun, = 0.03-0.05 kWh/day)
-   - `sensor.energy_total_kwh` (lifetime counter)
-2. If `poa_irradiance_w_m2` reads 0 or wildly off, check the
-   latitude/longitude in the firmware config (should be 33.45,
-   -112.07 for Phoenix) and the time sync (NTP or manual).
-3. If `panel_efficiency_pct` reads >20%, the panel area calculation
-   is wrong — double check `panel_L_in × panel_W_in` in
-   `wattplot_params.py`.
-
-### 10.7 Test the watering automation
-
-**Process:**
-1. In Home Assistant, verify these entities exist:
-   - `sensor.soil_moisture_pct`
-   - `sensor.panel_temp_c` / `sensor.soil_temp_c` / `sensor.battery_temp_c`
-   - `sensor.battery_v` / `sensor.battery_soc_pct`
-   - `sensor.poa_irradiance_w_m2`
-   - `sensor.energy_today_kwh`
-   - `switch.watering_solenoid` (manual toggle)
-   - `switch.watering_automation` (auto mode)
-2. Force a watering event: in HA, set `sensor.soil_moisture_pct` to
-   25 (below the 30% threshold), wait 15 seconds. The solenoid
-   should click open for 50 seconds (~100 mL water).
-3. Verify `sensor.water_ml_today` increments by ~100 mL.
-4. Verify `sensor.watering_events_today` increments by 1.
-5. Test safety blocks:
-   - Set `sensor.panel_temp_c` to 50°C → watering is blocked
-   - Set `sensor.battery_v` to 11.0V → watering is blocked
-   - Set `sensor.battery_soc_pct` to 15 → watering is blocked
-   - At night (`panel_power_w` < 0.5W) → watering is blocked
-
----
-
-## Final build checklist
-
-- [ ] Bed is level, square, and full of soil
-- [ ] Frame hinges smoothly from 0° to ~35° tilt
-- [ ] Hinge pin is fully seated
-- [ ] Panel is firmly clamped to the frame (4 mid-clamps)
-- [ ] Top kickstand bracket is mounted on panel's underside, 2" north of south edge
-- [ ] Bottom kickstand block is mounted on bed's south wall, low position
-- [ ] Kickstand actuator is pinned at both ends
-- [ ] Panel reaches 0° when actuator is fully retracted
-- [ ] Panel reaches ~35° when actuator is fully extended
-- [ ] IMU is reading tilt correctly
-- [ ] Battery is connected to Sunapex BAT+/BAT− with 3 A fuse
-- [ ] Panel MC4 is connected to Sunapex PV+/PV− (red to +, black to −)
-- [ ] Sunapex LCD is in **Li / LiFePO4** mode (not sealed lead-acid)
-- [ ] Sunapex charging LED is on when the panel is in sun
-- [ ] Solar panel is producing 8-9 W peak in full sun
-- [ ] ESP32 is online in Home Assistant
-- [ ] State machine transitions are working
-- [ ] Battery voltage on `sensor.battery_voltage` matches Sunapex LCD reading
-- [ ] Firmware has `max_tilt_deg = 35.0` configured
-- [ ] **Solenoid is mounted, tee is in the cold water line, drip emitter is in soil**
-- [ ] **Solenoid wiring through relay is correct (test in HA, click on/off)**
-- [ ] **3 DS18B20 sensors are reading (panel, soil, battery)**
-- [ ] **Soil moisture sensor is reading 30-60%**
-- [ ] **INA219 reads panel V×I; panel_power_w peaks at 8-10W in full sun**
-- [ ] **battery_soc_pct follows the LiFePO4 curve**
-- [ ] **poa_irradiance_w_m2 peaks at ~900-1000 W/m² at solar noon**
-- [ ] **panel_efficiency_pct is 12-18%**
-- [ ] **energy_today_kwh accumulates ~0.03-0.05 kWh/day**
-- [ ] **Auto-watering fires when soil drops below 30%**
-- [ ] **Safety blocks work (high temp, low battery, low SOC, nighttime)**
-
-**Mini v2.4 complete. A real smart planter with full energy telemetry.
-Apply learnings to the full-size build.**
+## Electronics (v3.2 firmware)
+
+The physical build is done. For the controller, sensors, and wiring,
+use these canonical references — the wiring chapter in this doc used
+to live here, but the firmware has moved on (ESP32-C3 → ESP32-S3, 5V
+relay → DRV8871 H-bridge, GPIO retuned) and the wiring has to move
+with it.
+
+| Reference | What's in it |
+|---|---|
+| [`docs/schematic.html`](schematic.html) | Rev B (2026-08-03). 14 sections, 5 V/3.3 V power tree, dual H-bridge. The single source of truth for the controller schematic. |
+| [`docs/pinmap.html`](pinmap.html) | Visual diff between the schematic and the firmware. Every wire, every pin, on the ESP32-S3-DevKitC-1. |
+| [`docs/wiring.md`](wiring.md) | Cable lengths, AWG, JST pinouts, pre-power checklist. |
+| [`docs/sensor_placement.md`](sensor_placement.md) | DS18B20 + capacitive soil + BMI160 placement. Full-size build's guidance applies to the Mini too. |
+| [`firmware/README.md`](../firmware/README.md) | Flash + log-stream + MQTT quick-start. The Mini and the full-size use the same firmware. |
+| [`firmware/wattplot.yaml`](../firmware/wattplot.yaml) | The YAML itself. The v3.2 revision history is in the header comment. |
+| [`booth/PARTS_STATUS.md`](../booth/PARTS_STATUS.md) | The current parts list (W3 2026-08-09), with status of each item. The Mini's electronics list is the source of truth here, not in this build guide. |
+
+### Mini-specific gotchas (read these)
+
+- **Solenoid driver:** the v3.2 firmware uses a **DRV8871 H-bridge**
+  (not the 5V relay in the original v2.4 design). The Mini bench
+  build has both for transition; the PCB v3 will only have the
+  DRV8871.
+- **Pin map:** the Mini uses the same ESP32-S3-DevKitC-1 as the
+  full-size, so the GPIO map is identical. The Mini's actuator is
+  just lighter (70 N vs 330 lbf) — the same control law, the same
+  current limit constants.
+- **Calibration:** the IMU offset is different (the Mini's panel is
+  smaller and tilts less). Re-run the IMU calibration on the Mini's
+  panel after mounting; don't carry over the full-size's values.
+- **Pre-power checklist:** the [pre-power checklist](pre_build_checklist.md)
+  applies. Verify no shorts before applying 12 V.
