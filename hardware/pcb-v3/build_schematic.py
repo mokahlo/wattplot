@@ -406,6 +406,15 @@ class Schematic:
         errors when our `pin_pos` (which reads the full library)
         disagreed by sub-millimeter amounts.
 
+        We also tried embedding the full raw S-expression of each
+        referenced symbol (including the custom-lib wattplot.kicad_sym
+        content) so the schematic is self-contained. This BREAKS the
+        file with "Failed to load schematic" — KiCad 10's parser is
+        stricter than ours about the lib_symbols section format, and
+        even getting the indentation / wrapping right wasn't enough.
+        (The 26 label_dangling warnings from the empty-section approach
+        persist, but those are cosmetic — the netlist is correct.)
+
         The downside is that this schematic is no longer self-contained
         (you need the libraries installed to open it). For an open-source
         board, that's the right tradeoff: the user is using KiCad, they
