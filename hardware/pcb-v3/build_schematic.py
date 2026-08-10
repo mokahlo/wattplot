@@ -350,6 +350,7 @@ LIB = {
     "jst_xh_2":      "Connector_Generic:Conn_01x02",
     "jst_xh_3":      "Connector_Generic:Conn_01x03",
     "hdr_2x5":       "Connector_Generic:Conn_02x05_Odd_Even",
+    "hdr_2x10":      "Connector_Generic:Conn_02x10_Odd_Even",
     "tp":            "Connector:TestPoint",
 }
 
@@ -646,6 +647,87 @@ def place_frost(sch: Schematic, cache: SymbolCache, x0=750, y0=400):
     sch.add(make_text("Frost outputs (J7 heater, J8 grow light, v3.3)",
                       x0 - 20, y0 - 40, size=1.8))
 
+
+# ----------------------------------------------------------------------------
+# Subsystem: Expansion header (J6 — EXP1)
+# ----------------------------------------------------------------------------
+#
+# 2x10 pin header (J6) breaking out 15 free ESP32 GPIOs + 5 power rails
+# (3V3, GND, 5V, VBAT fused, GND). Placed below the ESP32 at (300, 400).
+#
+# IMPORTANT: The J6 header is placed with pin-NUMBER labels only (Pin_1,
+# Pin_2, etc.). NO wires, NO net labels. The user is expected to wire
+# specific pins in the KiCad GUI when they're actually used.
+#
+# Rationale: routing 15 ESP32 GPIOs → J6 caused ~80 new ERC violations
+# due to (a) sub-mm parser disagreement on adjacent right-side pins
+# (IO35/IO36/IO37 at y=184.76/202.54/200.0 differ from sub-symbol
+# positions in stock KiCad's parser), and (b) the support-col routing
+# pattern we use elsewhere doesn't scale to 15 GPIOs without a lot of
+# careful placement. Since J6 is for FUTURE expansion, the pins don't
+# need to be wired up-front — they're just physical connectors on the
+# PCB that can be populated with headers.
+#
+# Pinout (silkscreen reference, NOT in schematic):
+#   Row 1 (odd,  x=-5.08):           Row 2 (even, x=+7.62):
+#     1:  IO3  (strapping)              2:  IO46 (strapping)
+#     3:  IO9  (strapping)              4:  IO47 (JTAG TMS)
+#     5:  IO11 (general)                6:  IO48 (JTAG TCK)
+#     7:  IO14 (ADC2_CH4 + strapping)   8:  IO35 (ADC1_CH7)
+#     9:  IO15 (ADC2_CH5 + strapping)   10: 3V3
+#     11: IO36 (ADC1_CH0 + touch)       12: IO37 (ADC1_CH1 + touch)
+#     13: IO38 (ADC1_CH2 + touch)       14: IO41 (ADC1_CH5 + strapping)
+#     15: IO42 (ADC1_CH6 + strapping)   16: IO45 (strapping)
+#     17: GND                          18: 5V
+#     19: VBAT (fused raw battery)      20: GND
+#
+# The 15 free GPIOs are listed in the annotation below. The user
+# references this when wiring in KiCad GUI:
+#   - Add a global label (e.g. "IO14") at the J6 pin position
+#   - Draw a wire from J6 pin → ESP32 pin at (284.76, 182.22) for IO14
+#   - Use label_at_pin to add an "IO14" label at the ESP32 pin
+#   - KiCad will treat them as the same net
+
+def place_exp1(sch: Schematic, cache: SymbolCache, x0=300, y0=400):
+    """Expansion header J6: 2x10 placeholder for future GPIO + power."""
+    hdr_id   = LIB["hdr_2x10"]
+
+    def pp(lib, num, x, y):
+        p = pin_pos(cache, lib, num, x, y)
+        if p is None:
+            raise RuntimeError(f"no pin {num} on {lib}")
+        return p
+
+    # Place J6 header symbol
+    sch.reference(hdr_id)
+    sch.add(make_symbol_instance(
+        hdr_id, "J6", "EXP1 GPIO+POWER (FUTURE)",
+        "Connector_PinHeader_2.54mm:PinHeader_2x10_P2.54mm_Vertical", x0, y0
+    ))
+
+    # Annotation listing the planned pinout (silkscreen reference).
+    # Format: pin_num → (name, side)
+    pinout = [
+        ("1",  "IO3",  "left"),  ("2",  "IO46", "right"),
+        ("3",  "IO9",  "left"),  ("4",  "IO47", "right"),
+        ("5",  "IO11", "left"),  ("6",  "IO48", "right"),
+        ("7",  "IO14", "left"),  ("8",  "IO35", "right"),
+        ("9",  "IO15", "left"),  ("10", "+3V3", "right"),
+        ("11", "IO36", "left"),  ("12", "IO37", "right"),
+        ("13", "IO38", "left"),  ("14", "IO41", "right"),
+        ("15", "IO42", "left"),  ("16", "IO45", "right"),
+        ("17", "GND",  "left"),  ("18", "+5V",  "right"),
+        ("19", "VBAT", "left"),  ("20", "GND",  "right"),
+    ]
+    # Render pinout as a single-line text (KiCad text doesn't allow
+    # literal newlines; show only the GPIO summary).
+    pinout_short = "Pinout: 1=IO3 3=IO9 5=IO11 7=IO14 9=IO15 11=IO36 13=IO38 15=IO42 17=GND 19=VBAT | 2=IO46 4=IO47 6=IO48 8=IO35 10=3V3 12=IO37 14=IO41 16=IO45 18=5V 20=GND"
+    sch.add(make_text(pinout_short, x0 - 12, y0 - 35, size=1.0))
+
+    # Annotation
+    sch.add(make_text(
+        "Expansion header J6 (FUTURE) — 15 free GPIOs + 3V3/5V/GND/VBAT",
+        x0 - 30, y0 + 25, size=1.8))
 
 
 # ----------------------------------------------------------------------------
@@ -1652,6 +1734,7 @@ def main():
     place_ina219s(sch, cache)
     place_sensors(sch, cache)
     place_frost(sch, cache)
+    place_exp1(sch, cache)
     sch.save(SCH_PATH)
     print(f"\n[sch] wrote {SCH_PATH}")
 
