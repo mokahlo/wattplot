@@ -309,20 +309,20 @@ class SymbolCache:
 
 LIB = {
     # Power
-    "mp1584":        "Converter_DCDC:MP2307",  # not in stock libs; MP2307 is a similar 3A buck
-    "ams1117":       "Regulator_Linear:AMS1117-3.3",
-    "smbj16":        "Diode:D_TVS",  # generic TVS placeholder
+    "mp1584":        "Regulator_Switching:MP1470",  # MP1470 is a similar 2A/16V sync buck in stock libs; we use as placeholder for MP1584EN
+    "ams1117":       "Regulator_Linear:AMS1117-3.3",  # extends AP1117-15; pin positions come from there
+    "smbj16":        "Power_Protection:TVS1800DRV",  # closest 16V-ish TVS in stock lib; sub for SMBJ16A
     "inductor_4u7":  "Device:L",
     "cap":           "Device:C",
     "cap_polarized": "Device:C_Polarized",
     "res":           "Device:R",
-    "led_0805":      "LED:LED",  # generic LED placeholder
+    "led_0805":      "Device:LED",  # generic LED in Device lib (LED lib has only specific part numbers)
     "fuse_1812":     "Device:Fuse",
 
     # ESP32-S3
     "esp32s3":       "RF_Module:ESP32-S3-WROOM-1",
     "usbc":          "Connector:USB_C_Receptacle",
-    "usblc6":        "Power_Protection:ESD5V0S1B",  # similar 1-line ESD placeholder
+    "usblc6":        "Power_Protection:USBLC6-2P6",  # correct substitute for USBLC6-2
     "sw_tactile":    "Switch:SW_Push",
 
     # DRV8871 (using stock DRV8871DDA — same IC, different package)
@@ -381,14 +381,27 @@ class Schematic:
         return True
 
     def lib_symbols_section(self):
+        """Emit an EMPTY lib_symbols section. KiCad will resolve every
+        `lib_id` from the user's installed libraries at open time.
+
+        We deliberately do NOT embed a stub. The script used to emit a
+        minimal stub (`(symbol "lib:id" (pin_names (offset 0)) (in_bom yes)
+        (on_board yes))`) which KiCad's ERC then compared against the
+        full library copy and flagged as a mismatch — and worse, used the
+        stub's missing pin positions to compute "wire not connected"
+        errors when our `pin_pos` (which reads the full library)
+        disagreed by sub-millimeter amounts.
+
+        The downside is that this schematic is no longer self-contained
+        (you need the libraries installed to open it). For an open-source
+        board, that's the right tradeoff: the user is using KiCad, they
+        have the libs.
+        """
         self.add("\t(lib_symbols")
-        for lib_id, sym in self.lib_symbols.items():
-            self.add(f'\t\t(symbol "{lib_id}"')
-            self.add(f"\t\t\t(pin_names (offset 0))")
-            self.add(f"\t\t\t(in_bom yes)")
-            self.add(f"\t\t\t(on_board yes)")
-            self.add(f"\t\t)")
         self.add("\t)")
+        # (Alternatively, for full portability, we'd embed the entire raw
+        # S-expression of each symbol here. That's future work; for now
+        # we rely on the KiCad 10 standard library being present.)
 
     def save(self, path):
         self.lib_symbols_section()
@@ -433,7 +446,7 @@ def make_junction(x, y):
 def make_global_label(name, x, y, shape="input"):
     return (
         f'\t(global_label "{name}" (at {x} {y} 0)'
-        f' (shape {shape}) (fields_autoplaced yes)'
+        f' (shape {shape})'
         f' (effects (font (size 1.27 1.27))) (uuid "{new_uuid()}"))'
     )
 
@@ -470,119 +483,244 @@ def pin_pos(cache, lib_id, pin_num, instance_x, instance_y, angle=0):
 # ----------------------------------------------------------------------------
 
 def place_power_tree(sch: Schematic, cache: SymbolCache, x0=80, y0=130):
-    """12V input → MP1584 → 5V → AMS1117 → 3.3V.
+    """12V input → MP1470 (buck placeholder) → 5V → AMS1117 → 3.3V.
 
-    Coordinates (mm), origin top-left of A3 sheet. y0 is the main rail.
+    MP1470 pinout (substituted for MP1584EN — same SOT-23-6 footprint,
+    similar 6-pin sync buck):
+      1=GND, 2=SW, 3=IN, 4=FB, 5=EN, 6=BST
+
+    AMS1117-3.3 pinout (extends AP1117-15):
+      1=GND, 2=VO, 3=VI
     """
     y_main = y0
+    mp_id = LIB["mp1584"]   # actually MP1470; see LIB dict
+    ams_id = LIB["ams1117"]
+    res_id = LIB["res"]
+    cap_id = LIB["cap_polarized"]
+    l_id   = LIB["inductor_4u7"]
 
-    # MP1584 buck at (x0+50, y_main)
-    mp_x, mp_y = x0 + 50, y_main
-    mp1584_id = LIB["mp1584"]
-    sch.reference(mp1584_id)
+    # ------------------------------------------------------------------
+    # Component placement
+    # ------------------------------------------------------------------
+
+    # MP1470 (U1) at (x0+50, y_main)
+    mp_x, mp_y = x0 + 50, y_main          # (130, 130)
+    sch.reference(mp_id)
     sch.add(make_symbol_instance(
-        mp1584_id, "U1", "MP1584EN",
+        mp_id, "U1", "MP1584EN",
         "Package_TO_SOT_SMD:SOT-23-6", mp_x, mp_y
     ))
 
-    # MP1584 pin positions (SOT-23-6 typical): 1=EN, 2=GND, 3=SW,
-    # 4=VIN, 5=FB, 6=NC
-    # Verify from symbol once cached
-    mp_sym = cache.get(mp1584_id)
-    if mp_sym:
-        for num in ('1', '2', '3', '4', '5'):
-            p = pin_pos(cache, mp1584_id, num, mp_x, mp_y)
-            if p:
-                print(f"  MP1584 pin {num}: {p}")
-
-    # 12V input: global label on the left
-    sch.add(make_global_label("+12V", x0, y_main - 12, "input"))
-
-    # Wire 12V to MP1584 VIN (pin 4)
-    vin_pos = pin_pos(cache, mp1584_id, '4', mp_x, mp_y)
-    if vin_pos:
-        sch.add(make_wire(x0 + 5, y_main, vin_pos[0], vin_pos[1]))
-        sch.add(make_junction(vin_pos[0], vin_pos[1]))
-
-    # 5V output: global label after MP1584
-    fb_pos = pin_pos(cache, mp1584_id, '5', mp_x, mp_y)
-    gnd_pos = pin_pos(cache, mp1584_id, '2', mp_x, mp_y)
-    sw_pos = pin_pos(cache, mp1584_id, '3', mp_x, mp_y)
-    en_pos = pin_pos(cache, mp1584_id, '1', mp_x, mp_y)
-
-    if en_pos:
-        # EN to 12V via pull-up resistor
-        sch.add(make_text("EN", en_pos[0] + 2, en_pos[1], size=0.8))
-    if fb_pos:
-        # Feedback divider: 33k from VOUT to FB, 10k from FB to GND
-        sch.add(make_symbol_instance(
-            LIB["res"], "R1", "33k",
-            "Resistor_SMD:R_0603_1608Metric", mp_x + 10, mp_y + 12
-        ))
-        sch.add(make_symbol_instance(
-            LIB["res"], "R2", "10k",
-            "Resistor_SMD:R_0603_1608Metric", mp_x + 10, mp_y + 18
-        ))
-
-    if sw_pos:
-        # Inductor from SW
-        sch.add(make_symbol_instance(
-            LIB["inductor_4u7"], "L1", "4.7uH",
-            "Inductor_SMD:L_1210_3225Metric", mp_x + 20, mp_y - 8
-        ))
-
-    # Cin (input cap, near VIN)
-    sch.add(make_symbol_instance(
-        LIB["cap_polarized"], "C1", "22uF/25V",
-        "Capacitor_SMD:C_1210_3225Metric", mp_x, mp_y + 15
-    ))
-    # Cbst (bootstrap cap)
-    sch.add(make_symbol_instance(
-        LIB["cap"], "C2", "100nF",
-        "Capacitor_SMD:C_0402_1005Metric", mp_x + 8, mp_y + 15
-    ))
-    # Cout (output cap, near AMS1117 input)
-    sch.add(make_symbol_instance(
-        LIB["cap_polarized"], "C3", "22uF/10V",
-        "Capacitor_SMD:C_1210_3225Metric", mp_x, mp_y - 15
-    ))
-
-    # AMS1117 LDO at (x0+150, y_main)
-    ldo_x, ldo_y = x0 + 150, y_main
-    ams_id = LIB["ams1117"]
+    # AMS1117 (U2) at (x0+150, y_main)
+    ams_x, ams_y = x0 + 150, y_main       # (230, 130)
     sch.reference(ams_id)
     sch.add(make_symbol_instance(
         ams_id, "U2", "AMS1117-3.3",
-        "Package_TO_SOT_SMD:SOT-223-3_TabPin2", ldo_x, ldo_y
+        "Package_TO_SOT_SMD:SOT-223-3_TabPin2", ams_x, ams_y
     ))
 
-    # Cap on AMS1117 input
+    # C1: 12V input cap (between +12V rail and GND)
+    c1_x, c1_y = mp_x - 5, mp_y + 18      # (125, 148)
+    sch.reference(cap_id)
     sch.add(make_symbol_instance(
-        LIB["cap_polarized"], "C4", "22uF/10V",
-        "Capacitor_SMD:C_0805_2012Metric", ldo_x, ldo_y + 15
-    ))
-    # Cap on AMS1117 output
-    sch.add(make_symbol_instance(
-        LIB["cap_polarized"], "C5", "22uF/10V",
-        "Capacitor_SMD:C_0805_2012Metric", ldo_x, ldo_y - 15
+        cap_id, "C1", "22uF/25V",
+        "Capacitor_SMD:C_1210_3225Metric", c1_x, c1_y
     ))
 
-    # Wire 5V rail (after MP1584 to AMS1117 input)
-    # For now use approximate positions
-    sch.add(make_global_label("+5V", ldo_x - 15, y_main - 12, "bidirectional"))
-    sch.add(make_global_label("+3V3", ldo_x + 25, y_main - 12, "bidirectional"))
-    sch.add(make_global_label("GND", ldo_x, y_main + 35, "input"))
+    # C2: bootstrap cap (between SW and BST) — placed just below MP1470
+    c2_x, c2_y = mp_x + 8, mp_y + 8       # (138, 138)
+    sch.reference(cap_id)
+    sch.add(make_symbol_instance(
+        cap_id, "C2", "100nF",
+        "Capacitor_SMD:C_0402_1005Metric", c2_x, c2_y
+    ))
 
-    # Battery voltage divider
+    # C3: 5V output cap (between +5V rail and GND, near L1)
+    c3_x, c3_y = mp_x + 30, mp_y + 15     # (160, 145)
+    sch.reference(cap_id)
     sch.add(make_symbol_instance(
-        LIB["res"], "R3", "100k 1%",
-        "Resistor_SMD:R_0603_1608Metric", x0, y_main - 30
+        cap_id, "C3", "22uF/10V",
+        "Capacitor_SMD:C_1210_3225Metric", c3_x, c3_y
     ))
+
+    # C4: AMS1117 input cap (between +5V rail and GND)
+    c4_x, c4_y = ams_x - 8, ams_y + 15    # (222, 145)
+    sch.reference(cap_id)
     sch.add(make_symbol_instance(
-        LIB["res"], "R4", "100k 1%",
-        "Resistor_SMD:R_0603_1608Metric", x0, y_main - 45
+        cap_id, "C4", "22uF/10V",
+        "Capacitor_SMD:C_0805_2012Metric", c4_x, c4_y
     ))
-    sch.add(make_text("VBAT_ADC → GPIO7", x0 + 10, y_main - 38, size=1.0))
+
+    # C5: AMS1117 output cap (between +3V3 rail and GND)
+    c5_x, c5_y = ams_x + 8, ams_y - 15    # (238, 115)
+    sch.reference(cap_id)
+    sch.add(make_symbol_instance(
+        cap_id, "C5", "22uF/10V",
+        "Capacitor_SMD:C_0805_2012Metric", c5_x, c5_y
+    ))
+
+    # L1: output inductor (between MP1470 SW and +5V rail)
+    l1_x, l1_y = mp_x + 20, mp_y          # (150, 130)
+    sch.reference(l_id)
+    sch.add(make_symbol_instance(
+        l_id, "L1", "4.7uH",
+        "Inductor_SMD:L_1210_3225Metric", l1_x, l1_y
+    ))
+
+    # R1: 33k feedback (top of divider, from +5V to FB)
+    r1_x, r1_y = mp_x + 35, mp_y - 8      # (165, 122)
+    sch.reference(res_id)
+    sch.add(make_symbol_instance(
+        res_id, "R1", "33k",
+        "Resistor_SMD:R_0603_1608Metric", r1_x, r1_y
+    ))
+
+    # R2: 10k feedback (bottom of divider, from FB to GND)
+    r2_x, r2_y = mp_x + 35, mp_y - 18     # (165, 112)
+    sch.reference(res_id)
+    sch.add(make_symbol_instance(
+        res_id, "R2", "10k",
+        "Resistor_SMD:R_0603_1608Metric", r2_x, r2_y
+    ))
+
+    # R3: 100k battery divider (top, from VBAT to VBAT_ADC)
+    r3_x, r3_y = x0, y_main - 30          # (80, 100)
+    sch.reference(res_id)
+    sch.add(make_symbol_instance(
+        res_id, "R3", "100k 1%",
+        "Resistor_SMD:R_0603_1608Metric", r3_x, r3_y
+    ))
+
+    # R4: 100k battery divider (bottom, from VBAT_ADC to GND)
+    r4_x, r4_y = x0, y_main - 45          # (80, 85)
+    sch.reference(res_id)
+    sch.add(make_symbol_instance(
+        res_id, "R4", "100k 1%",
+        "Resistor_SMD:R_0603_1608Metric", r4_x, r4_y
+    ))
+
+    # Test point for VBAT_ADC (taps the middle of the divider)
+    sch.reference(LIB["tp"])
+    sch.add(make_symbol_instance(
+        LIB["tp"], "TP1", "VBAT_ADC",
+        "TestPoint:TestPoint_Pad_D1.0mm", x0 + 12, y_main - 37
+    ))
+
+    # ------------------------------------------------------------------
+    # Resolve pin positions
+    # ------------------------------------------------------------------
+
+    def pp(lib, num, x, y):
+        """Shorthand for pin_pos with a missing-pin fallback."""
+        p = pin_pos(cache, lib, num, x, y)
+        if p is None:
+            raise RuntimeError(f"no pin {num} on {lib}")
+        return p
+
+    # MP1470: 1=GND, 2=SW, 3=IN, 4=FB, 5=EN, 6=BST
+    mp_gnd = pp(mp_id, '1', mp_x, mp_y)
+    mp_sw  = pp(mp_id, '2', mp_x, mp_y)
+    mp_in  = pp(mp_id, '3', mp_x, mp_y)
+    mp_fb  = pp(mp_id, '4', mp_x, mp_y)
+    mp_en  = pp(mp_id, '5', mp_x, mp_y)
+    mp_bst = pp(mp_id, '6', mp_x, mp_y)
+
+    # AMS1117-3.3 (via AP1117-15): 1=GND, 2=VO, 3=VI
+    ams_gnd = pp(ams_id, '1', ams_x, ams_y)
+    ams_vo  = pp(ams_id, '2', ams_x, ams_y)
+    ams_vi  = pp(ams_id, '3', ams_x, ams_y)
+
+    # Caps: pin 1 = + (top), pin 2 = - (bottom)
+    c1_pos, c1_neg = pp(cap_id, '1', c1_x, c1_y), pp(cap_id, '2', c1_x, c1_y)
+    c2_pos, c2_neg = pp(cap_id, '1', c2_x, c2_y), pp(cap_id, '2', c2_x, c2_y)
+    c3_pos, c3_neg = pp(cap_id, '1', c3_x, c3_y), pp(cap_id, '2', c3_x, c3_y)
+    c4_pos, c4_neg = pp(cap_id, '1', c4_x, c4_y), pp(cap_id, '2', c4_x, c4_y)
+    c5_pos, c5_neg = pp(cap_id, '1', c5_x, c5_y), pp(cap_id, '2', c5_x, c5_y)
+
+    # Inductor: pin 1 = top, pin 2 = bottom
+    l1_top, l1_bot = pp(l_id, '1', l1_x, l1_y), pp(l_id, '2', l1_x, l1_y)
+
+    # Resistors: pin 1 = top, pin 2 = bottom
+    r1_top, r1_bot = pp(res_id, '1', r1_x, r1_y), pp(res_id, '2', r1_x, r1_y)
+    r2_top, r2_bot = pp(res_id, '1', r2_x, r2_y), pp(res_id, '2', r2_x, r2_y)
+    r3_top, r3_bot = pp(res_id, '1', r3_x, r3_y), pp(res_id, '2', r3_x, r3_y)
+    r4_top, r4_bot = pp(res_id, '1', r4_x, r4_y), pp(res_id, '2', r4_x, r4_y)
+
+    # ------------------------------------------------------------------
+    # Net labels — placed AT each power pin
+    # ------------------------------------------------------------------
+    # Multiple same-named global labels = same net (KiCad convention).
+    # With the lib_symbols section now empty (see Schematic.lib_symbols_section),
+    # KiCad's ERC reads pin positions from the installed libraries, which
+    # match the coordinates we computed via pin_pos(). Labels placed exactly
+    # at a pin position connect cleanly.
+
+    def label_at_pin(net, pin_xy, shape="bidirectional"):
+        x, y = pin_xy
+        sch.add(make_global_label(net, x, y, shape))
+
+    # +12V net: MP1470 IN, C1+, MP1470 EN (EN is tied to +12V via pull-up)
+    label_at_pin("+12V", mp_in)
+    label_at_pin("+12V", c1_pos)
+    label_at_pin("+12V", mp_en)
+
+    # GND net: every ground pin
+    label_at_pin("GND", mp_gnd)
+    label_at_pin("GND", ams_gnd)
+    label_at_pin("GND", c1_neg)
+    label_at_pin("GND", c3_neg)
+    label_at_pin("GND", c4_neg)
+    label_at_pin("GND", c5_neg)
+    label_at_pin("GND", r2_bot)
+    label_at_pin("GND", r4_bot)
+
+    # +5V net: MP1470 SW, AMS1117 VI, C3+, C4+, R1 top
+    label_at_pin("+5V", mp_sw)
+    label_at_pin("+5V", ams_vi)
+    label_at_pin("+5V", c3_pos)
+    label_at_pin("+5V", c4_pos)
+    label_at_pin("+5V", r1_top)
+
+    # +3V3 net: AMS1117 VO, C5+
+    label_at_pin("+3V3", ams_vo)
+    label_at_pin("+3V3", c5_pos)
+
+    # FB net: MP1470 FB, R1 bot, R2 top
+    label_at_pin("FB", mp_fb)
+    label_at_pin("FB", r1_bot)
+    label_at_pin("FB", r2_top)
+
+    # VBAT net: R3 top (battery +)
+    label_at_pin("VBAT", r3_top)
+
+    # VBAT_ADC net (mid-divider): R3 bot, R4 top, TP1
+    label_at_pin("VBAT_ADC", r3_bot)
+    label_at_pin("VBAT_ADC", r4_top)
+    label_at_pin("VBAT_ADC", (x0 + 12, y_main - 37))
+
+    # ------------------------------------------------------------------
+    # Wires — only for components bridging two named nets
+    # ------------------------------------------------------------------
+
+    def w(x1, y1, x2, y2):
+        sch.add(make_wire(x1, y1, x2, y2))
+
+    # L1 inductor: between MP1470 SW (+5V) and the rest of the +5V net
+    w(mp_sw[0], mp_sw[1], l1_top[0], l1_top[1])                  # SW → L1 top
+    w(l1_bot[0], l1_bot[1], c3_pos[0], l1_bot[1])                # L1 bot → C3+ col
+    sch.add(make_junction(l1_bot[0], l1_bot[1]))                  # tee so +5V label at C3+ sees it
+
+    # C2 bootstrap cap: between MP1470 SW and BST
+    # C2 pin 1 (top) → BST, C2 pin 2 (bottom) → SW
+    w(c2_pos[0], c2_pos[1], c2_pos[0], mp_bst[1])                # up to BST y
+    w(c2_pos[0], mp_bst[1], mp_bst[0], mp_bst[1])                # right to BST pin
+    sch.add(make_junction(mp_bst[0], mp_bst[1]))
+    w(c2_neg[0], c2_neg[1], c2_neg[0], mp_sw[1])                 # up to SW y
+    w(c2_neg[0], mp_sw[1], mp_sw[0], mp_sw[1])                   # right to SW pin
+    sch.add(make_junction(mp_sw[0], mp_sw[1]))
+
+    # Annotation
+    sch.add(make_text("→ GPIO7 (ADC)", x0 + 20, y_main - 37 - 2, size=1.0))
 
 
 # ----------------------------------------------------------------------------
