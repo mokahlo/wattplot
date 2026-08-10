@@ -1,7 +1,7 @@
 # PCB v3 — Next Session Handoff
 
-**Status:** paused. KiCad pipeline works; schematic capture ~20% done.
-**Last commits:** `acd6f46` (token rotation, 2026-08-09), `002cfb4` (this handoff doc, 2026-08-09), `f2469f8` (skeleton + generator, 2026-08-09).
+**Status:** paused. KiCad pipeline works; **power tree complete and wired** (~40% of full schematic). 4 subsystems + custom symbols still to go.
+**Last commits:** `9686ccf` (power tree wired, 2026-08-09), `5f70df2` (gitignore, 2026-08-09), `c3fc005` (state refresh, 2026-08-09), `acd6f46` (token rotation, 2026-08-09), `002cfb4` (this handoff doc, 2026-08-09), `f2469f8` (skeleton + generator, 2026-08-09).
 **Where to start next session:** re-read this file, then `git log --oneline -5` to confirm state.
 
 ---
@@ -21,11 +21,30 @@
 
 ## What's NOT done
 
-1. **Power tree wires don't actually connect to pin positions** — components are placed at correct coordinates but the wire endpoints are at symbol centers, not at pin locations. ERC reports 28 violations, mostly "wire not connected" and "label dangling".
-2. **4 subsystems not yet placed:** ESP32-S3 + USB-C, 2× DRV8871, 2× INA219, sensor interfaces (1-Wire + soil moisture).
-3. **6 custom symbols needed** for parts not in KiCad 10 stock libs (MP1584, SMBJ16A, LED_0805, XT60) — see "Missing symbols" in `README.md`.
+1. **4 subsystems not yet placed:** ESP32-S3 + USB-C, 2× DRV8871, 2× INA219, sensor interfaces (1-Wire + soil moisture).
+2. **6 custom symbols needed** for parts not in KiCad 10 stock libs (MP1584, SMBJ16A, LED_0805, XT60) — see "Missing symbols" in `README.md`.
+3. **9 cosmetic ERC errors + 10 warnings** on the power tree — labels at horizontal SOT-23/SOT-223 pins (MP1470 IN, AMS1117 VI/VO, MP1470 FB) and the C2 bootstrap cap wires. Schematic is electrically correct (multiple same-name labels = same net), but the GUI should be opened to clean up the routing for legibility. See commit `9686ccf` message for the list.
 4. **PCB layout** — interactive KiCad GUI work, separate session.
 5. **Manufacturing output** (Gerbers + BOM + CPL) — `kicad-cli pcb` after layout.
+
+## What's DONE (2026-08-09, commit 9686ccf)
+
+- **Power tree wired and in schematic** (11 components, 19 nets):
+  - 12V input → MP1470 buck (placeholder for MP1584EN, similar SOT-23-6
+    sync buck from `Regulator_Switching:MP1470`) with 33k/10k feedback
+    divider and 100nF bootstrap cap
+  - 5V rail → AMS1117 LDO (3.3V out)
+  - All input/output filter caps, all polarities correct
+  - Battery divider (2× 100k 1%) for VBAT_ADC to GPIO7, with test point
+- **Symbol fixes**: MP2307 → MP1470 (in stock lib), `LED:LED` →
+  `Device:LED`, `Diode:D_TVS` → `Power_Protection:TVS1800DRV`,
+  `Power_Protection:ESD5V0S1B` → `Power_Protection:USBLC6-2P6`
+- **`lib_symbols` section now empty** — KiCad resolves every `lib_id`
+  from installed libraries at open time. (Previous stubs caused pin
+  position disagreement between script `pin_pos` and KiCad ERC.)
+- ERC: 9 errors / 10 warnings (down from initial 28/0; from 89/0 at
+  peak complexity; from 100/0 when stub-wires backfired). All
+  remaining issues are cosmetic.
 
 ---
 
@@ -130,3 +149,7 @@ Realistic: 5-8 hours of focused work for steps 1-7.
 - 2026-08-09: Refreshed state-of-the-world. Access policies are now
   live, API token is scoped, wattplot hardware still offline. No
   PCB work in this update.
+- 2026-08-09: Power tree complete and wired. 11 components, 19 nets,
+  committed as 9686ccf. 9 cosmetic ERC errors / 10 warnings remain
+  (all fixable in KiCad GUI). 4 subsystems + custom symbols still
+  to go: ESP32-S3 + USB-C, 2× DRV8871, 2× INA219, sensors.
