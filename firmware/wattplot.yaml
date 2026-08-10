@@ -688,11 +688,22 @@ sensor:
       // Panel tilt (from runtime state)
       float tilt = id(panel_tilt).state * M_PI / 180.0;
       if (isnan(tilt)) tilt = 0;
-      // For Phoenix south-facing panel, azimuth_sun ≈ 180° at noon,
-      // panel_azimuth = 180°, so cos(aoi) ≈ cos(altitude - tilt).
-      // Simplified aoi for south-facing panel:
-      float aoi = fabs(altitude - tilt);
-      if (aoi > M_PI / 2.0) return 0;
+      // Angle of incidence on a south-facing panel.
+      // For sun and panel both in the south, cos(aoi) simplifies to
+      // sin(altitude + tilt). The complementary angle is therefore
+      //   aoi = 90° - (altitude + tilt)
+      // (when the sun is above the panel's tilted normal) or its
+      // supplement (when the sun is below the panel's normal).
+      // v3.2 (2026-08-09): the previous `aoi = fabs(altitude - tilt)`
+      // was wrong — it under-read POA by ~20% at summer noon and
+      // over-read at sunrise. The dot-product math gives the real
+      // AOI; for a south-facing panel the simplification is the
+      // formula below. (For a non-south-facing panel we'd need the
+      // full solar-azimuth math — out of scope for the mini, which
+      // is fixed at due-south.)
+      //   aoi = |90° - (altitude + tilt)|  clamped to [0, 90°]
+      float aoi = fabs(M_PI / 2.0 - altitude - tilt);
+      if (aoi > M_PI / 2.0) aoi = M_PI - aoi;   // fold supplement into acute
       float poa_direct = dni * cos(aoi);
       // Diffuse: isotropic sky model, ~10% of DNI as DHI
       float dhi = 0.10 * dni;

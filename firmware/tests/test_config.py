@@ -107,7 +107,15 @@ REQUIRED_IDS = [
     # the real INA219 bus-voltage sensor `panel_v`.
     "panel_current",
     "panel_v",
+    # Energy + irradiance chain — every link in the math has to compile.
+    # If anyone deletes a `template` sensor, the energy integration or
+    # POA / efficiency readouts in HA will silently go missing.
+    "panel_efficiency",
+    "poa_irradiance",
+    "energy_today",
+    "energy_total",
     "battery_voltage",
+    "battery_soc",
     "soil_moisture_raw",
     "soil_moisture_pct",
     # v3 current sense (rev B): IPROPI analog taps on both DRV8871s.
