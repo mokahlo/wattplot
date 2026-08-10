@@ -1455,12 +1455,22 @@ def place_esp32_s3(sch: Schematic, cache: SymbolCache, x0=300, y0=200):
     label("+3V3", i2c_r1_bot[0], e_3v3[1])
 
     # I²C pull-up R8 (SCL): GPIO18 (right col) → R8 → 3V3
-    i2c_r2_top = pp(res_id, '1', i2c_r2_x, i2c_r2_y)
-    i2c_r2_bot = pp(res_id, '2', i2c_r2_x, i2c_r2_y)
-    # Stub from GPIO18 (315.24, 215.24) right to x=335 (already in support col)
-    w(e_io18[0], e_io18[1], i2c_r2_top[0], e_io18[1])
-    sch.add(make_junction(i2c_r2_top[0], e_io18[1]))
-    # No through-R wire for R8 either
+    i2c_r2_top = pp(res_id, '1', i2c_r2_x, i2c_r2_y)   # (333.73, 248.81)
+    i2c_r2_bot = pp(res_id, '2', i2c_r2_x, i2c_r2_y)   # (336.27, 241.19)
+    # GPIO18 (315.24, 215.24) → R8 pin 1 (333.73, 248.81)
+    # Use a fresh support column at x=327 (between SDA col 325 and EN col 329.92)
+    # to avoid shorting to R7 SDA vertical at x=325.
+    scl_support_x = 327
+    # Horizontal stub from GPIO18 to support col
+    w(e_io18[0], e_io18[1], scl_support_x, e_io18[1])
+    sch.add(make_junction(scl_support_x, e_io18[1]))
+    # Down the support col to R8 pin 1's y
+    w(scl_support_x, e_io18[1], scl_support_x, i2c_r2_top[1])
+    sch.add(make_junction(scl_support_x, i2c_r2_top[1]))
+    # Right to R8 pin 1
+    w(scl_support_x, i2c_r2_top[1], i2c_r2_top[0], i2c_r2_top[1])
+    sch.add(make_junction(i2c_r2_top[0], i2c_r2_top[1]))
+    # NO through-R wire — the resistor's own pins do the connection.
     # Up to 3V3 rail from R8 pin 2
     w(i2c_r2_bot[0], i2c_r2_bot[1], i2c_r2_bot[0], e_3v3[1])
     label("+3V3", i2c_r2_bot[0], e_3v3[1])
