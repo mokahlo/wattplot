@@ -582,6 +582,73 @@ def place_sensors(sch: Schematic, cache: SymbolCache, x0=750, y0=200):
 
 
 # ----------------------------------------------------------------------------
+# Subsystem: Frost protection outputs (v3.3)
+# ----------------------------------------------------------------------------
+#
+# Two JST-XH 2-pin connectors driven directly by the ESP32 GPIOs.
+# The user wires a relay coil to each (logic-level N-MOSFET or a
+# relay module with BJT/MOSFET input). The relay's switched contact
+# handles the actual load (12V heating mat or 5V USB grow light).
+#
+#   J7  2-pin JST-XH  FROST HEATER  (pin 1 = GPIO39, pin 2 = GND)
+#   J8  2-pin JST-XH  FROST LIGHT   (pin 1 = GPIO40, pin 2 = GND)
+#
+# The GPIO lines are 3V3 CMOS outputs, max 20 mA source/sink.
+# Logic-level N-MOSFETs (AO3401A, IRLZ44N) drive directly. A relay
+# module with a BJT input needs a 1 kΩ base resistor; a MOSFET-input
+# module drives directly.
+#
+# Both signals default LOW (relay off, load de-energized). The
+# ESPHome firmware drives them HIGH to energize the load.
+#
+# See docs/frost_protection.md for full wiring recipes.
+
+def place_frost(sch: Schematic, cache: SymbolCache, x0=750, y0=400):
+    """Frost protection GPIO outputs (J7 heater, J8 grow light)."""
+    jst_id   = LIB["jst_xh_2"]
+
+    def pp(lib, num, x, y):
+        p = pin_pos(cache, lib, num, x, y)
+        if p is None:
+            raise RuntimeError(f"no pin {num} on {lib}")
+        return p
+
+    def lbl(net, pos, shape="bidirectional"):
+        sch.add(make_global_label(net, pos[0], pos[1], shape))
+
+    # J7: Heater relay coil (pin 1 = GPIO39, pin 2 = GND)
+    j7_x, j7_y = x0, y0
+    sch.reference(jst_id)
+    sch.add(make_symbol_instance(
+        jst_id, "J7", "FROST HEATER",
+        "Connector_JST:JST_XH_B2B-PH-K_1x02_P2.50mm_Vertical", j7_x, j7_y
+    ))
+    j7_p1 = pp(jst_id, '1', j7_x, j7_y)  # GPIO39 (FROST_HEATER)
+    j7_p2 = pp(jst_id, '2', j7_x, j7_y)  # GND
+
+    lbl("FROST_HEATER", j7_p1)
+    lbl("GND",          j7_p2)
+
+    # J8: Grow light relay coil (pin 1 = GPIO40, pin 2 = GND)
+    j8_x, j8_y = x0, y0 + 50
+    sch.reference(jst_id)
+    sch.add(make_symbol_instance(
+        jst_id, "J8", "FROST LIGHT",
+        "Connector_JST:JST_XH_B2B-PH-K_1x02_P2.50mm_Vertical", j8_x, j8_y
+    ))
+    j8_p1 = pp(jst_id, '1', j8_x, j8_y)  # GPIO40 (FROST_GROW_LIGHT)
+    j8_p2 = pp(jst_id, '2', j8_x, j8_y)  # GND
+
+    lbl("FROST_GROW_LIGHT", j8_p1)
+    lbl("GND",              j8_p2)
+
+    # Annotation
+    sch.add(make_text("Frost outputs (J7 heater, J8 grow light, v3.3)",
+                      x0 - 20, y0 - 40, size=1.8))
+
+
+
+# ----------------------------------------------------------------------------
 # Subsystem: 2x INA219 current/power monitors
 # ----------------------------------------------------------------------------
 #
@@ -1119,7 +1186,7 @@ def place_power_tree(sch: Schematic, cache: SymbolCache, x0=80, y0=130):
 #   Bottom     (y=-27.94): pins 1, 40, 41 (GND)
 #   Top        (y=+27.94): pin 2 (3V3)
 #
-# Wattplot pin map (firmware v3.2):
+# Wattplot pin map (firmware v3.3):
 #   GPIO1  → ACTUATOR_IN1     GPIO2  → ACTUATOR_IN2
 #   GPIO4  → ACTUATOR_IPROPI  GPIO21 → ACTUATOR_nFAULT
 #   GPIO5  → SOLENOID_IPROPI  GPIO10 → SOLENOID_IN1
@@ -1134,6 +1201,8 @@ def place_power_tree(sch: Schematic, cache: SymbolCache, x0=80, y0=130):
 #           external 10k to 3V3 + tactile button to GND for reset)
 #   USB_D+/D- → native USB (goes to USB-C receptacle)
 #   RXD0/TXD0 → UART (programming header)
+#   GPIO39 → FROST_HEATER     (v3.3, relay coil drive)
+#   GPIO40 → FROST_GROW_LIGHT (v3.3, relay coil drive)
 
 def place_esp32_s3(sch: Schematic, cache: SymbolCache, x0=300, y0=200):
     """ESP32-S3-WROOM-1 module + supporting circuitry.
@@ -1307,6 +1376,13 @@ def place_esp32_s3(sch: Schematic, cache: SymbolCache, x0=300, y0=200):
     e_txd0  = pp(esp_id, '37', esp_x, esp_y)
     e_io2   = pp(esp_id, '38', esp_x, esp_y)
     e_io1   = pp(esp_id, '39', esp_x, esp_y)
+    # v3.3: frost protection outputs. GPIO39 and GPIO40 are on the
+    # right side of the WROOM-1 module (KiCad internal pins 32, 33).
+    # The WROOM-1 datasheet exposes these pins; they're free of any
+    # strapping or PSRAM use on the N16R8 variant. GPIO33-37 are
+    # used internally for the octal PSRAM and are not user-accessible.
+    e_io39  = pp(esp_id, '32', esp_x, esp_y)
+    e_io40  = pp(esp_id, '33', esp_x, esp_y)
     e_gnd2  = pp(esp_id, '40', esp_x, esp_y)
     e_gnd3  = pp(esp_id, '41', esp_x, esp_y)
 
@@ -1340,6 +1416,10 @@ def place_esp32_s3(sch: Schematic, cache: SymbolCache, x0=300, y0=200):
     label_at_pin("STATUS_LED",     e_io17)  # GPIO17
     label_at_pin("I2C_SCL",        e_io18)  # GPIO18
     label_at_pin("ACTUATOR_nFAULT",e_io21)  # GPIO21
+    # v3.3: frost protection outputs. These GPIO lines drive the
+    # user's relay coils (heater + USB grow light) via J7/J8.
+    label_at_pin("FROST_HEATER",   e_io39)  # GPIO39
+    label_at_pin("FROST_GROW_LIGHT",e_io40) # GPIO40
 
     # USB data lines
     label_at_pin("USB_DP", e_usbdp)
@@ -1356,6 +1436,7 @@ def place_esp32_s3(sch: Schematic, cache: SymbolCache, x0=300, y0=200):
     label_at_pin("UART_TX", e_txd0)  # GPIO43/TXD0
 
     # Unused GPIOs (no labels — just pins visible on the schematic)
+    # GPIO39, GPIO40 are now used by frost (see above).
     for pin_xy in [e_io3, e_io9, e_io11, e_io14, e_io15,
                    e_io45, e_io46, e_io47, e_io48]:
         # No label — just visible in schematic
@@ -1570,6 +1651,7 @@ def main():
     place_drv8871s(sch, cache)
     place_ina219s(sch, cache)
     place_sensors(sch, cache)
+    place_frost(sch, cache)
     sch.save(SCH_PATH)
     print(f"\n[sch] wrote {SCH_PATH}")
 

@@ -1,7 +1,7 @@
 # PCB v3 — Next Session Handoff
 
-**Status:** schematic is **functionally complete** (~97%). All 6 subsystems placed and wired; R8 SCL pull-up now properly connected via fresh x=327 support column (was 30mm unconnected). ERC shows 145 violations (was 142, +3 from R8 stub); 2 persistent `multiple_net_names` warnings (+3V3/I2C_SDA, ACTUATOR_IPROPI/SOLENOID_IPROPI) are sub-mm parser disagreements — ERC explicitly picks one name in the netlist, so the sch is correct.
-**Last commits:** `24d97e5` (lib_symbols experiment failed + documented, 2026-08-09), `23fcb82` (R8 SCL fix via x=327 col, 2026-08-09), `c5b6e1f` (custom symbols + through-R fixes, 2026-08-09), `f2e8b71` (custom-lib, 2026-08-09), `1aae464` (sensors, 2026-08-09), `d0d261f` (INA219s, 2026-08-09), `8a4daa1` (DRV8871s, 2026-08-09), `eb24f4c` (ESP32-S3, 2026-08-09), `9686ccf` (power tree, 2026-08-09).
+**Status:** schematic is **functionally complete** (~98%). All 7 subsystems placed and wired; the v3.3 frost protection output connectors (J7 heater, J8 grow light) are now in place on GPIO39 and GPIO40. ERC shows 149 violations (was 145, +4 from new JST footprint warnings on J7/J8 — same naming quirk as J1/J2/J5/J6, cosmetic only). 2 persistent `multiple_net_names` warnings (+3V3/I2C_SDA, ACTUATOR_IPROPI/SOLENOID_IPROPI) are sub-mm parser disagreements — ERC explicitly picks one name in the netlist, so the sch is correct.
+**Last commits:** (next session) frost subsystem add, `24d97e5` (lib_symbols experiment failed + documented, 2026-08-09), `23fcb82` (R8 SCL fix via x=327 col, 2026-08-09), `c5b6e1f` (custom symbols + through-R fixes, 2026-08-09), `f2e8b71` (custom-lib, 2026-08-09), `1aae464` (sensors, 2026-08-09), `d0d261f` (INA219s, 2026-08-09), `8a4daa1` (DRV8871s, 2026-08-09), `eb24f4c` (ESP32-S3, 2026-08-09), `9686ccf` (power tree, 2026-08-09).
 **Where to start next session:** re-read this file, then `git log --oneline -10` to confirm state.
 
 ---
