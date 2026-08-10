@@ -724,6 +724,437 @@ def place_power_tree(sch: Schematic, cache: SymbolCache, x0=80, y0=130):
 
 
 # ----------------------------------------------------------------------------
+# Subsystem: ESP32-S3 + USB-C + EN/BOOT + status LED + I²C pull-ups + header
+# ----------------------------------------------------------------------------
+#
+# ESP32-S3-WROOM-1 pinout (from RF_Module lib, sub-symbol _1_1):
+#   Left side  (x=-15.24): pins 3, 4-9, 12, 15, 17-22, 27, 38, 39
+#   Right side (x=+15.24): pins 10, 11, 13, 14, 16, 23-26, 28-37
+#   Bottom     (y=-27.94): pins 1, 40, 41 (GND)
+#   Top        (y=+27.94): pin 2 (3V3)
+#
+# Wattplot pin map (firmware v3.2):
+#   GPIO1  → ACTUATOR_IN1     GPIO2  → ACTUATOR_IN2
+#   GPIO4  → ACTUATOR_IPROPI  GPIO21 → ACTUATOR_nFAULT
+#   GPIO5  → SOLENOID_IPROPI  GPIO10 → SOLENOID_IN1
+#   GPIO12 → SOLENOID_IN2     GPIO13 → SOLENOID_nFAULT
+#   GPIO6  → SOIL_MOISTURE_AOUT
+#   GPIO7  → BATTERY_V_ADC
+#   GPIO8  → I2C_SDA          GPIO18 → I2C_SCL
+#   GPIO16 → DS18B20_DATA
+#   GPIO17 → STATUS_LED
+#   GPIO0  → BOOT (strapping pin, active low)
+#   EN     → chip enable (active high, has internal pull-up; we add
+#           external 10k to 3V3 + tactile button to GND for reset)
+#   USB_D+/D- → native USB (goes to USB-C receptacle)
+#   RXD0/TXD0 → UART (programming header)
+
+def place_esp32_s3(sch: Schematic, cache: SymbolCache, x0=300, y0=200):
+    """ESP32-S3-WROOM-1 module + supporting circuitry.
+
+    Layout:
+                            STATUS_LED
+                                |
+                            [330R]-+--> GPIO17
+                                  LED
+        USB-C   USB_D+/D- -->   ESP32-S3    --> ACTUATOR/SOLENOID/
+        conn    via 5.1k       WROOM-1         SENSOR labels
+        + ESD                   |
+                              EN   BOOT        --> I2C pull-ups
+                              |    /                     |
+                             10k  SW                  SDA SCL
+                              |   |
+                             3V3 GND                 Program header
+                                                          |
+                                                       RX TX 0 3V3 GND
+    """
+    esp_id = LIB["esp32s3"]
+    usbc_id = LIB["usbc"]
+    res_id = LIB["res"]
+    led_id = LIB["led_0805"]
+    cap_id = LIB["cap"]
+    cap_p_id = LIB["cap_polarized"]
+    sw_id = LIB["sw_tactile"]
+    hdr_id = LIB["hdr_2x5"]
+    l_id = LIB["inductor_4u7"]
+
+    # ------------------------------------------------------------------
+    # Component placement
+    # ------------------------------------------------------------------
+
+    # ESP32-S3 module at (x0, y0)
+    esp_x, esp_y = x0, y0
+    sch.reference(esp_id)
+    sch.add(make_symbol_instance(
+        esp_id, "U3", "ESP32-S3-WROOM-1",
+        "RF_Module:ESP32-S3-WROOM-1", esp_x, esp_y
+    ))
+
+    # USB-C receptacle — to the left of ESP32
+    usbc_x, usbc_y = x0 - 60, y0 - 30
+    sch.reference(usbc_id)
+    sch.add(make_symbol_instance(
+        usbc_id, "J1", "USB-C",
+        "Connector:USB_C_Receptacle", usbc_x, usbc_y
+    ))
+
+    # Status LED + series resistor (above ESP32)
+    led_r_x, led_r_y = x0, y0 - 65        # resistor above
+    sch.reference(res_id)
+    sch.add(make_symbol_instance(
+        res_id, "R5", "330R",
+        "Resistor_SMD:R_0603_1608Metric", led_r_x, led_r_y
+    ))
+    led_x, led_y = x0, y0 - 80            # LED above resistor
+    sch.reference(led_id)
+    sch.add(make_symbol_instance(
+        led_id, "D1", "GREEN",
+        "LED_SMD:LED_0805_2012Metric", led_x, led_y
+    ))
+
+    # EN pull-up resistor + reset button (right of ESP32, top)
+    en_r_x, en_r_y = x0 + 35, y0 - 30
+    sch.reference(res_id)
+    sch.add(make_symbol_instance(
+        res_id, "R6", "10k",
+        "Resistor_SMD:R_0603_1608Metric", en_r_x, en_r_y
+    ))
+    rst_x, rst_y = x0 + 35, y0 - 50
+    sch.reference(sw_id)
+    sch.add(make_symbol_instance(
+        sw_id, "SW1", "RESET",
+        "Switch:SW_Push", rst_x, rst_y
+    ))
+
+    # BOOT button (right of ESP32, middle)
+    boot_x, boot_y = x0 + 35, y0
+    sch.reference(sw_id)
+    sch.add(make_symbol_instance(
+        sw_id, "SW2", "BOOT",
+        "Switch:SW_Push", boot_x, boot_y
+    ))
+
+    # I²C pull-up resistors (right of ESP32, bottom)
+    i2c_r1_x, i2c_r1_y = x0 + 35, y0 + 30    # SDA pull-up
+    sch.reference(res_id)
+    sch.add(make_symbol_instance(
+        res_id, "R7", "4.7k",
+        "Resistor_SMD:R_0603_1608Metric", i2c_r1_x, i2c_r1_y
+    ))
+    i2c_r2_x, i2c_r2_y = x0 + 35, y0 + 45    # SCL pull-up
+    sch.reference(res_id)
+    sch.add(make_symbol_instance(
+        res_id, "R8", "4.7k",
+        "Resistor_SMD:R_0603_1608Metric", i2c_r2_x, i2c_r2_y
+    ))
+
+    # Decoupling caps for ESP32 (multiple GND/3V3 pairs)
+    dec1_x, dec1_y = x0 - 30, y0 - 60
+    sch.reference(cap_id)
+    sch.add(make_symbol_instance(
+        cap_id, "C6", "100nF",
+        "Capacitor_SMD:C_0402_1005Metric", dec1_x, dec1_y
+    ))
+    dec2_x, dec2_y = x0 + 30, y0 - 60
+    sch.reference(cap_id)
+    sch.add(make_symbol_instance(
+        cap_id, "C7", "10uF",
+        "Capacitor_SMD:C_0603_1608Metric", dec2_x, dec2_y
+    ))
+
+    # USB-C series resistors + ESD protection (5.1k CC pull-downs optional)
+    # For simplicity: just put a USBLC6-2P6 ESD near the USB-C connector
+    # (was already in LIB; place + 100nF cap on each data line)
+    esd_x, esd_y = x0 - 35, y0 - 30
+    sch.reference(LIB["usblc6"])
+    sch.add(make_symbol_instance(
+        LIB["usblc6"], "U4", "USBLC6-2P6",
+        "Package_TO_SOT_SMD:SOT-23-6", esd_x, esd_y
+    ))
+
+    # Programming / debug header (10-pin: 2x5) at the far right
+    hdr_x, hdr_y = x0 + 80, y0
+    sch.reference(hdr_id)
+    sch.add(make_symbol_instance(
+        hdr_id, "J2", "PROG",
+        "PinHeader_2.54mm:PinHeader_2x05_P2.54mm_Vertical", hdr_x, hdr_y
+    ))
+
+    # ------------------------------------------------------------------
+    # Resolve pin positions
+    # ------------------------------------------------------------------
+    def pp(lib, num, x, y):
+        p = pin_pos(cache, lib, num, x, y)
+        if p is None:
+            raise RuntimeError(f"no pin {num} on {lib}")
+        return p
+
+    # ESP32-S3 pins
+    e_gnd   = pp(esp_id, '1',  esp_x, esp_y)     # bottom GND
+    e_3v3   = pp(esp_id, '2',  esp_x, esp_y)     # top 3V3
+    e_en    = pp(esp_id, '3',  esp_x, esp_y)     # left EN
+    e_io4   = pp(esp_id, '4',  esp_x, esp_y)
+    e_io5   = pp(esp_id, '5',  esp_x, esp_y)
+    e_io6   = pp(esp_id, '6',  esp_x, esp_y)
+    e_io7   = pp(esp_id, '7',  esp_x, esp_y)
+    e_io15  = pp(esp_id, '8',  esp_x, esp_y)
+    e_io16  = pp(esp_id, '9',  esp_x, esp_y)
+    e_io17  = pp(esp_id, '10', esp_x, esp_y)
+    e_io18  = pp(esp_id, '11', esp_x, esp_y)
+    e_io8   = pp(esp_id, '12', esp_x, esp_y)
+    e_usbdn = pp(esp_id, '13', esp_x, esp_y)
+    e_usbdp = pp(esp_id, '14', esp_x, esp_y)
+    e_io3   = pp(esp_id, '15', esp_x, esp_y)
+    e_io46  = pp(esp_id, '16', esp_x, esp_y)
+    e_io9   = pp(esp_id, '17', esp_x, esp_y)
+    e_io10  = pp(esp_id, '18', esp_x, esp_y)
+    e_io11  = pp(esp_id, '19', esp_x, esp_y)
+    e_io12  = pp(esp_id, '20', esp_x, esp_y)
+    e_io13  = pp(esp_id, '21', esp_x, esp_y)
+    e_io14  = pp(esp_id, '22', esp_x, esp_y)
+    e_io21  = pp(esp_id, '23', esp_x, esp_y)
+    e_io47  = pp(esp_id, '24', esp_x, esp_y)
+    e_io48  = pp(esp_id, '25', esp_x, esp_y)
+    e_io45  = pp(esp_id, '26', esp_x, esp_y)
+    e_io0   = pp(esp_id, '27', esp_x, esp_y)
+    e_rxd0  = pp(esp_id, '36', esp_x, esp_y)
+    e_txd0  = pp(esp_id, '37', esp_x, esp_y)
+    e_io2   = pp(esp_id, '38', esp_x, esp_y)
+    e_io1   = pp(esp_id, '39', esp_x, esp_y)
+    e_gnd2  = pp(esp_id, '40', esp_x, esp_y)
+    e_gnd3  = pp(esp_id, '41', esp_x, esp_y)
+
+    # ------------------------------------------------------------------
+    # Net labels — placed AT each ESP32 pin (multiple same-name = same net)
+    # ------------------------------------------------------------------
+    def label_at_pin(net, pin_xy, shape="bidirectional"):
+        x, y = pin_xy
+        sch.add(make_global_label(net, x, y, shape))
+
+    # 3V3 (chip supply, decoupled)
+    label_at_pin("+3V3", e_3v3)
+
+    # GND (all 3 GND pins)
+    label_at_pin("GND", e_gnd)
+    label_at_pin("GND", e_gnd2)
+    label_at_pin("GND", e_gnd3)
+
+    # Wattplot signal labels (each maps to a firmware function)
+    label_at_pin("ACTUATOR_IN1",   e_io1)   # GPIO1
+    label_at_pin("ACTUATOR_IN2",   e_io2)   # GPIO2
+    label_at_pin("ACTUATOR_IPROPI",e_io4)   # GPIO4 (ADC)
+    label_at_pin("SOLENOID_IPROPI",e_io5)   # GPIO5 (ADC)
+    label_at_pin("SOIL_AOUT",      e_io6)   # GPIO6 (ADC)
+    label_at_pin("BATTERY_V_ADC",  e_io7)   # GPIO7 (ADC)
+    label_at_pin("I2C_SDA",        e_io8)   # GPIO8
+    label_at_pin("SOLENOID_IN1",   e_io10)  # GPIO10
+    label_at_pin("SOLENOID_IN2",   e_io12)  # GPIO12
+    label_at_pin("SOLENOID_nFAULT",e_io13)  # GPIO13
+    label_at_pin("DS18B20_DATA",   e_io16)  # GPIO16
+    label_at_pin("STATUS_LED",     e_io17)  # GPIO17
+    label_at_pin("I2C_SCL",        e_io18)  # GPIO18
+    label_at_pin("ACTUATOR_nFAULT",e_io21)  # GPIO21
+
+    # USB data lines
+    label_at_pin("USB_DP", e_usbdp)
+    label_at_pin("USB_DN", e_usbdn)
+
+    # BOOT (strapping pin — pulled high normally, low during download mode)
+    label_at_pin("BOOT", e_io0)
+
+    # EN
+    label_at_pin("EN_CHIP", e_en)
+
+    # UART (programming header)
+    label_at_pin("UART_RX", e_rxd0)  # GPIO44/RXD0
+    label_at_pin("UART_TX", e_txd0)  # GPIO43/TXD0
+
+    # Unused GPIOs (no labels — just pins visible on the schematic)
+    for pin_xy in [e_io3, e_io9, e_io11, e_io14, e_io15,
+                   e_io45, e_io46, e_io47, e_io48]:
+        # No label — just visible in schematic
+        pass
+
+    # ------------------------------------------------------------------
+    # Supporting components wired to nets
+    # ------------------------------------------------------------------
+    #
+    # Routing rules: NO wire segment runs along x=284.76 (left GPIO
+    # column) or x=315.24 (right GPIO column). All connections to
+    # those pins go via short horizontal stubs (≤5mm) and then route
+    # out to a "support" column at x=325 or x=335 where the support
+    # components live. Otherwise a long wire would short together
+    # every label on the GPIO column.
+
+    # The support column for EN/RST/BOOT lives at x=335.
+    # The I2C pull-up column lives at x=335 too, but uses y values
+    # below the GPIO band (y < 177) so the vertical wires don't
+    # cross the right-side GPIO column (y = 177 to 223 at x=315).
+    # A short horizontal stub from each GPIO pin to x=325 connects it
+    # to the support column.
+
+    def w(x1, y1, x2, y2):
+        sch.add(make_wire(x1, y1, x2, y2))
+
+    def label(net, x, y, shape="bidirectional"):
+        sch.add(make_global_label(net, x, y, shape))
+
+    # Status LED: GPIO17 → R5 (330R) → LED anode; LED cathode → GND
+    # GPIO17 is on right side (x=315.24, y=217.78). Wire RIGHT to the
+    # support column at x=335 (no other labels at y=217.78).
+    led_r_top = pp(res_id, '1', led_r_x, led_r_y)
+    led_r_bot = pp(res_id, '2', led_r_x, led_r_y)
+    led_pos = pp(led_id, '1', led_x, led_y)
+    led_neg = pp(led_id, '2', led_x, led_y)
+    w(led_r_top[0], led_r_top[1], e_io17[0], led_r_top[1])    # right to R5
+    sch.add(make_junction(e_io17[0], led_r_top[1]))
+    label("STATUS_LED", e_io17[0], led_r_top[1])              # label on stub
+    w(led_r_top[0], led_r_top[1], led_r_bot[0], led_r_bot[1])  # through R5
+    w(led_r_bot[0], led_r_bot[1], led_pos[0], led_r_bot[1])    # to LED anode
+    w(led_pos[0], led_pos[1], led_neg[0], led_pos[1])         # through LED
+    w(led_neg[0], led_pos[1], led_neg[0], y0 - 100)            # down to GND rail
+    label("GND", led_neg[0], y0 - 100)
+
+    # EN pull-up: EN (left col, x=284.76) → R6 (x=335) → 3V3
+    # Route: EN → right to x=325, then DOWN through y=173.81, then
+    # right to R6 pin 1. The vertical segment at x=325 is between
+    # the right GPIO column (315.24) and R6 (335), no labels there.
+    en_r_top = pp(res_id, '1', en_r_x, en_r_y)
+    en_r_bot = pp(res_id, '2', en_r_x, en_r_y)
+    # Stub from EN pin right to x=325 (no other label at y=222.86
+    # since the BOOT label is at y=217.78 and the GPIO labels are
+    # at x=284.76 — this stub is at y=222.86 only)
+    w(e_en[0], e_en[1], 325, e_en[1])
+    sch.add(make_junction(325, e_en[1]))
+    # Vertical from (325, 222.86) down to (325, en_r_top[1] = 173.81)
+    w(325, e_en[1], 325, en_r_top[1])
+    # Right to R6 pin 1
+    w(325, en_r_top[1], en_r_top[0], en_r_top[1])
+    sch.add(make_junction(en_r_top[0], en_r_top[1]))
+    # Down through R6 to its bottom pin
+    w(en_r_top[0], en_r_top[1], en_r_bot[0], en_r_bot[1])
+    # Up to 3V3 rail (y=227.94)
+    w(en_r_bot[0], en_r_bot[1], en_r_bot[0], e_3v3[1])
+    label("+3V3", en_r_bot[0], e_3v3[1])
+
+    # EN reset button (SW1): pin 1 to EN_CHIP net, pin 2 to GND
+    # SW_Push has HORIZONTAL pins: pin 1 at x=rst_x-5.08, pin 2 at x=rst_x+5.08
+    rst_top = pp(sw_id, '1', rst_x, rst_y)
+    rst_bot = pp(sw_id, '2', rst_x, rst_y)
+    # Connect rst_top (329.92, 153.81) to EN net
+    # Route: up from rst_top to EN y, then left to e_en[0]
+    w(rst_top[0], rst_top[1], rst_top[0], e_en[1])
+    w(rst_top[0], e_en[1], e_en[0], e_en[1])
+    sch.add(make_junction(e_en[0], e_en[1]))
+    # rst_bot to GND
+    w(rst_bot[0], rst_bot[1], rst_bot[0], y0 - 100)
+    label("GND", rst_bot[0], y0 - 100)
+
+    # BOOT button (SW2): pin 1 to BOOT (IO0), pin 2 to GND
+    boot_top = pp(sw_id, '1', boot_x, boot_y)
+    boot_bot = pp(sw_id, '2', boot_x, boot_y)
+    # Connect boot_top (334.92, 203.81) to BOOT net (e_io0 = 284.76, 217.78)
+    # Route: up from boot_top to e_io0 y, then left to e_io0[0]
+    w(boot_top[0], boot_top[1], boot_top[0], e_io0[1])
+    w(boot_top[0], e_io0[1], e_io0[0], e_io0[1])
+    sch.add(make_junction(e_io0[0], e_io0[1]))
+    w(boot_bot[0], boot_bot[1], boot_bot[0], y0 - 100)
+    label("GND", boot_bot[0], y0 - 100)
+
+    # I²C pull-up R7 (SDA): GPIO8 (left col) → R7 → 3V3
+    i2c_r1_top = pp(res_id, '1', i2c_r1_x, i2c_r1_y)
+    i2c_r1_bot = pp(res_id, '2', i2c_r1_x, i2c_r1_y)
+    # Stub from GPIO8 (284.76, 197.46) right to x=325
+    w(e_io8[0], e_io8[1], 325, e_io8[1])
+    sch.add(make_junction(325, e_io8[1]))
+    # Vertical from (325, 197.46) down to (325, 233.81 = i2c_r1_top[1])
+    w(325, e_io8[1], 325, i2c_r1_top[1])
+    # Right to R7 pin 1
+    w(325, i2c_r1_top[1], i2c_r1_top[0], i2c_r1_top[1])
+    sch.add(make_junction(i2c_r1_top[0], i2c_r1_top[1]))
+    # Down through R7
+    w(i2c_r1_top[0], i2c_r1_top[1], i2c_r1_bot[0], i2c_r1_bot[1])
+    # Up to 3V3 rail
+    w(i2c_r1_bot[0], i2c_r1_bot[1], i2c_r1_bot[0], e_3v3[1])
+    label("+3V3", i2c_r1_bot[0], e_3v3[1])
+
+    # I²C pull-up R8 (SCL): GPIO18 (right col) → R8 → 3V3
+    i2c_r2_top = pp(res_id, '1', i2c_r2_x, i2c_r2_y)
+    i2c_r2_bot = pp(res_id, '2', i2c_r2_x, i2c_r2_y)
+    # Stub from GPIO18 (315.24, 215.24) right to x=335 (already in support col)
+    w(e_io18[0], e_io18[1], i2c_r2_top[0], e_io18[1])
+    sch.add(make_junction(i2c_r2_top[0], e_io18[1]))
+    # Down through R8
+    w(i2c_r2_top[0], e_io18[1], i2c_r2_top[0], i2c_r2_top[1])
+    w(i2c_r2_top[0], i2c_r2_top[1], i2c_r2_bot[0], i2c_r2_bot[1])
+    # Up to 3V3 rail
+    w(i2c_r2_bot[0], i2c_r2_bot[1], i2c_r2_bot[0], e_3v3[1])
+    label("+3V3", i2c_r2_bot[0], e_3v3[1])
+
+    # Decoupling caps: C6 (100nF) and C7 (10uF) on 3V3/GND
+    c6_pos = pp(cap_id, '1', dec1_x, dec1_y)
+    c6_neg = pp(cap_id, '2', dec1_x, dec1_y)
+    # Stub C6 positive to the 3V3 rail
+    w(c6_pos[0], c6_pos[1], c6_pos[0], e_3v3[1])
+    # Stub C6 negative to the GND rail
+    w(c6_neg[0], c6_neg[1], c6_neg[0], y0 - 100)
+    label("GND", c6_neg[0], y0 - 100)
+
+    c7_pos = pp(cap_p_id, '1', dec2_x, dec2_y)
+    c7_neg = pp(cap_p_id, '2', dec2_x, dec2_y)
+    w(c7_pos[0], c7_pos[1], c7_pos[0], e_3v3[1])
+    w(c7_neg[0], c7_neg[1], c7_neg[0], y0 - 100)
+    label("GND", c7_neg[0], y0 - 100)
+
+    # 3V3/GND labels for the rails (one label per rail, used by all
+    # the support components' wires)
+    label("+3V3", e_3v3[0], e_3v3[1])
+    label("GND", 300, y0 - 100)
+
+    # USB-C: place labels for power and data lines
+    # USB-C has many pins; we just need CC1/CC2 (with 5.1k to GND),
+    # VBUS (with 10uF cap), GND, D+, D-
+    # For schematic brevity, label the data + power pins and skip CC
+    # (the 5.1k CC pull-downs are added in a later pass)
+    # Try to read a few USB-C pin positions
+    for n in ('1', '4', '5', '6', '9', '12', 'A1', 'B12'):
+        try:
+            p = pp(usbc_id, n, usbc_x, usbc_y)
+            if p:
+                # Label only the meaningful pins
+                if n == '4':  label("USB_VBUS", p[0], p[1])
+                if n == '5':  label("USB_VBUS", p[0], p[1])
+                if n == '9':  label("USB_DP",   p[0], p[1])
+                if n == '12': label("USB_DN",   p[0], p[1])
+                if n in ('1','12'): label("GND", p[0], p[1])
+        except RuntimeError:
+            pass
+
+    # Programming header: 10-pin (2x5)
+    # Standard ESP32 programming header pinout:
+    #   1: GND   2: GPIO0 (BOOT)
+    #   3: GPIO1 (TX)  4: EN (RST)
+    #   5: GPIO3 (RX)  6: GPIO2
+    #   7: 3V3   8: GPIO4
+    #   9: GPIO5 10: GND
+    # (matches the J-LINK / ESP-PROG / ESP32-S3-USB-Bridge pinout)
+    # We'll just label the meaningful pins; the rest get GND
+    for n, net in [('1', 'GND'), ('2', 'BOOT'), ('3', 'UART_TX'),
+                   ('4', 'EN_CHIP'), ('5', 'UART_RX'), ('7', '+3V3'),
+                   ('9', 'STATUS_LED'), ('10', 'GND')]:
+        try:
+            p = pp(hdr_id, n, hdr_x, hdr_y)
+            if p:
+                label(net, p[0], p[1])
+        except RuntimeError:
+            pass
+
+    # Annotation
+    sch.add(make_text("ESP32-S3 Module + USB + EN/BOOT + LED + I2C + Header",
+                      x0 - 30, y0 - 110, size=2.0))
+
+
+# ----------------------------------------------------------------------------
 # Main
 # ----------------------------------------------------------------------------
 
@@ -742,6 +1173,7 @@ def main():
     sch = Schematic(cache)
     sch.header()
     place_power_tree(sch, cache)
+    place_esp32_s3(sch, cache)
     sch.save(SCH_PATH)
     print(f"\n[sch] wrote {SCH_PATH}")
 
