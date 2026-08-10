@@ -18,6 +18,8 @@ SCH_PATH = HERE / "wattplot-v3.kicad_sch"
 PRO_PATH = HERE / "wattplot-v3.kicad_pro"
 
 # --- KiCad library path ---
+# Stock KiCad 10 library + our custom lib (for the 4 hand-rolled symbols)
+CUSTOM_LIB = Path(__file__).parent / "custom-lib"
 KICAD_LIB = Path(r"C:\Users\mokah\AppData\Local\Programs\KiCad\10.0\share\kicad\symbols")
 
 # --- Schematic constants ---
@@ -41,25 +43,37 @@ def new_uuid():
 class SymbolCache:
     """Reads KiCad 10 .kicad_sym files and caches symbol definitions.
     Each symbol entry has: pins (dict of number -> (x, y, name, type))
+
+    Searches a list of lib directories (stock KiCad + custom-lib first).
     """
 
-    def __init__(self, lib_dir: Path):
-        self.lib_dir = lib_dir
+    def __init__(self, lib_dirs):
+        # Accept either a single Path or a list of Paths
+        if isinstance(lib_dirs, (Path, str)):
+            self.lib_dirs = [Path(lib_dirs)]
+        else:
+            self.lib_dirs = [Path(d) for d in lib_dirs]
         self._cache: dict[str, dict] = {}
         self._lib_paths: dict[str, Path] = {}
 
     def _find_lib(self, lib_name: str) -> Path | None:
-        """Find the .kicad_sym file for a given library name."""
+        """Find the .kicad_sym file for a given library name.
+
+        Search order: CUSTOM_LIB first (so our hand-rolled symbols
+        override stock ones), then stock KiCad.
+        """
         if lib_name in self._lib_paths:
             return self._lib_paths[lib_name]
-        p = self.lib_dir / f"{lib_name}.kicad_sym"
-        if p.exists():
-            self._lib_paths[lib_name] = p
-            return p
-        # Search subdirs
-        for f in self.lib_dir.rglob(f"{lib_name}.kicad_sym"):
-            self._lib_paths[lib_name] = f
-            return f
+        # Search custom lib first, then stock
+        # (Reverse the list so custom comes first when iterated in reverse)
+        for lib_dir in reversed(self.lib_dirs):
+            p = lib_dir / f"{lib_name}.kicad_sym"
+            if p.exists():
+                self._lib_paths[lib_name] = p
+                return p
+            for f in lib_dir.rglob(f"{lib_name}.kicad_sym"):
+                self._lib_paths[lib_name] = f
+                return f
         return None
 
     def get(self, lib_id: str) -> dict | None:
@@ -309,14 +323,14 @@ class SymbolCache:
 
 LIB = {
     # Power
-    "mp1584":        "Regulator_Switching:MP1470",  # MP1470 is a similar 2A/16V sync buck in stock libs; we use as placeholder for MP1584EN
+    "mp1584":        "wattplot:MP1584EN",  # our custom 6-pin SOT-23-6 sync buck
     "ams1117":       "Regulator_Linear:AMS1117-3.3",  # extends AP1117-15; pin positions come from there
-    "smbj16":        "Power_Protection:TVS1800DRV",  # closest 16V-ish TVS in stock lib; sub for SMBJ16A
+    "smbj16":        "wattplot:SMBJ16A",  # our custom 2-pin TVS
     "inductor_4u7":  "Device:L",
     "cap":           "Device:C",
     "cap_polarized": "Device:C_Polarized",
     "res":           "Device:R",
-    "led_0805":      "Device:LED",  # generic LED in Device lib (LED lib has only specific part numbers)
+    "led_0805":      "wattplot:LED_0805",  # our custom 2-pin LED (Device:LED is OK too)
     "fuse_1812":     "Device:Fuse",
 
     # ESP32-S3
@@ -332,7 +346,7 @@ LIB = {
     "ina219":        "Sensor_Energy:INA219BxD",
 
     # Connectors
-    "xt60":          "Connector:Barrel_Jack",  # generic 2-pin power placeholder
+    "xt60":          "wattplot:XT60",  # our custom 2-pin XT60 power connector
     "jst_xh_2":      "Connector_Generic:Conn_01x02",
     "jst_xh_3":      "Connector_Generic:Conn_01x03",
     "hdr_2x5":       "Connector_Generic:Conn_02x05_Odd_Even",
@@ -526,11 +540,14 @@ def place_sensors(sch: Schematic, cache: SymbolCache, x0=750, y0=200):
     r_top = pp(res_id, '1', r_x, r_y)  # top of resistor (connects to 3V3)
     r_bot = pp(res_id, '2', r_x, r_y)  # bottom (connects to DATA)
 
-    # Wire from DATA (j5_p2) up to r_bot
-    sch.add(make_wire(j5_p2[0], j5_p2[1], j5_p2[0], r_bot[1]))
-    sch.add(make_wire(j5_p2[0], r_bot[1], r_bot[0], r_bot[1]))
-    sch.add(make_junction(j5_p2[0], r_bot[1]))
-    # Wire from r_top to 3V3 (j5_p3)
+    # Wire from DATA (j5_p2) up to r_bot — route via x=752 to avoid
+    # passing through the +3V3 label at (744.92, 197.46)
+    sch.add(make_wire(j5_p2[0], j5_p2[1], 752, j5_p2[1]))  # right
+    sch.add(make_wire(752, j5_p2[1], 752, r_bot[1]))          # up
+    sch.add(make_wire(752, r_bot[1], r_bot[0], r_bot[1]))      # left to r_bot
+    sch.add(make_junction(752, r_bot[1]))
+    # Wire from r_top to 3V3 (j5_p3) — NO through-R wire, the
+    # resistor's own pins do the connection.
     sch.add(make_wire(r_top[0], r_top[1], r_top[0], j5_p3[1]))
     sch.add(make_wire(r_top[0], j5_p3[1], j5_p3[0], j5_p3[1]))
     sch.add(make_junction(r_top[0], j5_p3[1]))
@@ -814,11 +831,11 @@ def place_drv8871s(sch: Schematic, cache: SymbolCache, x0=450, y0=200):
         w(p_out2[0], j2[1], j2[0], j2[1])
         j(p_out2[0], j2[1])
 
-        # ILIM resistor: ILIM pin → R top → R bot → GND
+        # ILIM resistor: ILIM pin → R top; R bot → GND
+        # (No through-R wire — the resistor's own pins do the connection)
         w(p_ilim[0], p_ilim[1], p_ilim[0], r_top[1])
         w(p_ilim[0], r_top[1], r_top[0], r_top[1])
         j(p_ilim[0], r_top[1])
-        w(r_top[0], r_top[1], r_bot[0], r_bot[1])
         w(r_bot[0], r_bot[1], r_bot[0], y - 30)
         lbl("GND", (r_bot[0], y - 30))
 
@@ -1369,7 +1386,7 @@ def place_esp32_s3(sch: Schematic, cache: SymbolCache, x0=300, y0=200):
     w(led_r_top[0], led_r_top[1], e_io17[0], led_r_top[1])    # right to R5
     sch.add(make_junction(e_io17[0], led_r_top[1]))
     label("STATUS_LED", e_io17[0], led_r_top[1])              # label on stub
-    w(led_r_top[0], led_r_top[1], led_r_bot[0], led_r_bot[1])  # through R5
+    # NO through-R wire — R5's own pins do the connection.
     w(led_r_bot[0], led_r_bot[1], led_pos[0], led_r_bot[1])    # to LED anode
     w(led_pos[0], led_pos[1], led_neg[0], led_pos[1])         # through LED
     w(led_neg[0], led_pos[1], led_neg[0], y0 - 100)            # down to GND rail
@@ -1391,9 +1408,8 @@ def place_esp32_s3(sch: Schematic, cache: SymbolCache, x0=300, y0=200):
     # Right to R6 pin 1
     w(325, en_r_top[1], en_r_top[0], en_r_top[1])
     sch.add(make_junction(en_r_top[0], en_r_top[1]))
-    # Down through R6 to its bottom pin
-    w(en_r_top[0], en_r_top[1], en_r_bot[0], en_r_bot[1])
-    # Up to 3V3 rail (y=227.94)
+    # No through-R wire — the resistor's pins do the connection.
+    # Up to 3V3 rail (y=227.94) from R6 pin 2
     w(en_r_bot[0], en_r_bot[1], en_r_bot[0], e_3v3[1])
     label("+3V3", en_r_bot[0], e_3v3[1])
 
@@ -1413,10 +1429,11 @@ def place_esp32_s3(sch: Schematic, cache: SymbolCache, x0=300, y0=200):
     # BOOT button (SW2): pin 1 to BOOT (IO0), pin 2 to GND
     boot_top = pp(sw_id, '1', boot_x, boot_y)
     boot_bot = pp(sw_id, '2', boot_x, boot_y)
-    # Connect boot_top (334.92, 203.81) to BOOT net (e_io0 = 284.76, 217.78)
-    # Route: up from boot_top to e_io0 y, then left to e_io0[0]
-    w(boot_top[0], boot_top[1], boot_top[0], e_io0[1])
-    w(boot_top[0], e_io0[1], e_io0[0], e_io0[1])
+    # Connect boot_top to BOOT net (e_io0 = 284.76, 217.78)
+    # Route via y=219 to avoid the STATUS_LED label at y=217.78
+    w(boot_top[0], boot_top[1], boot_top[0], 219)
+    w(boot_top[0], 219, e_io0[0], 219)
+    w(e_io0[0], 219, e_io0[0], e_io0[1])
     sch.add(make_junction(e_io0[0], e_io0[1]))
     w(boot_bot[0], boot_bot[1], boot_bot[0], y0 - 100)
     label("GND", boot_bot[0], y0 - 100)
@@ -1432,9 +1449,8 @@ def place_esp32_s3(sch: Schematic, cache: SymbolCache, x0=300, y0=200):
     # Right to R7 pin 1
     w(325, i2c_r1_top[1], i2c_r1_top[0], i2c_r1_top[1])
     sch.add(make_junction(i2c_r1_top[0], i2c_r1_top[1]))
-    # Down through R7
-    w(i2c_r1_top[0], i2c_r1_top[1], i2c_r1_bot[0], i2c_r1_bot[1])
-    # Up to 3V3 rail
+    # NO through-R wire — the resistor's own pins do the connection.
+    # Up to 3V3 rail from R7 pin 2
     w(i2c_r1_bot[0], i2c_r1_bot[1], i2c_r1_bot[0], e_3v3[1])
     label("+3V3", i2c_r1_bot[0], e_3v3[1])
 
@@ -1444,10 +1460,8 @@ def place_esp32_s3(sch: Schematic, cache: SymbolCache, x0=300, y0=200):
     # Stub from GPIO18 (315.24, 215.24) right to x=335 (already in support col)
     w(e_io18[0], e_io18[1], i2c_r2_top[0], e_io18[1])
     sch.add(make_junction(i2c_r2_top[0], e_io18[1]))
-    # Down through R8
-    w(i2c_r2_top[0], e_io18[1], i2c_r2_top[0], i2c_r2_top[1])
-    w(i2c_r2_top[0], i2c_r2_top[1], i2c_r2_bot[0], i2c_r2_bot[1])
-    # Up to 3V3 rail
+    # No through-R wire for R8 either
+    # Up to 3V3 rail from R8 pin 2
     w(i2c_r2_bot[0], i2c_r2_bot[1], i2c_r2_bot[0], e_3v3[1])
     label("+3V3", i2c_r2_bot[0], e_3v3[1])
 
@@ -1519,7 +1533,7 @@ def place_esp32_s3(sch: Schematic, cache: SymbolCache, x0=300, y0=200):
 # ----------------------------------------------------------------------------
 
 def main():
-    cache = SymbolCache(KICAD_LIB)
+    cache = SymbolCache([CUSTOM_LIB, KICAD_LIB])
 
     # Verify symbol resolution
     for name, lib_id in LIB.items():
