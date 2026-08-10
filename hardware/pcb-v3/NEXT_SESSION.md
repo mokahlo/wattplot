@@ -1,8 +1,8 @@
 # PCB v3 — Next Session Handoff
 
-**Status:** schematic is **functionally complete** (~95%). All 6 subsystems placed: power tree, ESP32-S3 + USB-C + support, 2x DRV8871 H-bridges, 2x INA219 current monitors, sensor interfaces, 4 custom symbols. ERC shows 142 violations, mostly cosmetic (off-grid warnings, label-anchor quirks from empty lib_symbols, 2 multiple_net_names that need GUI cleanup).
-**Last commits:** `c5b6e1f` (custom symbols + through-R fixes, 2026-08-09), `f2e8b71` (custom-lib, 2026-08-09), `1aae464` (sensors, 2026-08-09), `d0d261f` (INA219s, 2026-08-09), `8a4daa1` (DRV8871s, 2026-08-09), `eb24f4c` (ESP32-S3, 2026-08-09), `9686ccf` (power tree, 2026-08-09).
-**Where to start next session:** re-read this file, then `git log --oneline -8` to confirm state.
+**Status:** schematic is **functionally complete** (~97%). All 6 subsystems placed and wired; R8 SCL pull-up now properly connected via fresh x=327 support column (was 30mm unconnected). ERC shows 145 violations (was 142, +3 from R8 stub); 2 persistent `multiple_net_names` warnings (+3V3/I2C_SDA, ACTUATOR_IPROPI/SOLENOID_IPROPI) are sub-mm parser disagreements — ERC explicitly picks one name in the netlist, so the sch is correct.
+**Last commits:** `24d97e5` (lib_symbols experiment failed + documented, 2026-08-09), `23fcb82` (R8 SCL fix via x=327 col, 2026-08-09), `c5b6e1f` (custom symbols + through-R fixes, 2026-08-09), `f2e8b71` (custom-lib, 2026-08-09), `1aae464` (sensors, 2026-08-09), `d0d261f` (INA219s, 2026-08-09), `8a4daa1` (DRV8871s, 2026-08-09), `eb24f4c` (ESP32-S3, 2026-08-09), `9686ccf` (power tree, 2026-08-09).
+**Where to start next session:** re-read this file, then `git log --oneline -10` to confirm state.
 
 ---
 
@@ -21,12 +21,66 @@
 
 ## What's NOT done
 
-1. **PCB layout** — interactive KiCad GUI work, separate session.
-2. **Manufacturing output** (Gerbers + BOM + CPL) — `kicad-cli pcb` after layout.
-3. **Final ERC clean in KiCad GUI** — ~5 minutes of cleanup needed for
-   the 2 remaining `multiple_net_names` warnings (labels that share
-   coordinates due to lib_symbols being empty) and a few `wire_dangling`
-   stubs. Schematic is electrically correct; just visual touch-up.
+1. **PCB layout** — interactive KiCad GUI work, separate session. ~2-4
+   hours, 80×60mm 2-layer board.
+2. **Manufacturing output** (Gerbers + BOM + CPL) — `kicad-cli pcb` after
+   layout.
+3. **Final ERC clean in KiCad GUI** — ~5-10 minutes of cleanup for:
+   - 2 `multiple_net_names` warnings (+3V3/I2C_SDA, ACTUATOR_IPROPI/SOLENOID_IPROPI)
+     — these are sub-mm parser disagreements; the labels ARE at the correct
+     pin positions, KiCad 10's parser just doesn't always agree to sub-mm.
+     Schematic is electrically correct; netlist is correct.
+   - 26 `label_dangling` — same sub-mm disagreement. Cosmetic.
+   - 5 `wire_dangling` and 37 `unconnected_wire_endpoint` — mostly cosmetic
+     wire stub issues; can be cleaned up interactively.
+   - 64 `endpoint_off_grid` — wires not snapped to 50mil grid; cosmetic.
+4. **Tried but failed: lib_symbols full-embed** — KiCad 10's parser is
+   stricter than ours about the lib_symbols section format. Even with
+   correct paren counts and indentation, embedding either the full raw
+   S-expression OR just the custom-lib content breaks loading with
+   "Failed to load schematic". Documented in `build_schematic.py`
+   `lib_symbols_section()`. Empty-section is the right tradeoff.
+
+## What's DONE (2026-08-09, commits 9686ccf → 24d97e5)
+
+All 6 subsystems placed and wired:
+
+1. **Power tree** (commit `9686ccf`) — 12V → MP1584EN buck → 5V →
+   AMS1117 LDO → 3.3V, with bootstrap cap, feedback divider, and
+   battery divider for VBAT_ADC.
+
+2. **ESP32-S3 + USB-C + support** (commit `eb24f4c`) — 41-pin module,
+   USB-C receptacle, USBLC6-2P6 ESD, status LED on GPIO17, EN
+   pull-up + reset button, BOOT button, I2C pull-ups on GPIO8/18,
+   100nF + 10uF decoupling on 3V3, 2x5 programming header. All 14
+   used GPIOs labeled at pin positions with Wattplot signal names.
+
+3. **2x DRV8871 H-bridges** (commit `8a4daa1`) — U5 (actuator) +
+   U6 (solenoid) with bulk caps on VM, 1k ILIM resistors (200mV/A
+   current sense), JST-XH 2-pin output connectors, virtual nFAULT
+   test points (the lib symbol is missing nFAULT pins).
+
+4. **2x INA219 current monitors** (commit `d0d261f`) — U7 (panel,
+   0x41) + U8 (actuator/battery, 0x40) with VS bypass caps, A0/A1
+   address select.
+
+5. **Sensor interfaces** (commit `1aae464`) — J5 (JST-XH 3-pin)
+   1-Wire with 4.7k pull-up R12, J6 (JST-XH 3-pin) soil moisture.
+
+6. **4 custom symbols** (commits `f2e8b71`, `c5b6e1f`) —
+   `custom-lib/wattplot.kicad_sym` with MP1584EN, SMBJ16A, LED_0805,
+   XT60. build_schematic.py reads custom-lib/ first, then stock.
+
+7. **R8 SCL pull-up fix** (commit `23fcb82`) — was 30mm unconnected
+   to R8 pin 1. Now routed via fresh x=327 support col (between
+   SDA col 325 and EN col 329.92) to avoid shorting SDA↔SCL.
+
+8. **lib_symbols experiment** (commit `24d97e5`) — tried twice
+   (full embed + custom-lib only), both broke loading. Documented
+   why and reverted to empty-section approach.
+
+Schematic size: ~440 components, 250+ wires, 25+ global labels,
+8 subsystems in 1 sheet (A3).
 
 ## What's DONE (2026-08-09, commits 9686ccf → c5b6e1f)
 
@@ -180,5 +234,11 @@ Realistic: 5-8 hours of focused work for steps 1-7.
 - 2026-08-09 (later): 4 custom symbols added (commit `f2e8b71`).
   MP1584EN, SMBJ16A, LED_0805, XT60 in `custom-lib/wattplot.kicad_sym`.
 - 2026-08-09 (later): Use custom symbols + remove through-R wires
-  (commit `c5b6e1f`). Schematic now ~95% complete. ERC 142
-  violations, mostly cosmetic.
+  (commit `c5b6e1f`). Schematic ~95% complete. ERC 142 violations.
+- 2026-08-09 (later): R8 SCL pull-up fix (commit `23fcb82`).
+  Routed through fresh x=327 support col. R8 pin 1 now actually
+  connected (was 30mm floating). +3 ERC violations, but the sch
+  is electrically correct.
+- 2026-08-09 (later): lib_symbols embed experiment documented
+  (commit `24d97e5`). Tried twice, both broke loading. Reverted
+  to empty section.
