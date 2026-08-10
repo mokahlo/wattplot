@@ -14,7 +14,7 @@ the recovery checklist at the bottom and keep it in the toolkit.
       threshold should land in 0.85 - 1.0 A; the actuator should
       retract to 0° on release.
 - [ ] **Live control panel reachable from github.io.** Open
-      <https://mokahlo.github.io/wattplot/control.html> on the booth
+      <https://wattplot.org/control.html> on the booth
       laptop. Verify the panel shows the live chip (not the stale
       banner) and that pressing Calibrate doesn't 500.
 - [ ] **Sim dashboard renders.** Open the local

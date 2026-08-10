@@ -4,8 +4,8 @@
 title: Wattplot
 description: A raised bed whose canopy is a working solar panel. The symbiosis of energy production and agriculture.
 tagline: One bed. Two harvests.
-url: https://mokahlo.github.io
-baseurl: /wattplot
+url: https://wattplot.org
+baseurl: ""
 lang: en_US
 
 # Markdown engine

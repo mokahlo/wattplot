@@ -17,7 +17,7 @@ on a stable public HTTPS URL with two-tier access:
 
 | Piece | State |
 |---|---|
-| Domain + Cloudflare zone (`phxtraffic.com`) | ✅ live |
+| Domain + Cloudflare zone (`wattplot.org`) | ✅ live |
 | Tunnel `mo-tower` → `127.0.0.1:8765`, `cloudflared` service | ✅ live |
 | Public read (`/api/state`, `/api/logs`, `/api/whoami`, `/control.html`, `/logs.html`, `/`) | ✅ live |
 | `/api/whoami`, `/login`, auth-aware UI (§9) | ✅ live |
@@ -45,7 +45,7 @@ from the Jekyll build (see `_config.yml` `exclude: [docs/_internal/...]`).
 │             │                                                       │
 │             │ "Open live control panel" button (operator)           │
 │             ▼                                                       │
-│  https://control.phxtraffic.com                                      │
+│  https://control.wattplot.org                                      │
 │             │                                                       │
 │             │ Cloudflare edge                                       │
 │             │   • TLS term (auto cert)                              │
@@ -82,7 +82,7 @@ from the Jekyll build (see `_config.yml` `exclude: [docs/_internal/...]`).
 
 **The headline numbers:**
 
-- Stable URL: `https://control.phxtraffic.com` — your domain, your subdomain.
+- Stable URL: `https://control.wattplot.org` — your domain, your subdomain.
 - Cost: **~$10/yr** for the domain. Cloudflare Tunnel + Access are free.
 - Time to set up: ~15 min of Cloudflare dashboard config (no OAuth setup).
 - Public surface: live data + logs (read-only).
@@ -309,7 +309,7 @@ tunnel: wattplot-control
 credentials-file: C:\Users\mokah\.cloudflared\<UUID>.json
 
 ingress:
-  - hostname: control.phxtraffic.com
+  - hostname: control.wattplot.org
     service: http://127.0.0.1:8765
     originRequest:
       # Don't trust any incoming Host header; force ours.
@@ -325,11 +325,11 @@ the tunnel UUID from §7c.)
 ### 7e. Route DNS
 
 ```powershell
-cloudflared tunnel route dns wattplot-control control.phxtraffic.com
+cloudflared tunnel route dns wattplot-control control.wattplot.org
 ```
 
 This creates a CNAME record in Cloudflare DNS pointing
-`control.phxtraffic.com` → the tunnel. The record shows up
+`control.wattplot.org` → the tunnel. The record shows up
 proxied (orange cloud) in the Cloudflare DNS tab.
 
 ### 7f. Run cloudflared as a Windows service
@@ -391,7 +391,7 @@ python C:\dev\wattplot\tools\wattplot_control.py
 In another terminal:
 
 ```powershell
-curl -i https://control.phxtraffic.com/api/state
+curl -i https://control.wattplot.org/api/state
 ```
 
 Expected (this is BEFORE Access policies are applied, so you get
@@ -408,7 +408,7 @@ If you get a Cloudflare error, check:
   tunnel is healthy and connected.
 - `cloudflared tunnel list` — should list wattplot-control as
   "active".
-- DNS tab in Cloudflare: the CNAME for `control.phxtraffic.com`
+- DNS tab in Cloudflare: the CNAME for `control.wattplot.org`
   should be present and proxied.
 
 ### 7h. Gotcha — port 8765 collisions cause 502 (tunnel says "Bad Gateway")
@@ -464,7 +464,7 @@ Build the gate before poking holes in it.
 3. **Application configuration**:
    - Name: `Wattplot Controls`
    - Session duration: 24 hours
-   - Application domain: `control.phxtraffic.com`
+   - Application domain: `control.wattplot.org`
    - **Path**: leave empty — this app deliberately catches *everything*.
 4. **Identity providers**: **One-time PIN** only.
 5. Click **Next**.
@@ -477,7 +477,7 @@ Build the gate before poking holes in it.
 
 Catch-all is the point: any endpoint added later is protected the day it
 ships, without anyone remembering to update a list. Verify before moving
-on — from an incognito window, `https://control.phxtraffic.com/api/state`
+on — from an incognito window, `https://control.wattplot.org/api/state`
 should now bounce to a Cloudflare login page.
 
 ### 8b. Application 2 — public read (Bypass)
@@ -488,7 +488,7 @@ Now open up only the read-only surface.
 2. **Application configuration**:
    - Name: `Wattplot Public Read`
    - Session duration: 24 hours
-   - Application domain: `control.phxtraffic.com`
+   - Application domain: `control.wattplot.org`
    - **Path**: leave empty (the policy below is path-filtered)
 3. Click **Next**.
 4. **Policy**:
@@ -551,7 +551,7 @@ the actuators to the public. List each public path in full.
 ### 8d. Test from outside
 
 In a **private/incognito** window (no cookies), open
-`https://control.phxtraffic.com/control.html`.
+`https://control.wattplot.org/control.html`.
 
 Expect: the live dashboard, no auth prompt, and the orange banner
 *"Public read-only view. Controls require sign-in."* with every control
@@ -567,13 +567,13 @@ machine with no Access cookie — they are the difference between "the
 login page appeared" and "the hardware is protected":
 
 ```bash
-curl -s -o /dev/null -w '%{http_code}\n' https://control.phxtraffic.com/api/state
+curl -s -o /dev/null -w '%{http_code}\n' https://control.wattplot.org/api/state
 ```
 
 Expect `200` — public read still works.
 
 ```bash
-curl -s -o /dev/null -w '%{http_code}\n' -X POST -H 'Content-Type: application/json' -d '{"label":"Solenoid Valve","on":true}' https://control.phxtraffic.com/api/switch
+curl -s -o /dev/null -w '%{http_code}\n' -X POST -H 'Content-Type: application/json' -d '{"label":"Solenoid Valve","on":true}' https://control.wattplot.org/api/switch
 ```
 
 Expect `302` (redirect to the Access login), **not** `200`, `400`, `500`
@@ -583,7 +583,7 @@ found: this call returned a JSON `400 {"error": "unknown label"}` from
 aiohttp instead of a redirect.
 
 ```bash
-curl -s -o /dev/null -w '%{http_code}\n' https://control.phxtraffic.com/api/whoami
+curl -s -o /dev/null -w '%{http_code}\n' https://control.wattplot.org/api/whoami
 ```
 
 Expect `200` with `{"authed": false}`. A `302` here means `/api/whoami`
@@ -662,7 +662,7 @@ the secret; the log file is not.
 | Component | Mechanism | Survives reboot? |
 |---|---|---|
 | Cloudflare Tunnel | `cloudflared service install` → runs as LOCAL SYSTEM | Yes |
-| Cloudflare DNS for control.phxtraffic.com | Stored in Cloudflare | Yes |
+| Cloudflare DNS for control.wattplot.org | Stored in Cloudflare | Yes |
 | Access policies | Stored in Cloudflare | Yes |
 | Access login method (email OTP) | Stored in Cloudflare | Yes |
 | Python server (`wattplot_control.py`) | NOT persistent | **No** |
@@ -690,7 +690,7 @@ Register-ScheduledTask `
 Reboot. After 30 s, the laptop should have:
 - `cloudflared` service running (LOCAL SYSTEM)
 - `wattplot_control.py` running (your user)
-- `https://control.phxtraffic.com/api/state` returning 200
+- `https://control.wattplot.org/api/state` returning 200
 
 If the tunnel shows offline: `Get-Service Cloudflared` → if Stopped,
 `Start-Service Cloudflared`. If the service won't start, look at
@@ -702,7 +702,7 @@ Windows Event Log → Application → Cloudflared.
 
 ### 11a. Why the dashboard is split across two hosts
 
-`mokahlo.github.io` and `control.phxtraffic.com` are different
+`mokahlo.github.io` and `control.wattplot.org` are different
 registrable domains, which makes `CF_Authorization` a **third-party
 cookie** for any request the github.io page sends. Chrome and Safari
 block those by default. No amount of CORS configuration changes this —
@@ -713,18 +713,18 @@ So the split is forced by the browser, not chosen for convenience:
 | Surface | Where it lives | Why |
 |---|---|---|
 | Live readings | embedded on github.io | `/api/state` is public and uncredentialed — no cookie, so no third-party problem |
-| Controls | `control.phxtraffic.com` | the Access cookie is first-party there, so sign-in works |
+| Controls | `control.wattplot.org` | the Access cookie is first-party there, so sign-in works |
 
 If fully embedded controls ever become a requirement, the fix is to put
 the docs site on the same registrable domain — a GitHub Pages custom
-domain such as `wattplot.phxtraffic.com`. The cookie is then same-site
+domain such as `wattplot.wattplot.org`. The cookie is then same-site
 and credentialed CORS works. That changes the published URL, which is
 why it was not done.
 
 ### 11b. Live telemetry strip on `docs/data.html`
 
 A "Live from the wattplot" panel above the charts polls
-`https://control.phxtraffic.com/api/state` every 5 s and shows tilt,
+`https://control.wattplot.org/api/state` every 5 s and shows tilt,
 battery, soil, power, controller state, and valve position.
 
 It distinguishes three states and never presents the last two as live:
@@ -754,10 +754,10 @@ issued and nothing here interacts with the Access bypass rules.
 ### 11d. Nav links and the wrong-host guard
 
 The "Live ↗" link in every page's top nav now points at
-`https://control.phxtraffic.com/control.html`.
+`https://control.wattplot.org/control.html`.
 
 Jekyll still publishes `docs/control.html` to
-`mokahlo.github.io/wattplot/control.html`, where there is no backend and
+`wattplot.org/control.html`, where there is no backend and
 every `/api/*` call would 404. Rather than leave a page that silently
 looks broken, `checkHost()` detects a foreign hostname, dims the grid,
 disables the controls, and shows a banner pointing at the real panel.
@@ -785,12 +785,12 @@ Get-WinEvent -FilterHashtable @{LogName='Application'; ProviderName='Cloudflared
 # The Wattplot app
 python C:\dev\wattplot\tools\wattplot_control.py
 # in another terminal
-curl https://control.phxtraffic.com/api/state
+curl https://control.wattplot.org/api/state
 
 # Verify auth is gating the controls
 # (no cookie) -> expect 302 to the Access login. A 4xx/5xx from the
 # app means the request reached Python and the gate is NOT in place.
-curl -i https://control.phxtraffic.com/api/switch -X POST -H "Content-Type: application/json" -d '{"label":"Solenoid Valve","on":true}'
+curl -i https://control.wattplot.org/api/switch -X POST -H "Content-Type: application/json" -d '{"label":"Solenoid Valve","on":true}'
 ```
 
 ---
@@ -825,7 +825,7 @@ deployment**, not where it is merely planned.
       is unchanged.
 - [x] **Cloudflare API token is scoped** (§20). The `cfat_*` in
       `.env` is limited to Tunnel Read + Access Apps & Policies R/W +
-      DNS R/W on `phxtraffic.com` only — no account admin, no WAF, no
+      DNS R/W on `wattplot.org` only — no account admin, no WAF, no
       members. A leak of this value cannot delete the account, change
       WAF rules, or invite attackers. Verified negative: `GET
       /accounts/{id}/members` → 403, `POST /zones/{id}/firewall/rules`
@@ -939,7 +939,7 @@ playbook, not a TODO list.
    gate before cutting holes in it.
 4. **Verify it locked down** (1 min):
    ```bash
-   curl -s -o /dev/null -w '%{http_code}\n' -X POST -H 'Content-Type: application/json' -d '{"label":"Solenoid Valve","on":false}' https://control.phxtraffic.com/api/switch
+   curl -s -o /dev/null -w '%{http_code}\n' -X POST -H 'Content-Type: application/json' -d '{"label":"Solenoid Valve","on":false}' https://control.wattplot.org/api/switch
    ```
    Must print `302`. If it prints `400` or `503`, the policy is not
    live yet — stop and fix before continuing.
@@ -947,11 +947,11 @@ playbook, not a TODO list.
    Include `/api/whoami`; exclude `/login` and the four POST endpoints.
 6. **Verify public read still works** (1 min):
    ```bash
-   curl -s -o /dev/null -w '%{http_code}\n' https://control.phxtraffic.com/api/state
+   curl -s -o /dev/null -w '%{http_code}\n' https://control.wattplot.org/api/state
    ```
    Must print `200`.
 7. **Sign-in round trip in incognito** (3 min). Open
-   `https://control.phxtraffic.com/control.html` — dashboard loads, no
+   `https://control.wattplot.org/control.html` — dashboard loads, no
    prompt, banner visible, controls dimmed. Click **Sign in to
    control →**, enter `mokahlou@gmail.com`, take the PIN from your
    inbox. Controls light up; toggle something harmless.
@@ -1025,7 +1025,7 @@ playbook, not a TODO list.
 
 - 2026-08-06: Initial draft. Cloudflare Tunnel + Access with path-based
   policies; Google OAuth for controls; public read for live data.
-- 2026-08-06 (later): Tunnel found live on `control.phxtraffic.com`, but
+- 2026-08-06 (later): Tunnel found live on `control.wattplot.org`, but
   audit showed **the Access policies were never applied** — an
   unauthenticated `POST /api/switch` reached aiohttp and returned its
   own `400`, not a login redirect. Documented the gap at the top of this
@@ -1042,7 +1042,7 @@ playbook, not a TODO list.
   `control.html`.
 - 2026-08-06 (later): Zero Trust org confirmed to already exist — team
   name **`phxtraffic`**, verified by the login redirect on
-  `vnc.phxtraffic.com`. `control.phxtraffic.com` returns 404 on
+  `vnc.wattplot.org`. `control.wattplot.org` returns 404 on
   `/.well-known/cloudflare-access-protected-resource/`, confirming no
   Access application covers it at all. §6 is therefore already done and
   §16 starts at the application setup.
@@ -1062,7 +1062,7 @@ playbook, not a TODO list.
   noted in the 2026-08-06 entries is closed.
 - 2026-08-09: Cloudflare API token rotated from a full-account-admin
   `cfat_*` to a least-privilege scoped token. New token: name
-  `Wattplot Tunnel + Access + DNS (phxtraffic.com)`, id
+  `Wattplot Tunnel + Access + DNS (wattplot.org)`, id
   `d9b8216a8f1400526a2d137e7d5cd913`, expires 2027-08-09. Scopes
   cover Tunnel Read, Access Apps + Policies R/W (account + account.zone),
   and DNS R/W only — no WAF, no members, no token management. Old
@@ -1085,12 +1085,12 @@ the wattplot scripts need a token. The token lives in
 
 | Field | Value |
 |---|---|
-| Name | `Wattplot Tunnel + Access + DNS (phxtraffic.com)` |
+| Name | `Wattplot Tunnel + Access + DNS (wattplot.org)` |
 | Internal id | `d9b8216a8f1400526a2d137e7d5cd913` |
 | Format | `cfat_XEVQaNs…25b8da` (53 chars; full value in `.env`) |
 | Expires | 2027-08-09 (1-year, set at creation) |
 | Account | `b322f4733377cc8d6ce9d3813b239951` |
-| Zone | `1c5d5daedda893478f0ac9822f6bd116` (`phxtraffic.com`) |
+| Zone | `1c5d5daedda893478f0ac9822f6bd116` (`wattplot.org`) |
 
 ### 20b. Scopes — least-privilege, no account admin
 
@@ -1104,15 +1104,15 @@ Two policy objects, six permission groups total:
 | `com.cloudflare.api.account.<acct>` | Access: Apps and Policies Write (account) | App/PATCH/DELETE on `/accounts/{id}/access/apps` |
 | `com.cloudflare.api.account.<acct>` | DNS Read | `GET /zones/{id}/dns_records` |
 | `com.cloudflare.api.account.<acct>` | DNS Write | POST/PUT/PATCH/DELETE on `/zones/{id}/dns_records` |
-| `com.cloudflare.api.account.zone.<phxtraffic.com>` | Access: Apps and Policies Read (account.zone) | Zone-scoped app endpoints |
-| `com.cloudflare.api.account.zone.<phxtraffic.com>` | Access: Apps and Policies Write (account.zone) | Zone-scoped app endpoints |
+| `com.cloudflare.api.account.zone.<wattplot.org>` | Access: Apps and Policies Read (account.zone) | Zone-scoped app endpoints |
+| `com.cloudflare.api.account.zone.<wattplot.org>` | Access: Apps and Policies Write (account.zone) | Zone-scoped app endpoints |
 
 **Explicitly NOT included:** `Account API Tokens: *` (no self-rotation),
 `Account Settings: *`, `WAF: *`, `Account Members: *`, `Billing: *`.
 A leak of this value cannot delete the account, change WAF rules,
 invite attackers as members, or rotate other tokens. Worst case:
 attacker reads/creates Access apps and DNS records on
-`phxtraffic.com` — which they can already do via the public
+`wattplot.org` — which they can already do via the public
 dashboard if they got a session.
 
 ### 20c. Verified positive (the rotation's last sanity check)
@@ -1176,7 +1176,7 @@ foreach ($line in Get-Content -LiteralPath $envFile -Encoding UTF8) {
 }
 $acct = $envVars['couldflare_account_id']    # the typo IS in the .env
 $tok  = $envVars['cloudflare_api_token']
-$zone = '1c5d5daedda893478f0ac9822f6bd116'   # phxtraffic.com
+$zone = '1c5d5daedda893478f0ac9822f6bd116'   # wattplot.org
 $h    = @{ Authorization = "Bearer $tok"; 'Content-Type' = 'application/json' }
 
 # --- 0. Capture the old token's value in case of rollback ---
@@ -1184,12 +1184,12 @@ $tok | Out-File 'C:\dev\wattplot\.cloudflare_token_old.txt' -Encoding utf8 -NoNe
 
 # --- 1. List the obsolete tokens (so we know what to revoke at the end) ---
 $lst = Invoke-RestMethod -Method Get -Uri "https://api.cloudflare.com/client/v4/accounts/$acct/tokens?per_page=50" -Headers $h
-$lst.result | Where-Object { $_.name -ne 'Wattplot Tunnel + Access + DNS (phxtraffic.com)' } |
+$lst.result | Where-Object { $_.name -ne 'Wattplot Tunnel + Access + DNS (wattplot.org)' } |
     Select-Object id, name, status | Format-Table -AutoSize
 
 # --- 2. Create the new token (admin token in .env still has perms) ---
 $body = @{
-  name = 'Wattplot Tunnel + Access + DNS (phxtraffic.com)'
+  name = 'Wattplot Tunnel + Access + DNS (wattplot.org)'
   policies = @(
     @{
       effect = 'allow'

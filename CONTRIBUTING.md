@@ -91,7 +91,7 @@ installed locally — see the `requires_esphome` marker in
 
 The site is plain Jekyll, dark theme, no plugins beyond defaults.
 Layout is `docs/_layouts/default.html`; page metadata via YAML front
-matter. Live at https://mokahlo.github.io/wattplot/.
+matter. Live at https://wattplot.org/.
 
 Every Markdown page under `docs/` becomes a served HTML page. Internal
 notes (the `docs/_internal/` folder) are excluded from the Jekyll

@@ -162,7 +162,7 @@ works, the full-size works.
 Wattplot is MIT-licensed, open-source, code-first.
 
 - **Repo:** github.com/mokahlo/wattplot
-- **3D viewer:** mokahlo.github.io/wattplot
+- **3D viewer:** wattplot.org
 - **Upcycling guide:** docs/upcycling.md
 - **License:** MIT (use, modify, sell, attribution appreciated)
 

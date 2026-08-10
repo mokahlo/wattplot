@@ -544,10 +544,10 @@
     }
 
     // ---- wrong-host guard ----
-    // Jekyll also publishes this file to mokahlo.github.io/wattplot/,
+    // Jekyll also publishes this file to wattplot.org/,
     // where there is no backend: every /api/* call would 404 and the
     // page would sit there looking broken. Say what's wrong instead.
-    const CONTROL_HOST = 'control.phxtraffic.com';
+    const CONTROL_HOST = 'control.wattplot.org';
     function checkHost() {
       const h = location.hostname;
       const ok = h === CONTROL_HOST || h === 'localhost' || h === '127.0.0.1';

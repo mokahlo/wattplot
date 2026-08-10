@@ -9,15 +9,15 @@ software side.
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
 │  github.io (static site)                                              │
-│  https://mokahlo.github.io/wattplot/                                  │
+│  https://wattplot.org/                                  │
 │  - HTML, CSS, three.js 3D viewer, dashboard, gallery                   │
-│  - Reads live data via CORS to control.phxtraffic.com                  │
+│  - Reads live data via CORS to control.wattplot.org                  │
 └────────────────────────────────┬───────────────────────────────────────┘
                                  │ HTTPS (CORS allowlist: github.io)
                                  │ GET /api/state, /api/whoami, /api/logs
                                  ▼
 ┌────────────────────────────────────────────────────────────────────────┐
-│  Cloudflare edge (control.phxtraffic.com)                             │
+│  Cloudflare edge (control.wattplot.org)                             │
 │  - TLS termination, DDoS                                              │
 │  - Access policy on POSTs: email OTP → mokahlou@gmail.com only        │
 │  - Path Bypass list: GET /api/state, /api/logs, /api/whoami           │

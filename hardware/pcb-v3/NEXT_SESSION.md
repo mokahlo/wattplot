@@ -169,12 +169,12 @@ pin numbers for each part are documented in the `README.md`.
 - **Cloudflare API token:** ✅ ROTATED + SCOPED (2026-08-09, commit
   `acd6f46`). New token in `C:\dev\wattplot\.env`
   (`cloudflare_api_token`): name `Wattplot Tunnel + Access + DNS
-  (phxtraffic.com)`, id `d9b8216a8f1400526a2d137e7d5cd913`, expires
+  (wattplot.org)`, id `d9b8216a8f1400526a2d137e7d5cd913`, expires
   2027-08-09. Scopes: Tunnel Read + Access Apps/Policies R/W + DNS
   R/W only. No account admin. Old account-wide tokens revoked.
   Full rotation runbook in `docs/_internal/remote-access.md` §20e.
 - **GitHub Pages site:** unchanged. "Live" nav link points to
-  `https://control.phxtraffic.com/control.html`.
+  `https://control.wattplot.org/control.html`.
 
 ## Other quick wins while you wait
 

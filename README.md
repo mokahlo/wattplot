@@ -25,9 +25,9 @@ a GitHub Pages site. MIT license, no paywalls, no telemetry.
 > ready to flash (the chip is currently wedged; see [Status &
 > roadmap](#status--roadmap) below).
 
-**Live site:** [mokahlo.github.io/wattplot](https://mokahlo.github.io/wattplot/) ·
-**3D booth viewer:** [mokahlo.github.io/wattplot/booth/](https://mokahlo.github.io/wattplot/booth/) ·
-**Data dashboard:** [mokahlo.github.io/wattplot/data.html](https://mokahlo.github.io/wattplot/data.html)
+**Live site:** [wattplot.org](https://wattplot.org/) ·
+**3D booth viewer:** [wattplot.org/booth/](https://wattplot.org/booth/) ·
+**Data dashboard:** [wattplot.org/data.html](https://wattplot.org/data.html)
 
 ## Two builds, one structure
 
@@ -88,7 +88,7 @@ Three constraints guide every part of the design:
 
 ## Interactive 3D model
 
-[**Open the 3D viewer**](https://mokahlo.github.io/wattplot/) - drag to orbit, scroll to zoom. Loads the live STEP-derived STL.
+[**Open the 3D viewer**](https://wattplot.org/) - drag to orbit, scroll to zoom. Loads the live STEP-derived STL.
 
 ---
 

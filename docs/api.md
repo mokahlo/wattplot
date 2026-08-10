@@ -5,7 +5,7 @@ JSON HTTP API on top of the ESPHome native API. This page documents
 every endpoint; it's the contract for `docs/control.html` and for any
 third-party client.
 
-The Cloudflare Access policy on `control.phxtraffic.com` is the
+The Cloudflare Access policy on `control.wattplot.org` is the
 **real** auth gate for the write endpoints. The endpoints described
 below are reachable in cleartext from `localhost`; the Access
 policy sits in front of the public hostname. See

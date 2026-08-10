@@ -11,7 +11,7 @@ The Wattplot project name is in active use across:
 | Layer | Count | Effort |
 | --- | --- | --- |
 | GitHub repo `mokahlo/wattplot` | 1 | Mechanical (GitHub redirect handles it) |
-| GitHub Pages site `mokahlo.github.io/wattplot/` | ~30 pages | Find-and-replace per page |
+| GitHub Pages site `wattplot.org/` | ~30 pages | Find-and-replace per page |
 | Firmware file `firmware/wattplot.yaml` | 1 | Find-and-replace, then re-validate + re-compile |
 | ESPHome `name:` and `friendly_name:` | 2 fields | Same file |
 | `project.name` in ESPHome | 1 | Same file |
@@ -53,7 +53,7 @@ CIPO, and a Google search before committing.
 1. GitHub → Settings → General → "Rename repository" → enter new name.
 2. GitHub automatically redirects `github.com/mokahlo/wattplot` →
    `github.com/mokahlo/solataire` (or whatever).
-3. The GitHub Pages URL changes: `mokahlo.github.io/wattplot/` →
+3. The GitHub Pages URL changes: `wattplot.org/` →
    `mokahlo.github.io/solataire/`. Existing deep links to old URLs
    will continue to work via GitHub's redirect for HTTPS, but
    the canonical URL changes.
@@ -176,7 +176,7 @@ file.
 
 - **GitHub stars, forks, watchers** — all tied to the repo, not
   the name. Move with the rename.
-- **Old URLs** — GitHub redirects `mokahlo.github.io/wattplot/...` →
+- **Old URLs** — GitHub redirects `wattplot.org/...` →
   `mokahlo.github.io/solataire/...` for the lifetime of the redirect.
 - **Old git SHAs / blame** — preserved.
 - **Issue history / PR history** — preserved with their original
