@@ -15,7 +15,7 @@
 
 # Wattplot
 
-### Give an old solar panel a second life. Shade + food + power, in one raised bed.
+### One bed. Two harvests. Shade + food + power, in one raised bed.
 
 A planter up to 8 ft × 5 ft with a hinged, ballast-mounted solar
 canopy. Fits **any panel up to 97" × 61"**, new bifacial from the

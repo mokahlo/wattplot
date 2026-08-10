@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Status](https://img.shields.io/badge/status-prototype-orange)](https://github.com/mokahlo/wattplot#status--roadmap)
 
-**Give an old solar panel a second life.**
+**One bed. Two harvests.**
 
 A raised garden bed whose canopy is a working solar panel — the same
 square foot grows tomatoes *and* generates electricity. Symbiosis of

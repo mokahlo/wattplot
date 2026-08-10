@@ -12,9 +12,12 @@
 
 ## Why this booth
 
-- **The story is upcycling.** ~10M tons of solar panel waste by 2050.
-  Wattplot gives a decommissioned panel a second life as shade + food
-  + some power. Strong sustainability hook for a Maker Faire audience.
+- **The story is optimization.** Two outputs — tomatoes and kilowatt-hours
+  — from the same square foot. The panel canopy is what the frame would
+  have been lumber for anyway, so the bed is doing more work, not the
+  panel displacing the garden. (Sustainability angle: ~10M tons of solar
+  panel waste by 2050, and a Wattplot gives any decommissioned panel a
+  job. Strong hook for the Maker Faire audience without being the lead.)
 - **Mini v2.4 fits the 10×10 footprint** (it's 18×14×12 inches on a table).
 - **It's fully functional**, not a render: real panel, real MPPT, real
   actuator, real sensors, real soil. The "wow" moment is a kid pressing a
