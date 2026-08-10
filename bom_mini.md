@@ -158,8 +158,8 @@ for the full schematic and `bom.md` (full-size) for the PCB build of these.
 | 3 | DS18B20 waterproof temp sensors (panel, soil, battery) | Amazon | **$11** (5-pack) |
 | 1 | 4.7 kΩ pull-up (1-Wire bus) | Amazon | <$1 |
 | 1 | Capacitive soil moisture sensor V1.2 (5-pack for spares) | Amazon | **$9** |
-| 1 | INA219 current sensor breakout (I²C) | Mouser | **$2** |
-| 1 | BMI160 IMU breakout (panel angle, optional) | Mouser | **$2** |
+| 2 | INA219 current sensor breakout (I²C, addresses 0x40 + 0x41) — matches full-size, gives both panel V/I and actuator bus current. One is enough for battery, but the second is $2 and worth the diagnostic visibility. | Mouser | **$4** |
+| 1 | MPU6050 IMU breakout (panel angle, optional) — **NOT BMI160.** ESPHome 2026.7.2 dropped bmi160 from the YAML schema (see ADR-003). MPU6050 is the drop-in replacement at the same I²C footprint. | Mouser | **$2** |
 
 #### Prototyping hardware
 | Qty | Item | Source | Cost |
@@ -167,20 +167,28 @@ for the full schematic and `bom.md` (full-size) for the PCB build of these.
 | 1 | Breadboard or perfboard | Amazon | **$5** |
 | ~30 | Jumper wires (M-F, M-M, F-F) | Amazon | **$3** |
 
-**Total electronics (subsystems): ~$116 new + $50 already ordered = $166**
+**Total electronics (subsystems): ~$118 new + $50 already ordered = $168**
 
 ### Watering system (v2.4 — solenoid on tap water)
 
 | Qty | Item | Source | Cost |
 |---|---|---|---|
 | 1 | 12V DC normally-closed solenoid valve, 1/4" barb, ~2 GPM | Amazon | **$10-12** |
-| 1 | 1-channel 5V relay module (low-level trigger, for ESP32) | Amazon | **$3-5** |
 | 1 | 1/4" cold-water tee fitting (brass, for tap line) | Home Depot | **$3** |
 | 1 | Pressure regulator 5-30 PSI, 1/4" NPT (optional, recommended) | Amazon | **$10** |
 | 10 ft | 1/4" vinyl tubing (food-safe, for drip line) | Amazon | **$8** |
-| 1 | Pressure-compensating drip emitter (2 GPH) | Amazon | **$5** (5-pack) |
+| 1 | Pressure-compensating drip emitter (2 GPH) — pack of 5; bed is 18"×14" so 2-3 emitters is plenty, the rest are spares | Amazon | **$5** |
 | 2 | 1/4" tubing barb fittings (for solenoid inlet/outlet) | Amazon | **$3** |
 | 4 | Zip ties (for securing tubing) | Home Depot | **$2** |
+
+> **Solenoid driver note:** The solenoid is driven by the **DRV8871
+> U5b breakout** listed in the **Solenoid (water / latch)** electronics
+> section above — *not* by a separate relay. The v2.4 mini and the v3
+> full-size use the same firmware (`firmware/wattplot.yaml`), which
+> drives the solenoid through `solenoid_in1_out` / `solenoid_in2_out`
+> with brake/coast semantics, nFAULT feedback on GPIO13, and IPROPI
+> jam detection. A single-GPIO relay would have required forking the
+> firmware — not worth $4 of savings.
 
 **Total watering system: ~$44-48** (similar cost, no reservoir, no pump priming)
 
@@ -210,16 +218,16 @@ file (daily rotation, 30-day retention by default, ~30 MB total).
 | Panel + clamps | $33 | — | $33 |
 | Kickstand actuator + pins | $17 | already ordered | $17 |
 | Fasteners | $8 | — | $8 |
-| Electronics (MPPT, sensors, drivers, breadboard) | $116 | $50 (battery + ESP32) | $166 |
-| Watering system (solenoid + tee + drip) | $46 | — | $46 |
-| **Total** | **$248** | **$50** | **~$298** |
+| Electronics (MPPT, sensors, drivers, breadboard) | $118 | $50 (battery + ESP32) | $168 |
+| Watering system (solenoid + tee + drip) | $42 | — | $42 |
+| **Total** | **$246** | **$50** | **~$296** |
 
 **v2.4 adds ~$46 (solenoid watering) on top of v2.2 — full smart planter.**
 v2.4 swaps the v2.3 pump + 5-gal bucket for a 12V solenoid on tap water:
 cheaper to run, no reservoir to refill, no pump priming, fail-safe closed
 when de-energized.
 
-(The full-size build is ~$1,400; the mini v2.4 is ~21% of that.)
+(The full-size build is ~$770-$1,210; the mini v2.4 is ~25-38% of that.)
 
 ---
 
