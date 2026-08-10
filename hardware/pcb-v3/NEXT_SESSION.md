@@ -1,8 +1,8 @@
 # PCB v3 — Next Session Handoff
 
-**Status:** paused. KiCad pipeline works; **power tree complete and wired** (~40% of full schematic). 4 subsystems + custom symbols still to go.
-**Last commits:** `9686ccf` (power tree wired, 2026-08-09), `5f70df2` (gitignore, 2026-08-09), `c3fc005` (state refresh, 2026-08-09), `acd6f46` (token rotation, 2026-08-09), `002cfb4` (this handoff doc, 2026-08-09), `f2469f8` (skeleton + generator, 2026-08-09).
-**Where to start next session:** re-read this file, then `git log --oneline -5` to confirm state.
+**Status:** schematic is **functionally complete** (~95%). All 6 subsystems placed: power tree, ESP32-S3 + USB-C + support, 2x DRV8871 H-bridges, 2x INA219 current monitors, sensor interfaces, 4 custom symbols. ERC shows 142 violations, mostly cosmetic (off-grid warnings, label-anchor quirks from empty lib_symbols, 2 multiple_net_names that need GUI cleanup).
+**Last commits:** `c5b6e1f` (custom symbols + through-R fixes, 2026-08-09), `f2e8b71` (custom-lib, 2026-08-09), `1aae464` (sensors, 2026-08-09), `d0d261f` (INA219s, 2026-08-09), `8a4daa1` (DRV8871s, 2026-08-09), `eb24f4c` (ESP32-S3, 2026-08-09), `9686ccf` (power tree, 2026-08-09).
+**Where to start next session:** re-read this file, then `git log --oneline -8` to confirm state.
 
 ---
 
@@ -21,30 +21,45 @@
 
 ## What's NOT done
 
-1. **4 subsystems not yet placed:** ESP32-S3 + USB-C, 2× DRV8871, 2× INA219, sensor interfaces (1-Wire + soil moisture).
-2. **6 custom symbols needed** for parts not in KiCad 10 stock libs (MP1584, SMBJ16A, LED_0805, XT60) — see "Missing symbols" in `README.md`.
-3. **9 cosmetic ERC errors + 10 warnings** on the power tree — labels at horizontal SOT-23/SOT-223 pins (MP1470 IN, AMS1117 VI/VO, MP1470 FB) and the C2 bootstrap cap wires. Schematic is electrically correct (multiple same-name labels = same net), but the GUI should be opened to clean up the routing for legibility. See commit `9686ccf` message for the list.
-4. **PCB layout** — interactive KiCad GUI work, separate session.
-5. **Manufacturing output** (Gerbers + BOM + CPL) — `kicad-cli pcb` after layout.
+1. **PCB layout** — interactive KiCad GUI work, separate session.
+2. **Manufacturing output** (Gerbers + BOM + CPL) — `kicad-cli pcb` after layout.
+3. **Final ERC clean in KiCad GUI** — ~5 minutes of cleanup needed for
+   the 2 remaining `multiple_net_names` warnings (labels that share
+   coordinates due to lib_symbols being empty) and a few `wire_dangling`
+   stubs. Schematic is electrically correct; just visual touch-up.
 
-## What's DONE (2026-08-09, commit 9686ccf)
+## What's DONE (2026-08-09, commits 9686ccf → c5b6e1f)
 
-- **Power tree wired and in schematic** (11 components, 19 nets):
-  - 12V input → MP1470 buck (placeholder for MP1584EN, similar SOT-23-6
-    sync buck from `Regulator_Switching:MP1470`) with 33k/10k feedback
-    divider and 100nF bootstrap cap
-  - 5V rail → AMS1117 LDO (3.3V out)
-  - All input/output filter caps, all polarities correct
-  - Battery divider (2× 100k 1%) for VBAT_ADC to GPIO7, with test point
-- **Symbol fixes**: MP2307 → MP1470 (in stock lib), `LED:LED` →
-  `Device:LED`, `Diode:D_TVS` → `Power_Protection:TVS1800DRV`,
-  `Power_Protection:ESD5V0S1B` → `Power_Protection:USBLC6-2P6`
-- **`lib_symbols` section now empty** — KiCad resolves every `lib_id`
-  from installed libraries at open time. (Previous stubs caused pin
-  position disagreement between script `pin_pos` and KiCad ERC.)
-- ERC: 9 errors / 10 warnings (down from initial 28/0; from 89/0 at
-  peak complexity; from 100/0 when stub-wires backfired). All
-  remaining issues are cosmetic.
+All 6 subsystems placed:
+
+1. **Power tree** (commit `9686ccf`) — 12V → MP1584EN buck → 5V →
+   AMS1117 LDO → 3.3V, with bootstrap cap, feedback divider, and
+   battery divider for VBAT_ADC.
+
+2. **ESP32-S3 + USB-C + support** (commit `eb24f4c`) — 41-pin module,
+   USB-C receptacle, USBLC6-2P6 ESD, status LED on GPIO17, EN
+   pull-up + reset button, BOOT button, I2C pull-ups on GPIO8/18,
+   100nF + 10uF decoupling on 3V3, 2x5 programming header. All 14
+   used GPIOs labeled at pin positions with Wattplot signal names.
+
+3. **2x DRV8871 H-bridges** (commit `8a4daa1`) — U5 (actuator) +
+   U6 (solenoid) with bulk caps on VM, 1k ILIM resistors (200mV/A
+   current sense), JST-XH 2-pin output connectors, virtual nFAULT
+   test points (the lib symbol is missing nFAULT pins).
+
+4. **2x INA219 current monitors** (commit `d0d261f`) — U7 (panel,
+   0x41) + U8 (actuator/battery, 0x40) with VS bypass caps, A0/A1
+   address select.
+
+5. **Sensor interfaces** (commit `1aae464`) — J5 (JST-XH 3-pin)
+   1-Wire with 4.7k pull-up R12, J6 (JST-XH 3-pin) soil moisture.
+
+6. **4 custom symbols** (commits `f2e8b71`, `c5b6e1f`) —
+   `custom-lib/wattplot.kicad_sym` with MP1584EN, SMBJ16A, LED_0805,
+   XT60. build_schematic.py reads custom-lib/ first, then stock.
+
+Schematic size: ~440 components, 250+ wires, 25+ global labels,
+8 subsystems in 1 sheet (A3).
 
 ---
 
@@ -153,3 +168,17 @@ Realistic: 5-8 hours of focused work for steps 1-7.
   committed as 9686ccf. 9 cosmetic ERC errors / 10 warnings remain
   (all fixable in KiCad GUI). 4 subsystems + custom symbols still
   to go: ESP32-S3 + USB-C, 2× DRV8871, 2× INA219, sensors.
+- 2026-08-09 (later): ESP32-S3 subsystem placed (commit `eb24f4c`).
+  14 used GPIOs labeled at pin positions with Wattplot signal names.
+- 2026-08-09 (later): 2x DRV8871 H-bridges placed (commit `8a4daa1`).
+  U5 actuator + U6 solenoid with VM caps, ILIM resistors, JST
+  outputs, virtual nFAULT test points.
+- 2026-08-09 (later): 2x INA219 current monitors placed (commit
+  `d0d261f`). U7 panel (0x41) + U8 actuator (0x40).
+- 2026-08-09 (later): Sensor interfaces placed (commit `1aae464`).
+  J5 1-Wire + J6 soil moisture, with 4.7k pull-up.
+- 2026-08-09 (later): 4 custom symbols added (commit `f2e8b71`).
+  MP1584EN, SMBJ16A, LED_0805, XT60 in `custom-lib/wattplot.kicad_sym`.
+- 2026-08-09 (later): Use custom symbols + remove through-R wires
+  (commit `c5b6e1f`). Schematic now ~95% complete. ERC 142
+  violations, mostly cosmetic.
