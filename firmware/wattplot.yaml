@@ -1306,6 +1306,24 @@ number:
     initial_value: "2.0"
     optimistic: true
     restore_value: true
+  # v3.3: Separate watchdog limit for the forecast-preheat path.
+  # frost_max_runtime_min (default 30) is for the sensor arm —
+  # a cold snap that's already underway, the heater should cycle
+  # in 30-min windows to catch a stuck relay before it kills
+  # the pack overnight. The forecast arm, by contrast, commits
+  # to an entire night of heating; the 30-min cap would trip
+  # prematurely. Default 480 min = 8 h, enough to cover a
+  # Phoenix winter overnight from 6 pm to 2 am (when the sun
+  # starts to warm the bed again).
+  - platform: template
+    id: frost_preheat_max_runtime_min
+    name: "Frost Preheat Max Runtime (min)"
+    min_value: 30
+    max_value: 1440
+    step: 15
+    initial_value: "480"
+    optimistic: true
+    restore_value: true
 
 # ===== State machine =====
 select:
@@ -2316,6 +2334,7 @@ interval:
           float canopy_th = id(frost_canopy_threshold_c).state;
           float warm_above = id(frost_warm_above_c).state;
           int max_runtime_ms = (int)(id(frost_max_runtime_min).state * 60.0f * 1000.0f);
+          int preheat_max_runtime_ms = (int)(id(frost_preheat_max_runtime_min).state * 60.0f * 1000.0f);
           int min_soc = (int)id(frost_min_battery_soc).state;
           bool soil_bad = isnan(soil);
           bool canopy_bad = isnan(canopy);
@@ -2449,15 +2468,27 @@ interval:
                      forecast_min, forecast_th);
           }
           // ---- Watchdog enforcement ----
-          // If a switch is on and the elapsed time exceeds the
-          // max-runtime limit, force it off. This is the "stuck
-          // relay" safety net.
+          // Two runtime limits:
+          //   - max_runtime_ms (frost_max_runtime_min, default 30)
+          //     for the sensor arm — short, catches a stuck relay
+          //     before it kills the pack overnight.
+          //   - preheat_max_runtime_ms (frost_preheat_max_runtime_min,
+          //     default 480) for the forecast arm — covers an
+          //     entire night of preheat (6 pm to 2 am).
+          // When forecast_preheat is active, the larger limit
+          // applies. After the forecast clears (next morning),
+          // the watchdog reverts to the sensor limit. The user
+          // can tune both independently.
+          int effective_max_runtime_ms = forecast_preheat
+              ? preheat_max_runtime_ms
+              : max_runtime_ms;
           auto apply_watchdog = [&](bool &want_on, int on_since_ms, const char *name) {
             if (want_on && on_since_ms != 0) {
               unsigned long elapsed = millis() - (unsigned long)on_since_ms;
-              if ((int)elapsed > max_runtime_ms) {
-                ESP_LOGW("frost", "%s watchdog tripped (%lus > %ds)",
-                         name, elapsed/1000, max_runtime_ms/1000);
+              if ((int)elapsed > effective_max_runtime_ms) {
+                ESP_LOGW("frost", "%s watchdog tripped (%lus > %ds, preheat=%d)",
+                         name, elapsed/1000, effective_max_runtime_ms/1000,
+                         forecast_preheat ? 1 : 0);
                 id(g_frost_watchdog_trips) = id(g_frost_watchdog_trips) + 1;
                 want_on = false;
               }

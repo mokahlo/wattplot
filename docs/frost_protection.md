@@ -133,6 +133,74 @@ Set `Frost Forecast Threshold (°C)` to -100. The comparison
 `forecast < threshold` is then always false, and the preheat
 arm never fires. The tick falls back to sensor-only logic.
 
+## Two watchdog limits
+
+The frost protection has TWO watchdog limits, one per arm:
+
+| Knob | Default | Used when |
+|---|---|---|
+| `Frost Max Runtime (min)` | 30 | Sensor arm (sensors say cold) |
+| `Frost Preheat Max Runtime (min)` | 480 | Forecast arm (NWS says cold) |
+
+The tick picks the right one based on which arm is keeping the
+load on:
+
+```cpp
+int effective_max_runtime_ms = forecast_preheat
+    ? preheat_max_runtime_ms    // 8h default
+    : max_runtime_ms;            // 30 min default
+```
+
+### Why two limits?
+
+The **sensor arm** limit (30 min) is the safety net for a stuck
+relay during an active cold snap. A 30 W heater at 12 V pulls
+2.5 A; a 10 Ah LiFePO4 pack dies in 4 hours if the relay is
+stuck. The 30 min cap means a stuck relay costs at most 0.8 Ah
+before the watchdog trips — leaves plenty of margin for a real
+fault.
+
+The **forecast arm** limit (8 h) is for overnight preheat. The
+whole point of preheat is to run the heater *for the whole
+cold night*, not for 30 minutes. With a 30 min cap, the
+preheat would trip at 6:30 am and the bed would freeze by 7.
+With an 8 h cap, the preheat can run from 6 pm to 2 am — when
+the sun starts to warm the bed again.
+
+### When the limit flips
+
+- **Forecast is cold (preheat)**: uses the preheat cap (8h).
+  The overnight preheat can run uninterrupted.
+- **Forecast clears (morning)**: switches to the sensor cap
+  (30 min) for any subsequent heating. The hysteresis should
+  release the load when temps recover, so the watchdog
+  rarely fires in this path.
+- **Sensor says cold, forecast also says cold**: the load is
+  on; the tick uses the LARGER cap (preheat = 8h). This
+  keeps the load on overnight even though the sensor arm
+  was the trigger.
+
+### Power budget at the limits
+
+For the wattplot mini (10 W panel, 12 V 10 Ah LiFePO4 pack):
+
+| Load | Power | 8h runtime | Pack drain |
+|---|---|---|---|
+| 30 W heating mat | 30 W | 240 Wh | 200% of pack — pack dies |
+| 10 W USB grow light | 10 W | 80 Wh | 67% of pack — pack survives |
+| 5 W LED panel | 5 W | 40 Wh | 33% of pack — pack comfortable |
+
+A 30 W heater at the default 8 h preheat will deplete the
+battery. **For overnight preheat, use a 5-10 W load (USB grow
+light or low-power LED panel)**, not a 30 W mat. The battery
+floor (`Frost Min Battery SOC (%)`, default 50%) trips first
+for a heater that draws more than the pack can supply
+overnight.
+
+For the full-size build (larger battery, 620 W panel), the
+battery floor and the watchdog are both fine. The 30 W mat
+can run a full night if the pack is sized accordingly.
+
 ## Hardware
 
 The firmware does NOT include the relay or the load. The ESP32
@@ -217,7 +285,8 @@ plants.
 | `Frost Soil Threshold (°C)` | 4.0 | -5 to 10 | Below this → turn ON |
 | `Frost Canopy Threshold (°C)` | 2.0 | -5 to 10 | Below this → turn ON |
 | `Frost Warm-Above (°C)` | 6.0 | 0 to 15 | Above this (both) → turn OFF |
-| `Frost Max Runtime (min)` | 30 | 5 to 240 | Watchdog force-off |
+| `Frost Max Runtime (min)` | 30 | 5 to 240 | Watchdog (sensor arm) |
+| `Frost Preheat Max Runtime (min)` | 480 | 30 to 1440 | Watchdog (forecast arm) |
 | `Frost Min Battery SOC (%)` | 50 | 10 to 80 | Force off below this |
 | `Frost Forecast Threshold (°C)` | 2.0 | -20 to 10 | NWS forecast preheat trigger |
 
@@ -261,10 +330,10 @@ from HA and the tick will leave them alone. Useful for:
 
 - **NWS forecast errors cost the battery.** The forecast is
   sometimes wrong. If NWS says -5°C and the actual low is +2°C,
-  the heater runs for hours for nothing. The watchdog caps this
-  at `frost_max_runtime_min` (default 30). For overnight
-  preheat, raise the max to 480 (8h) or 600 (10h) — see
-  the watchdog section above.
+  the heater runs for hours for nothing. The `Frost Preheat
+  Max Runtime` watchdog (default 480 min = 8h) caps the
+  damage. For full overnight coverage, use a low-wattage load
+  (5-10 W LED panel) — see the power budget table above.
 - **No flat-panel-on-frost optimization.** At 35° tilt the
   panel shades most of the bed, which slows solar heating the
   next morning. The frost tick doesn't change tilt; the user
@@ -278,7 +347,7 @@ from HA and the tick will leave them alone. Useful for:
 ## Tests
 
 `firmware/tests/test_frost_state.py` ports the C++ lambda to
-Python and pins the behavior with 45 tests:
+Python and pins the behavior with 50 tests:
 
 - Mode select (Off / Heater / Grow Light / Both)
 - Threshold + hysteresis logic

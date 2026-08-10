@@ -138,6 +138,7 @@ REQUIRED_IDS = [
     "frost_canopy_threshold_c",
     "frost_warm_above_c",
     "frost_max_runtime_min",
+    "frost_preheat_max_runtime_min",
     "frost_min_battery_soc",
     "frost_forecast_threshold_c",
     # Switches / outputs / binary sensors

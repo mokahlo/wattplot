@@ -71,6 +71,7 @@ class FrostInputs:
     canopy_threshold_c: float = DEFAULT_CANOPY_THRESHOLD_C
     warm_above_c: float = DEFAULT_WARM_ABOVE_C
     max_runtime_min: float = DEFAULT_MAX_RUNTIME_MIN
+    preheat_max_runtime_min: float = 480.0  # 8h, covers overnight preheat
     min_battery_soc: float = DEFAULT_MIN_BATTERY_SOC
     # NWS forecast: tonight's predicted low. None means "no poll
     # has landed yet" — the C++ uses initial_value=999.0 for the
@@ -128,6 +129,7 @@ def frost_tick(
     canopy_th = inputs.canopy_threshold_c
     warm_above = inputs.warm_above_c
     max_runtime_ms = int(inputs.max_runtime_min * 60.0 * 1000.0)
+    preheat_max_runtime_ms = int(inputs.preheat_max_runtime_min * 60.0 * 1000.0)
     min_soc = inputs.min_battery_soc
     soil_bad = math.isnan(soil)
     canopy_bad = math.isnan(canopy)
@@ -253,11 +255,16 @@ def frost_tick(
           f"threshold {forecast_th:.1f}°C")
 
     # ---- Watchdog enforcement ----
+    # Two runtime limits, picked by which arm is keeping the load
+    # on. When forecast_preheat is active, the longer limit applies
+    # so the preheat can run overnight without tripping.
+    effective_max_runtime_ms = preheat_max_runtime_ms if forecast_preheat else max_runtime_ms
     def apply_watchdog(want_on, on_since_ms, name):
         if want_on and on_since_ms != 0:
             elapsed = now_ms - on_since_ms
-            if elapsed > max_runtime_ms:
-                L(f"{name} watchdog tripped ({elapsed//1000}s > {max_runtime_ms//1000}s)")
+            if elapsed > effective_max_runtime_ms:
+                L(f"{name} watchdog tripped ({elapsed//1000}s > "
+                  f"{effective_max_runtime_ms//1000}s, preheat={forecast_preheat})")
                 state.watchdog_trips += 1
                 return False
         return want_on
@@ -961,18 +968,118 @@ class TestForecastPreheat:
         assert state.frost_state == "Sensor error"
 
     def test_preheat_still_subject_to_watchdog(self):
-        """The forecast arm extends the on-duration, but the
+        """The forecast arm extends the on-duration (default 8h
+        vs 30 min for the sensor arm) but the preheat_max_runtime
         watchdog still trips. A stuck relay is still a stuck
-        relay. (Set max_runtime high to confirm the preheat
-        path also gets watchdogged.)"""
-        # 31 min runtime, 30 min cap
+        relay. Use a 30-min preheat_max to confirm the cap fires.
+        """
+        # 31 min runtime, 30 min preheat_max cap
         base = 60 * 60 * 1000
         now = base + 31 * 60 * 1000
         state = FrostState(heater_on=True, heater_on_since_ms=base)
         frost_tick(state, FrostInputs(
             soil_c=5.0, canopy_c=5.0,
             forecast_min_c=-2.0, forecast_poll_age_min=10.0,
+            preheat_max_runtime_min=30.0,  # override default 480
         ), mode="Heater", now_ms=now)
+        assert not state.heater_on
+        assert state.watchdog_trips == 1
+
+    def test_preheat_default_does_not_trip_under_8h(self):
+        """With the default 480-min (8h) preheat_max, the watchdog
+        does NOT trip at 4h elapsed. This is the design point:
+        overnight preheat should be able to run a full night."""
+        # 4h runtime, 8h preheat_max cap
+        base = 60 * 60 * 1000
+        now = base + 4 * 60 * 60 * 1000
+        state = FrostState(heater_on=True, heater_on_since_ms=base)
+        frost_tick(state, FrostInputs(
+            soil_c=5.0, canopy_c=5.0,
+            forecast_min_c=-2.0, forecast_poll_age_min=10.0,
+        ), mode="Heater", now_ms=now)
+        # Still on — well under the 8h cap
+        assert state.heater_on
+        assert state.watchdog_trips == 0
+
+    def test_preheat_trips_at_preheat_max(self):
+        """At preheat_max_runtime + 1 min, the watchdog trips.
+        With the default 480 min cap, that's 481 min."""
+        base = 60 * 60 * 1000
+        now = base + 481 * 60 * 1000
+        state = FrostState(heater_on=True, heater_on_since_ms=base)
+        frost_tick(state, FrostInputs(
+            soil_c=5.0, canopy_c=5.0,
+            forecast_min_c=-2.0, forecast_poll_age_min=10.0,
+        ), mode="Heater", now_ms=now)
+        assert not state.heater_on
+        assert state.watchdog_trips == 1
+
+    def test_sensor_arm_uses_30min_cap_even_with_forecast(self):
+        """When forecast is fresh but temps are below threshold
+        (sensor arm + preheat arm both active), the watchdog
+        uses the LARGER limit (preheat_max). The sensor arm's
+        30-min cap would otherwise prematurely trip the load.
+        """
+        # 60 min runtime, sensor_max=30, preheat_max=480.
+        # Without the preheat-aware limit, watchdog would trip.
+        # With the preheat-aware limit, the heater stays on.
+        base = 60 * 60 * 1000
+        now = base + 60 * 60 * 1000
+        state = FrostState(heater_on=True, heater_on_since_ms=base)
+        frost_tick(state, FrostInputs(
+            soil_c=1.0, canopy_c=0.0,        # sensor arm active
+            forecast_min_c=-2.0, forecast_poll_age_min=10.0,
+        ), mode="Heater", now_ms=now)
+        # 60 min < 480 min preheat_max → stays on
+        assert state.heater_on
+        assert state.watchdog_trips == 0
+
+    def test_forecast_clearing_releases_via_hysteresis(self):
+        """When the forecast clears (next morning), the hysteresis
+        arm releases the load normally. This is the natural
+        release path — the watchdog isn't involved.
+        """
+        # Heater was preheated with warm afternoon temps.
+        # Now the morning sun warms the bed above warm_above
+        # AND the forecast clears.
+        base = 60 * 60 * 1000
+        now = base + 6 * 60 * 60 * 1000  # 6 hours later
+        state = FrostState(heater_on=True, heater_on_since_ms=base)
+        # First tick: preheat + warm sensors = held on
+        frost_tick(state, FrostInputs(
+            soil_c=7.0, canopy_c=7.0,        # above warm_above=6
+            forecast_min_c=-2.0, forecast_poll_age_min=10.0,
+        ), mode="Heater", now_ms=now)
+        assert state.heater_on
+        # Morning: forecast clears, sun warms the bed
+        frost_tick(state, FrostInputs(
+            soil_c=8.0, canopy_c=8.0,        # well above warm_above
+            forecast_min_c=10.0, forecast_poll_age_min=120.0,  # no preheat
+        ), mode="Heater", now_ms=now + 60_000)
+        # Released via hysteresis (both > warm_above, no preheat)
+        assert not state.heater_on
+        assert state.watchdog_trips == 0  # released, not tripped
+
+    def test_forecast_clearing_uses_sensor_cap_for_active_event(self):
+        """If temps are in the deadband (below warm_above) when
+        the forecast clears, the hysteresis doesn't release.
+        The watchdog reverts to the 30-min sensor cap and trips.
+        This is the dangerous case: a forecast was preheating,
+        now it says mild, but the bed is actually cold (sensor
+        says 5°C). Without the preheat, we'd release. With
+        sensor arm (5 < 6, in deadband), we want to stay on.
+        But the watchdog is the safety net.
+        """
+        # 60 min runtime, sensor arm 30 min cap, no preheat
+        base = 60 * 60 * 1000
+        now = base + 60 * 60 * 1000
+        state = FrostState(heater_on=True, heater_on_since_ms=base)
+        frost_tick(state, FrostInputs(
+            soil_c=5.0, canopy_c=5.0,        # in deadband
+            forecast_min_c=10.0, forecast_poll_age_min=120.0,  # no preheat
+        ), mode="Heater", now_ms=now)
+        # Hysteresis: deadband, both below warm_above → wants on
+        # Watchdog: 60 min > 30 min cap → trip
         assert not state.heater_on
         assert state.watchdog_trips == 1
 
