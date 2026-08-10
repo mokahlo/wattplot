@@ -1,7 +1,7 @@
 # PCB v3 — Next Session Handoff
 
 **Status:** paused. KiCad pipeline works; schematic capture ~20% done.
-**Last commit:** `f2469f8` (2026-08-09).
+**Last commits:** `acd6f46` (token rotation, 2026-08-09), `002cfb4` (this handoff doc, 2026-08-09), `f2469f8` (skeleton + generator, 2026-08-09).
 **Where to start next session:** re-read this file, then `git log --oneline -5` to confirm state.
 
 ---
@@ -70,19 +70,23 @@ The pattern is:
 The pin lookup function uses the cache populated in `SymbolCache`. The
 pin numbers for each part are documented in the `README.md`.
 
-## Outstanding async / state-of-the-world
+## Outstanding async / state-of-the-world (refreshed 2026-08-09)
 
 - **Wattplot hardware:** offline. ESP32-S3 not pinging; Python
   `wattplot_control.py` not running. Bring back online separately.
-- **Cloudflare Access policies:** NOT set up. The tunnel is up
-  (`vnc.phxtraffic.com` and `control.phxtraffic.com` both return
-  200), but `POST /api/*` is **public** — anyone with the URL can
-  press buttons. The Access setup is blocked on a Cloudflare API
-  token (the `CLOUDFLARE_API_TOKEN=` in `OneDrive\dev\.env\.env` is
-  empty). Either create one in the dashboard or use email-OTP per
-  the existing plan.
-- **GitHub Pages site:** unchanged. The "Live" link in the nav now
-  points to `https://control.phxtraffic.com/control.html`.
+- **Cloudflare Access policies:** ✅ LIVE (2026-08-09). 5 path-bypass
+  apps + 1 catch-all Allow for `mokahlou@gmail.com` via email OTP.
+  Verified: `GET /api/state` → 200 (public), `POST /api/switch` → 302
+  (auth required). See `docs/_internal/remote-access.md` §8.
+- **Cloudflare API token:** ✅ ROTATED + SCOPED (2026-08-09, commit
+  `acd6f46`). New token in `C:\dev\wattplot\.env`
+  (`cloudflare_api_token`): name `Wattplot Tunnel + Access + DNS
+  (phxtraffic.com)`, id `d9b8216a8f1400526a2d137e7d5cd913`, expires
+  2027-08-09. Scopes: Tunnel Read + Access Apps/Policies R/W + DNS
+  R/W only. No account admin. Old account-wide tokens revoked.
+  Full rotation runbook in `docs/_internal/remote-access.md` §20e.
+- **GitHub Pages site:** unchanged. "Live" nav link points to
+  `https://control.phxtraffic.com/control.html`.
 
 ## Other quick wins while you wait
 
@@ -92,13 +96,11 @@ If you have 10 minutes before the next session:
    ```powershell
    python C:\dev\wattplot\tools\wattplot_control.py
    ```
-2. **Lock the controller state** to `Locked` from the local panel
-   while the public endpoint is unauthenticated. This is the current
-   security posture and you don't want random visitors running
-   `Water Now` while you're not around.
-3. **Create a Cloudflare API token** at
-   https://dash.cloudflare.com/profile/api-tokens. 2 min. Then the
-   Access setup is one session away from being done.
+2. **Wire the INA219s.** The new PCB plans for two of them (0x40 +
+   0x41) for accurate panel/battery/actuator current sensing. Until
+   they are wired, the live panel still shows the wrong battery
+   voltage (5.18V — that's the MP1584 buck output, not the 12V rail)
+   and the SOC tile stays at 0%.
 
 ---
 
@@ -125,3 +127,6 @@ Realistic: 5-8 hours of focused work for steps 1-7.
 
 - 2026-08-09: Initial handoff. Pipeline proven; ~80% of full schematic
   remaining.
+- 2026-08-09: Refreshed state-of-the-world. Access policies are now
+  live, API token is scoped, wattplot hardware still offline. No
+  PCB work in this update.
