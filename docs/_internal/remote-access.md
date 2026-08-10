@@ -13,24 +13,17 @@ on a stable public HTTPS URL with two-tier access:
   calibration. Anyone clicking a control button sees the Cloudflare
   login page, not a password dialog.
 
-**Status (2026-08-06): PARTIALLY DEPLOYED — controls are currently
-unprotected.**
+**Status (2026-08-09): DEPLOYED — controls are protected.**
 
 | Piece | State |
 |---|---|
 | Domain + Cloudflare zone (`phxtraffic.com`) | ✅ live |
-| Tunnel → `127.0.0.1:8765`, `cloudflared` service | ✅ live |
-| Public read (`/api/state` etc.) | ✅ live |
-| `/api/whoami`, `/login`, auth-aware UI (§9) | ✅ committed |
-| **Access policies (§8)** | ❌ **not applied** |
-| Task Scheduler entry (§10) | ❌ not created |
-
-> ⚠️ **Until §8 is done, `POST /api/switch` and `POST /api/button` are
-> reachable by anyone on the internet.** Confirmed 2026-08-06: an
-> unauthenticated POST returned aiohttp's own `400 {"error": "unknown
-> label"}` rather than a redirect to a login page, proving the request
-> reached the application. §8 is the fix and it is a dashboard-only
-> change — no code required.
+| Tunnel `mo-tower` → `127.0.0.1:8765`, `cloudflared` service | ✅ live |
+| Public read (`/api/state`, `/api/logs`, `/api/whoami`, `/control.html`, `/logs.html`, `/`) | ✅ live |
+| `/api/whoami`, `/login`, auth-aware UI (§9) | ✅ live |
+| **Access policies (§8)** | ✅ **live** — 6 apps: 5 path-bypass + 1 catch-all Allow for `mokahlou@gmail.com` |
+| Cloudflare API token (§20) | ✅ **scoped** — Tunnel/Access/DNS only, no account admin |
+| Task Scheduler entry (§10) | ❌ not created (server still does not survive a reboot) |
 
 Verified against Cloudflare docs as of Aug 2026.
 **Not public.** This file lives in `docs/_internal/` and is excluded
@@ -807,10 +800,10 @@ curl -i https://control.phxtraffic.com/api/switch -X POST -H "Content-Type: appl
 Boxes are ticked only where the item is **verified in the live
 deployment**, not where it is merely planned.
 
-- [ ] **Access policies applied (§8).** ❌ Not done. This is the one
-      that matters — until it is ticked, everything below about auth is
-      hypothetical and the actuators are open to the internet.
-- [ ] Verified with the `curl` checks in §8d: `POST /api/switch`
+- [x] **Access policies applied (§8).** Done 2026-08-09 — 5 path-bypass
+      apps + 1 catch-all Allow. Verified: anonymous `GET /api/state` →
+      200, anonymous `POST /api/switch` → 302.
+- [x] Verified with the `curl` checks in §8d: `POST /api/switch`
       returns **302**, not a JSON error from aiohttp.
 - [x] Auth happens at the edge. The Python app never sees a password
       or a PIN — only the `CF_Authorization` cookie proving Access
@@ -830,6 +823,13 @@ deployment**, not where it is merely planned.
       somewhere hostile.
 - [x] The wattplot's own auth (Noise PSK for the ESPHome native API)
       is unchanged.
+- [x] **Cloudflare API token is scoped** (§20). The `cfat_*` in
+      `.env` is limited to Tunnel Read + Access Apps & Policies R/W +
+      DNS R/W on `phxtraffic.com` only — no account admin, no WAF, no
+      members. A leak of this value cannot delete the account, change
+      WAF rules, or invite attackers. Verified negative: `GET
+      /accounts/{id}/members` → 403, `POST /zones/{id}/firewall/rules`
+      → 403.
 - [ ] `/api/logs` is public by choice. It exposes your own hardware
       logs; move it behind the catch-all app if that feels too
       revealing.
@@ -915,12 +915,20 @@ sketch the layout; you'd add the oauth2-proxy + Caddy steps on top.
 
 ---
 
-## 16. Implementation order — what is left
+## 16. Implementation order — status
 
-Steps 1–6 and 10–12 of the original plan are done: the domain is live,
-the tunnel runs, and the `/api/whoami` + `/login` + auth-aware UI work
-is committed. **Everything remaining is dashboard configuration, about
-15 minutes, no code.**
+Steps 1–8 done (2026-08-09). The Access policies are live and
+verified end-to-end with the §8d curl checks. The remaining item is
+the Task Scheduler entry for auto-restart of the Python server (§10).
+
+For the original step-by-step setup (if you ever rebuild from
+scratch), see the historical checklist below — it is preserved as a
+playbook, not a TODO list.
+
+---
+
+<details>
+<summary>Original 11-step checklist (now historical)</summary>
 
 1. **Zero Trust team exists?** (2 min) — https://one.dash.cloudflare.com.
    If this is the first visit it asks for a team name; that name can
@@ -955,6 +963,15 @@ is committed. **Everything remaining is dashboard configuration, about
    so the Python server does not currently survive a reboot.
 10. **Reboot smoke test** (5 min). Per §10.
 11. **Update the github.io nav link** (3 min). Per §11.
+
+</details>
+
+---
+
+**Current TODO (only one left):**
+
+- [ ] Task Scheduler entry for `wattplot_control.py` — §10. Without it,
+      the server dies on reboot and the live panel 502s.
 
 ---
 
@@ -1036,3 +1053,231 @@ is committed. **Everything remaining is dashboard configuration, about
 - TBD: Task Scheduler entry (§10) — the Python server still does not
   survive a reboot.
 - TBD: Switch to Tailscale fallback if Cloudflare is unstable.
+- 2026-08-09: Access policies applied (§8). Five path-bypass apps
+  (`/`, `/control.html`, `/logs.html`, `/api/state`, `/api/logs`,
+  `/api/whoami`) and one catch-all Allow app scoped to
+  `mokahlou@gmail.com` via email one-time PIN. Verified
+  end-to-end: anonymous `GET /api/state` → 200, anonymous
+  `POST /api/switch` → 302 to Access login. The unprotected gap
+  noted in the 2026-08-06 entries is closed.
+- 2026-08-09: Cloudflare API token rotated from a full-account-admin
+  `cfat_*` to a least-privilege scoped token. New token: name
+  `Wattplot Tunnel + Access + DNS (phxtraffic.com)`, id
+  `d9b8216a8f1400526a2d137e7d5cd913`, expires 2027-08-09. Scopes
+  cover Tunnel Read, Access Apps + Policies R/W (account + account.zone),
+  and DNS R/W only — no WAF, no members, no token management. Old
+  account-admin tokens revoked; one intermediate no-DNS token
+  (`d91912…`) is stranded in the dashboard because Cloudflare blocks
+  token-on-token revocation. See §20 for the token record and the
+  rotation runbook.
+
+---
+
+## 20. Cloudflare API token (`.env`)
+
+Some setup steps (Access app CRUD, DNS record CRUD, tunnel status
+checks) are done via the Cloudflare API rather than the dashboard, so
+the wattplot scripts need a token. The token lives in
+`C:\dev\wattplot\.env` as `cloudflare_api_token` and nowhere else —
+`.env` is gitignored.
+
+### 20a. Current token (rotated 2026-08-09)
+
+| Field | Value |
+|---|---|
+| Name | `Wattplot Tunnel + Access + DNS (phxtraffic.com)` |
+| Internal id | `d9b8216a8f1400526a2d137e7d5cd913` |
+| Format | `cfat_XEVQaNs…25b8da` (53 chars; full value in `.env`) |
+| Expires | 2027-08-09 (1-year, set at creation) |
+| Account | `b322f4733377cc8d6ce9d3813b239951` |
+| Zone | `1c5d5daedda893478f0ac9822f6bd116` (`phxtraffic.com`) |
+
+### 20b. Scopes — least-privilege, no account admin
+
+Two policy objects, six permission groups total:
+
+| Resource scope | Permission | Use |
+|---|---|---|
+| `com.cloudflare.api.account.<acct>` | Cloudflare Tunnel Read | `GET /accounts/{id}/cfd_tunnel` |
+| `com.cloudflare.api.account.<acct>` | Access: Apps Read | `GET /accounts/{id}/access/apps` |
+| `com.cloudflare.api.account.<acct>` | Access: Apps and Policies Read (account) | `GET /accounts/{id}/access/apps/<id>/policies` |
+| `com.cloudflare.api.account.<acct>` | Access: Apps and Policies Write (account) | App/PATCH/DELETE on `/accounts/{id}/access/apps` |
+| `com.cloudflare.api.account.<acct>` | DNS Read | `GET /zones/{id}/dns_records` |
+| `com.cloudflare.api.account.<acct>` | DNS Write | POST/PUT/PATCH/DELETE on `/zones/{id}/dns_records` |
+| `com.cloudflare.api.account.zone.<phxtraffic.com>` | Access: Apps and Policies Read (account.zone) | Zone-scoped app endpoints |
+| `com.cloudflare.api.account.zone.<phxtraffic.com>` | Access: Apps and Policies Write (account.zone) | Zone-scoped app endpoints |
+
+**Explicitly NOT included:** `Account API Tokens: *` (no self-rotation),
+`Account Settings: *`, `WAF: *`, `Account Members: *`, `Billing: *`.
+A leak of this value cannot delete the account, change WAF rules,
+invite attackers as members, or rotate other tokens. Worst case:
+attacker reads/creates Access apps and DNS records on
+`phxtraffic.com` — which they can already do via the public
+dashboard if they got a session.
+
+### 20c. Verified positive (the rotation's last sanity check)
+
+Run these against `https://api.cloudflare.com/client/v4/...` with the
+new token's `Authorization: Bearer …` header:
+
+- `GET /accounts/{id}/cfd_tunnel?per_page=10` → 3 tunnels, mo-tower `healthy`
+- `GET /accounts/{id}/access/apps?per_page=100` → 7 apps (6 Wattplot + VNC)
+- `GET /accounts/{id}/access/apps/<id>/policies` → 2 policies each
+- `GET /zones/{id}/dns_records?per_page=30` → 7 records (tunnel CNAMEs + GitHub Pages)
+
+If any of those 2xx's return an empty result, the token is too
+narrow — recheck the scope matrix above.
+
+### 20d. Verified negative (proves the scope is real)
+
+- `GET /accounts/{id}/members` → 403
+- `POST /zones/{id}/firewall/rules` → 403
+
+If either ever returns 2xx, the token has been widened — rotate
+immediately (§20e) and check git/.env for compromise.
+
+### 20e. Rotation runbook
+
+The token expires yearly. Rotate whenever it leaks, whenever the scope
+needs to change, or proactively on the same cadence as any other
+credential.
+
+**Gotchas first — learn these once, save hours later:**
+
+1. **There are two `Access: Apps and Policies` permission groups with
+   identical names** — one with scope `com.cloudflare.api.account`,
+   one with `com.cloudflare.api.account.zone`. The dashboard lists
+   them with the same name; the id is what distinguishes them. Need
+   *both* Read and *both* Write to cover every Access endpoint
+   (account-scope and zone-scope variants).
+2. **`DNS Read/Write` (account-scope) governs the DNS records API,
+   not `Zone DNS Settings Read/Write` (account.zone-scope).** The
+   latter is for zone settings (DNSSEC, nameservers) — not records.
+   If `/zones/{id}/dns_records` 403s, the two got swapped.
+3. **The new restricted token cannot revoke other tokens.** Leave
+   the old admin token in `.env` until the new one is verified on
+   every endpoint, *then* revoke, *then* swap. If you swap first, you
+   lock yourself out and have to restore `.env` from a backup.
+4. **Wait ~8 s after creating a token** before testing — Cloudflare
+   takes a moment to propagate.
+5. **One intermediate token may be stranded.** Tokens that didn't
+   include `Account API Tokens: Revoke` (i.e. the scoped ones you're
+   rotating away from) cannot delete each other. Clean them up
+   from the Cloudflare dashboard.
+
+**The rotation sequence (paste into PowerShell):**
+
+```powershell
+$envFile = 'C:\dev\wattplot\.env'
+$envVars = @{}
+foreach ($line in Get-Content -LiteralPath $envFile -Encoding UTF8) {
+  if ($line -match '^\s*#' -or $line -match '^\s*$') { continue }
+  if ($line -match '^\s*([^=]+)=(.*)$') { $envVars[$Matches[1].Trim()] = $Matches[2].Trim() }
+}
+$acct = $envVars['couldflare_account_id']    # the typo IS in the .env
+$tok  = $envVars['cloudflare_api_token']
+$zone = '1c5d5daedda893478f0ac9822f6bd116'   # phxtraffic.com
+$h    = @{ Authorization = "Bearer $tok"; 'Content-Type' = 'application/json' }
+
+# --- 0. Capture the old token's value in case of rollback ---
+$tok | Out-File 'C:\dev\wattplot\.cloudflare_token_old.txt' -Encoding utf8 -NoNewline
+
+# --- 1. List the obsolete tokens (so we know what to revoke at the end) ---
+$lst = Invoke-RestMethod -Method Get -Uri "https://api.cloudflare.com/client/v4/accounts/$acct/tokens?per_page=50" -Headers $h
+$lst.result | Where-Object { $_.name -ne 'Wattplot Tunnel + Access + DNS (phxtraffic.com)' } |
+    Select-Object id, name, status | Format-Table -AutoSize
+
+# --- 2. Create the new token (admin token in .env still has perms) ---
+$body = @{
+  name = 'Wattplot Tunnel + Access + DNS (phxtraffic.com)'
+  policies = @(
+    @{
+      effect = 'allow'
+      resources = @{ "com.cloudflare.api.account.$acct" = '*' }
+      permission_groups = @(
+        @{ id = 'efea2ab8357b47888938f101ae5e053f' }  # Cloudflare Tunnel Read
+        @{ id = '2dd44e425a914fb98f8d1ddbbcd66915' }  # Access: Apps Read
+        @{ id = '7ea222f6d5064cfa89ea366d7c1fee89' }  # Access: Apps and Policies Read  (account)
+        @{ id = '1e13c5124ca64b72b1969a67e8829049' }  # Access: Apps and Policies Write (account)
+        @{ id = '82e64a83756745bbbb1c9c2701bf816b' }  # DNS Read
+        @{ id = '4755a26eedb94da69e1066d98aa820be' }  # DNS Write
+      )
+    },
+    @{
+      effect = 'allow'
+      resources = @{ "com.cloudflare.api.account.zone.$zone" = '*' }
+      permission_groups = @(
+        @{ id = 'eb258a38ea634c86a0c89da6b27cb6b6' }  # Access: Apps and Policies Read  (account.zone)
+        @{ id = '959972745952452f8be2452be8cbb9f2' }  # Access: Apps and Policies Write (account.zone)
+      )
+    }
+  )
+  not_before = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+  expires_on = (Get-Date).AddDays(365).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+} | ConvertTo-Json -Depth 8
+$r = Invoke-RestMethod -Method Post `
+    -Uri "https://api.cloudflare.com/client/v4/accounts/$acct/tokens" `
+    -Headers $h -Body $body
+$new = $r.result
+"new token id: $($new.id)  expires: $($new.expires_on)"
+
+# --- 3. Verify the new token on every endpoint, using its value DIRECTLY ---
+#         (do not touch .env until this passes)
+$new.value | Out-File 'C:\dev\wattplot\.cloudflare_token_new.txt' -Encoding utf8 -NoNewline
+$hNew = @{ Authorization = "Bearer $($new.value)"; 'Content-Type' = 'application/json' }
+Start-Sleep -Seconds 8
+$t = Invoke-RestMethod -Method Get -Uri "https://api.cloudflare.com/client/v4/accounts/$acct/cfd_tunnel?per_page=10" -Headers $hNew
+$a = Invoke-RestMethod -Method Get -Uri "https://api.cloudflare.com/client/v4/accounts/$acct/access/apps?per_page=100" -Headers $hNew
+$d = Invoke-RestMethod -Method Get -Uri "https://api.cloudflare.com/client/v4/zones/$zone/dns_records?per_page=30" -Headers $hNew
+"tunnels=$(@($t.result).Count)  apps=$(@($a.result).Count)  dns=$(@($d.result).Count)"
+# STOP if any number is 0. Fix the scope matrix (§20b) and re-run from step 2.
+
+# --- 4. Revoke the old account-admin token (admin token still in .env) ---
+#         Skip any other "Wattplot" tokens in the list — they cannot be
+#         revoked by either old or new token; clean them from the dashboard.
+$adminId = '1768feb0924467eb734372c022c4fd5d'   # minimax-falling-heart-3346 (or current)
+$rv = Invoke-RestMethod -Method Delete -Uri "https://api.cloudflare.com/client/v4/accounts/$acct/tokens/$adminId" -Headers $h
+"admin revoked: $($rv.success)"
+
+# --- 5. ONLY now swap .env to the new token ---
+$newTok = (Get-Content 'C:\dev\wattplot\.cloudflare_token_new.txt' -Raw).Trim()
+$lines  = Get-Content $envFile -Encoding UTF8
+for ($i = 0; $i -lt $lines.Count; $i++) {
+  if ($lines[$i] -match '^\s*cloudflare_api_token\s*=') {
+    $lines[$i] = "cloudflare_api_token=$newTok"; break
+  }
+}
+$utf8 = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText($envFile, ($lines -join "`r`n"), $utf8)
+
+# --- 6. Sanity check the .env is using the new token ---
+$hSwap = @{ Authorization = "Bearer $((Select-String -Path $envFile -Pattern '^cloudflare_api_token=(.+)').Matches[0].Groups[1].Value)"; 'Content-Type' = 'application/json' }
+$v = Invoke-RestMethod -Method Get -Uri "https://api.cloudflare.com/client/v4/accounts/$acct/tokens/verify" -Headers $hSwap
+"verify: status=$($v.result.status)  id=$($v.result.id)"
+# Should match $new.id from step 2. If it shows the admin id, the .env swap didn't take.
+
+# --- 7. Clean up scratch files (the values are in .env or in trash) ---
+# Use mavis-trash, not Remove-Item — recoverable if you need to dig out an old value.
+mavis-trash 'C:\dev\wattplot\.cloudflare_token_new.txt' 'C:\dev\wattplot\.cloudflare_token_old.txt'
+```
+
+**Total time: 5–10 min.** Most of that is waiting for the 8 s
+propagation delay. The verification gates in steps 3 and 6 are
+non-negotiable — the lockout pattern in gotcha #3 is annoying
+to recover from but trivial to avoid.
+
+### 20f. .env backups after rotation
+
+The script above leaves `.env.bak.<timestamp>` files in
+`C:\dev\wattplot\` (one per rotation attempt). The current
+`.gitignore` only excludes `.env` and `.env.local` exactly, so the
+backups show as untracked in `git status`. They contain the *old* —
+now revoked — token values, so they are not a security risk, just
+clutter. Either:
+
+- add a single line to `.gitignore`: `.env.*.bak` (matches all
+  `.<name>.env.bak` and `.env.bak.*` shapes), or
+- `mavis-trash 'C:\dev\wattplot\.env.*.bak'` after a rotation
+  succeeds.
+
+Both are fine.
