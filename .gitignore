@@ -54,6 +54,11 @@ models/*.tjs
 .env
 .env.local
 *.local
+# Rotation snapshots from the Cloudflare token rotation runbook
+# (see docs/_internal/remote-access.md §20). These are left in the working
+# tree as a manual audit trail during rotation, but never committed.
+.env.bak*
+.env.*broken*
 
 # ESPHome secrets (template is committed as secrets.yaml.example)
 firmware/secrets.yaml
