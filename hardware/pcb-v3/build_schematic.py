@@ -479,6 +479,189 @@ def pin_pos(cache, lib_id, pin_num, instance_x, instance_y, angle=0):
 
 
 # ----------------------------------------------------------------------------
+# Subsystem: 2x DRV8871 H-bridges (actuator + solenoid drivers)
+# ----------------------------------------------------------------------------
+#
+# DRV8871DDA pinout (from Driver_Motor lib, sub-symbol _1_1):
+#   Pin 1: GND          (0, -10.16)
+#   Pin 2: IN2          (-10.16, 2.54)   ← direction input 2
+#   Pin 3: IN1          (-10.16, 5.08)   ← direction input 1
+#   Pin 4: ILIM         (10.16, -5.08)   ← current sense (IPROPI) — 1kΩ to GND = 200mV/A
+#   Pin 5: VM           (0, 10.16)      ← motor supply (12V fused)
+#   Pin 6: OUT1         (10.16, 5.08)   ← motor output 1
+#   Pin 7: GND (exposed pad) — hidden
+#   Pin 8: OUT2         (10.16, 2.54)   ← motor output 2
+#   Pin 9: GND (exposed pad) — hidden
+#
+# NOTE: The lib symbol does NOT have nSLEEP, VCC, or nFAULT pins. The real
+# chip has all three, but in this package they're handled internally
+# (nSLEEP tied high, VCC is internal 5V LDO). The nFAULT pin is
+# open-drain and needs to be wired externally — we model this as a
+# "virtual nFAULT" label on the H-bridge, which connects (by name) to
+# the ACTUATOR_nFAULT / SOLENOID_nFAULT label on the ESP32.
+#
+# Wattplot wiring:
+#   U5a (actuator) IN1=GPIO1, IN2=GPIO2, ILIM=GPIO4, nFAULT→GPIO21
+#   U5b (solenoid) IN1=GPIO10, IN2=GPIO12, ILIM=GPIO5, nFAULT→GPIO13
+#   VM (both) = +12V (fused)
+#   GND (both) = common ground
+#   OUT1/OUT2 → JST-XH 2-pin connector to motor / solenoid
+
+def place_drv8871s(sch: Schematic, cache: SymbolCache, x0=450, y0=200):
+    """Two DRV8871 H-bridges (U5a actuator, U5b solenoid) + support.
+
+    Layout:
+        U5a at (x0, y0)         ← actuator
+        U5b at (x0, y0 + 90)    ← solenoid (below)
+    """
+    drv_id  = LIB["drv8871"]
+    res_id  = LIB["res"]
+    cap_id  = LIB["cap_polarized"]
+    jst_id  = LIB["jst_xh_2"]
+    tp_id   = LIB["tp"]
+
+    def pp(lib, num, x, y):
+        p = pin_pos(cache, lib, num, x, y)
+        if p is None:
+            raise RuntimeError(f"no pin {num} on {lib}")
+        return p
+
+    def place_one_drv(idx, name, ref_prefix, x, y,
+                      in1_net, in2_net, ilim_net, nfault_net,
+                      motor_label, jst_ref):
+        """Place one DRV8871 + its VM bulk cap, ILIM resistor, JST output
+        connector, and a virtual nFAULT test point."""
+        # The DRV8871 itself
+        sch.reference(drv_id)
+        sch.add(make_symbol_instance(
+            drv_id, ref_prefix, f"DRV8871 ({name})",
+            "Package_SO:Texas_HTSOP-8-1EP_3.9x4.9mm_P1.27mm", x, y
+        ))
+
+        # Resolve pin positions
+        p_gnd  = pp(drv_id, '1', x, y)
+        p_in2  = pp(drv_id, '2', x, y)
+        p_in1  = pp(drv_id, '3', x, y)
+        p_ilim = pp(drv_id, '4', x, y)
+        p_vm   = pp(drv_id, '5', x, y)
+        p_out1 = pp(drv_id, '6', x, y)
+        p_out2 = pp(drv_id, '8', x, y)
+
+        # VM bulk cap (22uF/25V), placed above the chip
+        cap_x, cap_y = x, y - 20
+        sch.reference(cap_id)
+        sch.add(make_symbol_instance(
+            cap_id, f"C{8+idx}", "22uF/25V",
+            "Capacitor_SMD:C_1210_3225Metric", cap_x, cap_y
+        ))
+        c_pos = pp(cap_id, '1', cap_x, cap_y)
+        c_neg = pp(cap_id, '2', cap_x, cap_y)
+
+        # ILIM resistor (1kΩ to GND, 200mV/A), placed to the right
+        r_x, r_y = x + 25, y - 5
+        sch.reference(res_id)
+        sch.add(make_symbol_instance(
+            res_id, f"R{9+idx}", "1k",
+            "Resistor_SMD:R_0603_1608Metric", r_x, r_y
+        ))
+        r_top = pp(res_id, '1', r_x, r_y)
+        r_bot = pp(res_id, '2', r_x, r_y)
+
+        # JST-XH 2-pin output connector, placed further right
+        jst_x, jst_y = x + 50, y
+        sch.reference(jst_id)
+        sch.add(make_symbol_instance(
+            jst_id, jst_ref, motor_label,
+            "Connector_JST:JST_XH_B2B-PH-K_1x02_P2.50mm_Vertical", jst_x, jst_y
+        ))
+        j1 = pp(jst_id, '1', jst_x, jst_y)
+        j2 = pp(jst_id, '2', jst_x, jst_y)
+
+        # nFAULT test point (a "virtual" pin not in the symbol)
+        # Place to the right of the chip, at a y that doesn't collide
+        nf_x, nf_y = x + 25, y + 10
+        sch.reference(tp_id)
+        sch.add(make_symbol_instance(
+            tp_id, f"TP{1+idx}", f"nFAULT_{name}",
+            "TestPoint:TestPoint_Pad_D1.0mm", nf_x, nf_y
+        ))
+        nf_pos = pp(tp_id, '1', nf_x, nf_y)
+
+        # ------------------------------------------------------------------
+        # Power labels (at each pin, no wires needed for power rails)
+        # ------------------------------------------------------------------
+        def lbl(net, pos, shape="bidirectional"):
+            sch.add(make_global_label(net, pos[0], pos[1], shape))
+        lbl("+12V",  p_vm)        # motor supply
+        lbl("GND",   p_gnd)       # pin 1
+        lbl("GND",   (x, p_gnd[1]))  # also at the symbol center (where pins 7,9 are)
+        # Pin 7, 9 are hidden but their anchor is the same coordinate
+        # as pin 1. Adding a GND label there ensures the symbol is
+        # properly grounded even if KiCad resolves it differently.
+        lbl(in1_net, p_in1)
+        lbl(in2_net, p_in2)
+        lbl(ilim_net, p_ilim)
+        # Output connector: pin 1 = OUT1, pin 2 = OUT2 (typical convention)
+        lbl("OUT1",  j1)
+        lbl("OUT2",  j2)
+        # nFAULT virtual pin: name it with the same net as the ESP32 side
+        lbl(nfault_net, nf_pos)
+        # Annotation: which motor does this drive
+        sch.add(make_text(motor_label, jst_x + 5, jst_y + 7, size=1.27))
+
+        # ------------------------------------------------------------------
+        # Supporting wires
+        # ------------------------------------------------------------------
+        def w(x1, y1, x2, y2):
+            sch.add(make_wire(x1, y1, x2, y2))
+        def j(x, y):
+            sch.add(make_junction(x, y))
+
+        # VM bulk cap: between +12V and GND
+        # The +12V label is at p_vm (top of chip). Wire from cap
+        # positive to p_vm via a stub.
+        w(c_pos[0], c_pos[1], c_pos[0], p_vm[1])
+        w(c_pos[0], p_vm[1], p_vm[0], p_vm[1])
+        j(p_vm[0], p_vm[1])
+        # cap negative → GND rail (at y = p_gnd[1] = 189.84, but we
+        # route down to the same GND label as the chip)
+        w(c_neg[0], c_neg[1], c_neg[0], y - 30)
+        lbl("GND", (c_neg[0], y - 30))
+
+        # OUT1 → JST pin 1
+        w(p_out1[0], p_out1[1], p_out1[0], j1[1])
+        w(p_out1[0], j1[1], j1[0], j1[1])
+        j(p_out1[0], j1[1])
+        # OUT2 → JST pin 2
+        w(p_out2[0], p_out2[1], p_out2[0], j2[1])
+        w(p_out2[0], j2[1], j2[0], j2[1])
+        j(p_out2[0], j2[1])
+
+        # ILIM resistor: ILIM pin → R top → R bot → GND
+        w(p_ilim[0], p_ilim[1], p_ilim[0], r_top[1])
+        w(p_ilim[0], r_top[1], r_top[0], r_top[1])
+        j(p_ilim[0], r_top[1])
+        w(r_top[0], r_top[1], r_bot[0], r_bot[1])
+        w(r_bot[0], r_bot[1], r_bot[0], y - 30)
+        lbl("GND", (r_bot[0], y - 30))
+
+    # U5a (actuator) at the original position
+    place_one_drv(0, "ACT", "U5", x0, y0,
+                  in1_net="ACTUATOR_IN1", in2_net="ACTUATOR_IN2",
+                  ilim_net="ACTUATOR_IPROPI", nfault_net="ACTUATOR_nFAULT",
+                  motor_label="ACTUATOR", jst_ref="J3")
+    # U5b (solenoid) below U5a
+    place_one_drv(2, "SOL", "U6", x0, y0 + 100,
+                  in1_net="SOLENOID_IN1", in2_net="SOLENOID_IN2",
+                  ilim_net="SOLENOID_IPROPI", nfault_net="SOLENOID_nFAULT",
+                  motor_label="SOLENOID", jst_ref="J4")
+
+    # Common GND label for the support wires
+    sch.add(make_text("DRV8871 H-bridges (U5 actuator / U6 solenoid)",
+                      x0 - 30, y0 - 50, size=2.0))
+
+
+# ----------------------------------------------------------------------------
 # Subsystem: Power tree
 # ----------------------------------------------------------------------------
 
@@ -1174,6 +1357,7 @@ def main():
     sch.header()
     place_power_tree(sch, cache)
     place_esp32_s3(sch, cache)
+    place_drv8871s(sch, cache)
     sch.save(SCH_PATH)
     print(f"\n[sch] wrote {SCH_PATH}")
 
