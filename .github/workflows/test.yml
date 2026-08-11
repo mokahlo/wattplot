@@ -21,19 +21,15 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-${{ matrix.python-version }}-
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy pandas matplotlib pvlib shapely scipy
+          pip install -r requirements.txt -r requirements-dev.txt
 
       - name: "Smoke test: import all modules"
         run: |
@@ -44,6 +40,16 @@ jobs:
           print('Params OK:', LOCATION['name'])
           "
 
+      # Guards firmware/wattplot.yaml against pin-map / entity-ID drift.
+      # esphome is NOT installed here, so the compile-and-inspect codegen
+      # tests self-skip via the `requires_esphome` marker in conftest.py;
+      # the YAML-text checks (pin map, required IDs, deprecated-API guards)
+      # all still run. To get the codegen tier too, add `pip install esphome`
+      # above — it costs several minutes for the toolchain on a cold cache.
+      - name: Run firmware test suite
+        run: |
+          pytest firmware/tests/ -q
+
       - name: Run sun simulator
         run: |
           python analysis/sun_simulator.py
@@ -51,6 +57,10 @@ jobs:
       - name: Run wind load analysis
         run: |
           python analysis/wind_load.py
+
+      - name: Run post-bending analysis
+        run: |
+          python analysis/post_bending.py
 
       - name: Run shadow raycaster
         run: |
@@ -71,6 +81,106 @@ jobs:
         run: |
           python analysis/engineering_drawing.py
 
+      - name: Build PCB schematic
+        run: |
+          python analysis/pcb_schematic.py
+
+      - name: Generate build guides for all 5 panel presets
+        run: |
+          for panel in longi_620W residential_60cell large_format_1m65 my_craigslist_panel custom; do
+            echo "--- build_$panel.md ---"
+            python -c "
+            import sys; sys.path.insert(0, '.')
+            import wattplot_params as P
+            P.apply_panel_preset('$panel')
+            from models.build_guide import generate_build_guide
+            print(generate_build_guide('$panel')[:200])
+            "
+          done
+
+      - name: Verify cut list is well-formed
+        run: |
+          python -c "
+          import sys; sys.path.insert(0, '.')
+          from models.cut_list import derive_cut_list
+          r = derive_cut_list(bed_L_in=96.0, bed_W_in=44.6)
+          assert len(r['cuts']) > 0
+          assert r['total_length_in'] > 0
+          assert all(c.qty > 0 for c in r['cuts'])
+          assert all(c.length_in > 0 for c in r['cuts'])
+          print(f'Cut list OK: {len(r[\"cuts\"])} cuts, {r[\"total_length_in\"]/12:.1f} ft total')
+          "
+
+      - name: Validate bring_your_own_panel against presets
+        run: |
+          python -c "
+          import sys; sys.path.insert(0, '.')
+          import wattplot_params as P
+          for name in P.PANEL_PRESETS:
+              P.apply_panel_preset(name)
+              assert P.PANEL['L_in'] > 0
+              assert P.PANEL['W_in'] > 0
+              assert P.PANEL['wattage'] > 0
+              print(f'  {name}: {P.PANEL[\"L_in\"]}x{P.PANEL[\"W_in\"]}\" {P.PANEL[\"wattage\"]}W OK')
+          "
+
+  docs:
+    name: Lint docs + check internal links
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for STALE banners on canonical sources
+        # docs/pinmap.html, docs/schematic.html, firmware/wattplot.yaml,
+        # and firmware/README.md are the canonical sources that the
+        # STALE banners point at -- they must never be marked stale
+        # themselves.
+        run: |
+          for f in docs/pinmap.html docs/schematic.html firmware/wattplot.yaml firmware/README.md; do
+            if head -1 "$f" | grep -q '\*\*STALE'; then
+              echo "::error::$f is marked STALE but should be the canonical source"
+              exit 1
+            fi
+          done
+
+      - name: Verify docs gallery images resolve
+        run: |
+          python -c "
+          import re, pathlib
+          gallery = pathlib.Path('docs/gallery.html').read_text(encoding='utf-8')
+          refs = re.findall(r'href=\"(gallery/[^\"]+)\"', gallery)
+          missing = [r for r in refs if not pathlib.Path('docs', r).is_file()]
+          assert not missing, f'Missing gallery refs: {missing}'
+          print(f'Gallery OK: {len(refs)} refs resolve')
+          "
+
+      - name: Check README links to docs/*.md
+        run: |
+          python -c "
+          import re, pathlib
+          readme = pathlib.Path('README.md').read_text(encoding='utf-8')
+          md_links = re.findall(r'\(docs/([^\)]+\.md)\)', readme)
+          missing = [l for l in md_links if not pathlib.Path('docs', l).is_file()]
+          assert not missing, f'Missing README doc refs: {missing}'
+          print(f'README OK: {len(md_links)} docs refs resolve')
+          "
+
+      - name: Check internal docs/*.md links
+        run: |
+          python -c "
+          import re, pathlib
+          docs_root = pathlib.Path('docs')
+          for md in docs_root.rglob('*.md'):
+              text = md.read_text(encoding='utf-8')
+              for ref in re.findall(r'\]\(([^\)]+\.md)\)', text):
+                  if ref.startswith(('http://', 'https://', '#')):
+                      continue
+                  target = (md.parent / ref).resolve()
+                  # Allow .html equivalents (Jekyll will build the .md -> .html)
+                  if not (target.is_file() or target.with_suffix('.html').is_file()):
+                      print(f'  broken: {md.relative_to(docs_root)} -> {ref}')
+          "
+
   lint:
     name: Python lint
     runs-on: ubuntu-latest
@@ -79,5 +189,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install ruff
-      - run: ruff check . --exclude renders --exclude models --exclude tools
+      - run: pip install -r requirements-dev.txt
+      - run: ruff check .
+      - run: ruff format --check .

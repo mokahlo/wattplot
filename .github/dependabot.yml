@@ -1,0 +1,32 @@
+# GitHub-native config: Dependabot version updates + GitHub Actions
+# (the latter is the standard way to keep actions/* on current versions).
+
+version: 2
+
+updates:
+  # Python deps from requirements.txt
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    # Don't open auto-PRs that just bump a dep without context. Manual review.
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "python"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+      - "ci"
+    commit-message:
+      prefix: "ci"

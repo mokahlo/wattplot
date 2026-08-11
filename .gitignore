@@ -34,6 +34,11 @@ dist/
 
 # Generated render outputs (regenerable from source)
 renders/*.png
+# ...except the OpenSCAD-rendered STL + PNG artifacts. These are
+# committed so the docs site and the booth viewer can ship them
+# without requiring every contributor to have OpenSCAD installed.
+!renders/wattplot_*.stl
+!renders/wattplot_*.png
 models/*.step
 models/*.stl
 models/*.3mf
@@ -49,6 +54,11 @@ models/*.tjs
 .env
 .env.local
 *.local
+# Rotation snapshots from the Cloudflare token rotation runbook
+# (see docs/_internal/remote-access.md §20). These are left in the working
+# tree as a manual audit trail during rotation, but never committed.
+.env.bak*
+.env.*broken*
 
 # ESPHome secrets (template is committed as secrets.yaml.example)
 firmware/secrets.yaml
@@ -61,3 +71,47 @@ firmware/secrets.yaml.*
 test_output/
 tools/ci_jobs*.json
 models/*.FCBak
+
+# Runtime logs from tools/log_subscriber.py (wattplot.log grows to
+# hundreds of MB — never commit these; docs/logging.md explains rotation)
+logs/
+*.log
+*.log.gz
+!analysis/*.md
+
+# ESPHome build/validate transcripts (firmware/.esphome/ is covered by
+# firmware/.gitignore; these loose per-run logs were not)
+firmware/.esphome_*.log
+
+# Scratch files from doc/site generation (tools/*.ps1 splice these into
+# the HTML pages; they are intermediates, not sources)
+tools/_sim_*.html
+tools/sim_body.html
+tools/sim_inline_*.html
+
+# Draft commit messages staged for `git commit -F`
+tools/commit_msg_*.txt
+
+# Test artifacts accidentally created at the repo root during dev
+# (e.g. `test_cube3.png` from a FreeCAD export). Anything matching this
+# pattern in `renders/` is already ignored by the `renders/*.png` rule
+# above; this anchors the pattern to the root only.
+/test_*.png
+
+# KiCad project exports (Gerber, SVG, ERC logs, etc.). All regenerable
+# from the .kicad_pcb / .kicad_sch. Keep the project files, not the
+# build outputs.
+hardware/*/exports/
+hardware/pcb-v3/exports/
+
+# Vendor reference PDFs (datasheets, application notes). Per-person
+# references; the canonical "where to download" list is in
+# models/freecad/parts/vendor/README.md.
+parts/
+# ...except the OpenSCAD per-part modules under models/openscad/parts/.
+# Those are checked-in source files, not vendor PDFs.
+!models/openscad/parts/
+
+# SVG renders from models/render_svg_views.py (PNG renders already
+# gitignored above). Small but regenerable build artifacts.
+renders/*.svg

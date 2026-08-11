@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wattplot — Data dashboard</title>
 <meta name="description" content="Browse all Wattplot data: energy production, watering events, panel tilt, motor current, soil and panel temperature. Customizable charts, time ranges, CSV import.">
-<link rel="canonical" href="https://mokahlo.github.io/wattplot/data.html">
+<link rel="canonical" href="https://wattplot.org/data.html">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -149,7 +149,7 @@
     .live-cta { grid-template-columns: 1fr; }
   }
 
-  /* ---- Live telemetry strip (reads control.phxtraffic.com) ---- */
+  /* ---- Live telemetry strip (reads control.wattplot.org) ---- */
   .live-now {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: 12px; padding: 18px 20px; margin: 18px 0 24px;
@@ -290,7 +290,7 @@
         </div>
       </div>
     </nav>
-    <a class='livelink' href='https://control.phxtraffic.com/control.html' target='_blank' rel='noopener' title='Live control panel - public readings, sign-in for controls'>Live &#8599;</a>
+    <a class='livelink' href='https://control.wattplot.org/control.html' target='_blank' rel='noopener' title='Live control panel - public readings, sign-in for controls'>Live &#8599;</a>
     <a class="gh" href="https://github.com/mokahlo/wattplot">GitHub ↗</a>
   </div>
 </header>
@@ -328,9 +328,9 @@
         <strong>Live control panel</strong> &mdash; toggle the solenoid, set the tilt, run a self-calibration,
         and read every sensor in real time over the wattplot's native API.
         The readings above are public; the controls are behind a sign-in and open on
-        <code>control.phxtraffic.com</code>.
+        <code>control.wattplot.org</code>.
       </div>
-      <a class="live-cta-btn" href="https://control.phxtraffic.com/control.html" target="_blank" rel="noopener">Open control panel &rarr;</a>
+      <a class="live-cta-btn" href="https://control.wattplot.org/control.html" target="_blank" rel="noopener">Open control panel &rarr;</a>
     </div>
 
     <div class="toolbar">
@@ -884,14 +884,14 @@ loadChartJsDateAdapter().then(() => {
    Reads the public, uncredentialed /api/state on the control host.
    Deliberately no control actions here: the CF_Authorization cookie
    is third-party from github.io and browsers block it, so anything
-   requiring auth belongs on control.phxtraffic.com itself.
+   requiring auth belongs on control.wattplot.org itself.
 
    The rule this code exists to enforce: never render a frozen
    snapshot as if it were current. Three states, always distinguished
    -- live, stale (server up, wattplot link silent), down (no answer).
    --------------------------------------------------------------- */
 (function () {
-  const CONTROL_HOST = 'https://control.phxtraffic.com';
+  const CONTROL_HOST = 'https://control.wattplot.org';
   const POLL_MS = 5000;
   const STALE_WARN_S = 10;
 

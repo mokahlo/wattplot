@@ -1,0 +1,51 @@
+# Pre-commit hooks for the Wattplot repo.
+#
+# Install once after cloning:
+#   pip install pre-commit
+#   pre-commit install
+#
+# Every commit then runs the hooks below. To run them manually:
+#   pre-commit run --all-files
+#
+# See CONTRIBUTING.md for the rationale.
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: ["--fix"]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: check-yaml
+        # .github/workflows/*.yml is allowed to use the GitHub-specific
+        # `on:` key, which is a boolean in YAML 1.1 but a string in 1.2.
+        # PyYAML's safe_load flags this. Allow it.
+        args: ["--allow-multiple-documents"]
+        exclude: ^\.github/workflows/.*\.yml$
+      - id: check-json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=5120"]  # 5 MB; the largest PDF in specs/ is ~5.6 MB
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
+      - id: trailing-whitespace
+        # Markdown uses two trailing spaces for line breaks -- preserve.
+        exclude: \.md$
+
+  - repo: local
+    hooks:
+      - id: firmware-pytest
+        name: firmware pytest (smoke)
+        # Runs only the YAML-text tier of firmware tests -- the codegen
+        # tier requires esphome installed, which pre-commit CI doesn't have.
+        # Full codegen runs in GitHub Actions on every PR.
+        entry: bash -c 'pytest firmware/tests/ -q -m "not requires_esphome"'
+        language: system
+        pass_filenames: false
+        types: [python]

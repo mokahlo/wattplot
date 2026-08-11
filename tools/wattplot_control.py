@@ -11,23 +11,88 @@ Then open http://localhost:8765/ in a browser.
 
 Endpoints (all JSON, POST unless noted):
   GET  /                control panel HTML
-  GET  /api/state       all current values
+  GET  /api/state       all current values, plus a _meta block carrying
+                        link health (connected / stale_for_s / stale)
+  GET  /api/whoami      whether the caller has a Cloudflare Access session
   POST /api/switch      {"label": "Solenoid Valve", "on": true|false}
   POST /api/number      {"label": "Commanded Tilt (°)", "value": 20}
   POST /api/select      {"label": "Controller State", "option": "Normal"}
   POST /api/button      {"label": "Calibrate Actuator"}
 """
 import asyncio
+import math
+import sys
+import time
 from pathlib import Path
 
 import aioesphomeapi
 from aiohttp import web
+from zeroconf.asyncio import AsyncZeroconf
+
+from _secrets import get_api_key
 
 
 # ---- Config ----
 WATTPLOT_HOST = "wattplot-controller.local"
-WATTPLOT_KEY  = "cz0STvY6M+0ob9ydfsi28MDAL9b5P8VsmXsnZv3t7BU="
+WATTPLOT_KEY  = get_api_key()
 LOCAL_PORT    = 8765
+
+# The fastest sensors push every 100 ms and several push every 1 s, so a
+# healthy link is never quiet for long. If nothing arrives for this many
+# seconds the link is wedged (TCP up, no data) — drop it so ReconnectLogic
+# rebuilds it. This is the bug that left the panel serving a frozen
+# snapshot: the old code connected once and never noticed the link die.
+STALE_FORCE_RECONNECT_S = 30.0
+WATCHDOG_INTERVAL_S     = 5.0
+
+# Origins allowed to read the public endpoints cross-origin, so the
+# github.io site can render live tiles. Read-only and uncredentialed:
+# these responses never carry Access-Control-Allow-Credentials, so a
+# browser will not attach the CF_Authorization cookie to them and no
+# other site can borrow the operator's session. The control POSTs are
+# deliberately absent from CORS_PATHS below — they are same-origin only.
+CORS_ORIGINS = {
+    "https://mokahlo.github.io",
+    "http://localhost:4000",   # local `jekyll serve`
+    "http://127.0.0.1:4000",
+}
+CORS_PATHS = {"/api/state", "/api/logs", "/api/whoami"}
+
+# Token-bucket rate limit on the WRITE endpoints. Cloudflare Access
+# is the primary auth gate (the Access policy sits in front of every
+# POST and runs the email-OTP flow); this is the secondary defense
+# against a compromised token, a runaway UI script, or the Access
+# policy accidentally being removed. Per-IP buckets so a noisy
+# legitimate browser doesn't block other operators.
+#
+# Capacity: 30 tokens. Refill: 1 token / 2 seconds = 30 req/min
+# sustained, with a 30-request burst.
+WRITE_PATHS = {"/api/switch", "/api/number", "/api/select", "/api/button"}
+WRITE_BUCKET_CAPACITY = 30
+WRITE_BUCKET_REFILL_PER_S = 0.5    # 1 token every 2 s
+
+
+class _TokenBucket:
+    """Simple per-IP token bucket for the write endpoints."""
+
+    __slots__ = ("tokens", "last_refill")
+
+    def __init__(self, capacity: float):
+        self.tokens = float(capacity)
+        self.last_refill = time.monotonic()
+
+    def allow(self, capacity: float, refill_per_s: float) -> bool:
+        now = time.monotonic()
+        elapsed = now - self.last_refill
+        self.tokens = min(capacity, self.tokens + elapsed * refill_per_s)
+        self.last_refill = now
+        if self.tokens >= 1.0:
+            self.tokens -= 1.0
+            return True
+        return False
+
+
+_write_buckets: dict[str, _TokenBucket] = {}
 
 # Entity keys (stable, computed from entity name). The control panel
 # references labels, the server maps labels -> keys.
@@ -67,9 +132,32 @@ ENTITY_KEYS = {
     "Free Memory":                2070763131,
     "MCU Temperature":            487821941,
     "Last Event":                 1381377912,
+    # ===== v3.3: Frost protection (heater + USB grow light) =====
+    # Entity keys below are PLACEHOLDERS (0). Update with the real
+    # keys after the first flash by running:
+    #   python -c "from tools.dump_state import main; main()"
+    # and copying the integer keys for each new entity into this
+    # dict. Until then the live /api/state response won't include
+    # the frost sensors — the entities are still on the device and
+    # visible to Home Assistant via the native API.
+    "Frost Mode":                 0,   # select: Off / Heater / Grow Light / Both
+    "Frost Heater":               0,   # switch (output)
+    "Frost Grow Light":           0,   # switch (output)
+    "Frost State":                0,   # text sensor (Off / Standby / Heater / Grow Light / Both / Battery low / Sensor error)
+    "Soil Temperature":           0,   # sensor (DS18B20, 5cm depth)
+    "Canopy Air Temperature":     0,   # sensor (DS18B20, in canopy)
+    "Frost Soil Threshold (°C)":  0,   # number, default 4.0
+    "Frost Canopy Threshold (°C)":0,   # number, default 2.0
+    "Frost Warm-Above (°C)":      0,   # number, default 6.0
+    "Frost Max Runtime (min)":    0,   # number, default 30
+    "Frost Min Battery SOC (%)":  0,   # number, default 50
 }
 
 BUTTON_LABELS = {"Calibrate Actuator", "Water Now"}
+
+
+class LinkDown(RuntimeError):
+    """Raised when a command is attempted while the wattplot link is down."""
 
 
 # ---- API client wrapper ----
@@ -79,16 +167,84 @@ class WattplotClient:
         self.key = key
         self.api = None
         self.states = {}
+        self.connected = False
+        self.device_info = None
+        self._last_push = None      # time.monotonic() of the last state message
+        self._last_push_wall = None  # time.time() equivalent, for display
+        self._zc = None
+        self._reconnect = None
+        self._watchdog_task = None
 
-    async def connect(self):
-        self.api = aioesphomeapi.APIClient(self.host, 6053, noise_psk=self.key)
-        await self.api.connect(login=True)
+    async def start(self):
+        """Bring up the link and keep it up. Returns immediately — the
+        server comes up even if the wattplot is unreachable, and
+        ReconnectLogic keeps retrying with backoff in the background."""
+        self._zc = AsyncZeroconf()
+        self.api = aioesphomeapi.APIClient(
+            self.host, 6053, None,
+            noise_psk=self.key,
+            zeroconf_instance=self._zc.zeroconf,
+        )
+        self._reconnect = aioesphomeapi.ReconnectLogic(
+            client=self.api,
+            on_connect=self._on_connect,
+            on_disconnect=self._on_disconnect,
+            zeroconf_instance=self._zc.zeroconf,
+            name=self.host,
+        )
+        await self._reconnect.start()
+        self._watchdog_task = asyncio.create_task(self._watchdog())
+
+    async def stop(self):
+        if self._watchdog_task:
+            self._watchdog_task.cancel()
+        if self._reconnect:
+            await self._reconnect.stop()
+        if self._zc:
+            await self._zc.async_close()
+
+    async def _on_connect(self):
         self.api.subscribe_states(self._on_state)
-        await asyncio.sleep(0.5)
-        return await self.api.device_info()
+        self._mark_push()
+        self.connected = True
+        try:
+            self.device_info = await self.api.device_info()
+            print(f"[wattplot] connected: {self.device_info.name} "
+                  f"(mac {self.device_info.mac_address}, "
+                  f"esphome {self.device_info.esphome_version})")
+        except Exception as e:
+            print(f"[wattplot] connected, device_info failed: {e}")
+
+    async def _on_disconnect(self, expected: bool):
+        self.connected = False
+        print(f"[wattplot] disconnected (expected={expected}) - will retry")
+
+    def _mark_push(self):
+        self._last_push = time.monotonic()
+        self._last_push_wall = time.time()
+
+    def stale_for(self):
+        """Seconds since the last state message, or None if none ever."""
+        if self._last_push is None:
+            return None
+        return time.monotonic() - self._last_push
+
+    async def _watchdog(self):
+        """Force a reconnect if the link goes quiet while nominally up."""
+        while True:
+            await asyncio.sleep(WATCHDOG_INTERVAL_S)
+            age = self.stale_for()
+            if self.connected and age is not None and age > STALE_FORCE_RECONNECT_S:
+                print(f"[wattplot] no state for {age:.0f}s - forcing reconnect")
+                self.connected = False
+                try:
+                    await self.api.disconnect(force=True)
+                except Exception as e:
+                    print(f"[wattplot] forced disconnect failed: {e}")
 
     def _on_state(self, s):
         self.states[s.key] = s
+        self._mark_push()
 
     def get(self, label):
         key = ENTITY_KEYS.get(label)
@@ -99,16 +255,26 @@ class WattplotClient:
             return None
         return s.state
 
+    def _require_link(self):
+        """Raise if the wattplot link is down, so a command fails loudly
+        instead of being swallowed by a dead client object."""
+        if self.api is None or not self.connected:
+            raise LinkDown("wattplot link is down")
+
     async def set_switch(self, label, on):
+        self._require_link()
         self.api.switch_command(key=ENTITY_KEYS[label], state=bool(on))
 
     async def set_number(self, label, value):
+        self._require_link()
         self.api.number_command(key=ENTITY_KEYS[label], state=float(value))
 
     async def set_select(self, label, option):
+        self._require_link()
         self.api.select_command(key=ENTITY_KEYS[label], state=str(option))
 
     async def press_button(self, label):
+        self._require_link()
         self.api.button_command(key=ENTITY_KEYS[label])
 
     async def refresh(self, settle_s=0.2):
@@ -124,15 +290,62 @@ def make_state_payload(c: WattplotClient):
         elif isinstance(v, bool):
             out[label] = bool(v)
         elif isinstance(v, (int, float)):
-            out[label] = round(float(v), 3)
+            f = float(v)
+            # NaN/inf are not valid JSON: json.dumps emits a bare `NaN`
+            # token, which JSON.parse() in the browser rejects — one NaN
+            # sensor would blank the whole panel. Send null instead.
+            out[label] = round(f, 3) if math.isfinite(f) else None
         else:
             out[label] = str(v)
+
+    age = c.stale_for()
+    out["_meta"] = {
+        "connected": c.connected,
+        "stale_for_s": round(age, 1) if age is not None else None,
+        "last_update_epoch": c._last_push_wall,
+        "stale": (age is None) or (age > STALE_FORCE_RECONNECT_S),
+        "server_epoch": time.time(),
+    }
     return out
 
 
 # ---- HTTP handlers ----
 async def handle_state(request):
     return web.json_response(make_state_payload(request.app["wp"]))
+
+
+async def handle_login(request):
+    """GET /login?return_to=/control.html — the sign-in entry point.
+
+    This path is deliberately NOT on the Access bypass list, so Cloudflare
+    intercepts it and runs the email one-time-PIN flow before the request
+    ever arrives here. Reaching this handler therefore means the caller is
+    already authenticated, and all that is left is to bounce them back to
+    the page they came from. Keeping the flow here means the Access team
+    name never has to be hardcoded in the HTML.
+    """
+    target = request.query.get("return_to", "/control.html")
+    # Only ever redirect within this site. "//evil.com" is a protocol-
+    # relative URL, so checking for a leading "/" alone is not enough.
+    if not target.startswith("/") or target.startswith("//"):
+        target = "/control.html"
+    raise web.HTTPFound(target)
+
+
+async def handle_whoami(request):
+    """Report whether this request carries a Cloudflare Access session.
+
+    This endpoint is on the Access BYPASS list, so anyone may call it —
+    the answer only describes *this* request. The panel uses it to decide
+    whether to enable the control widgets. It is a UI hint, not a
+    security boundary: the real gate is the Access policy on the POST
+    endpoints, enforced at Cloudflare's edge before traffic reaches here.
+    """
+    authed = bool(request.cookies.get("CF_Authorization"))
+    return web.json_response({
+        "authed": authed,
+        "email": request.headers.get("Cf-Access-Authenticated-User-Email"),
+    })
 
 
 async def handle_switch(request):
@@ -190,17 +403,186 @@ async def handle_index(request):
                         content_type="text/html")
 
 
+# ---- Log file endpoints ----
+LOG_DIR = Path(__file__).resolve().parent.parent / "logs"
+
+
+def tail_lines(path: Path, n: int) -> list[str]:
+    """Return the last `n` lines of a text file, memory-efficient."""
+    if not path.exists():
+        return []
+    block_size = 8192
+    data = b""
+    with open(path, "rb") as f:
+        f.seek(0, 2)
+        pos = f.tell()
+        while pos > 0 and data.count(b"\n") <= n:
+            read_size = min(block_size, pos)
+            pos -= read_size
+            f.seek(pos)
+            data = f.read(read_size) + data
+    return data.decode("utf-8", errors="replace").splitlines()[-n:]
+
+
+async def handle_logs(request):
+    """GET /api/logs?file=current|rotated&lines=500&level=info"""
+    which = request.query.get("file", "current")
+    try:
+        n = int(request.query.get("lines", "500"))
+    except ValueError:
+        n = 500
+    n = max(1, min(n, 5000))
+    level = request.query.get("level", "all").lower()
+
+    if not LOG_DIR.exists():
+        return web.json_response({"lines": [], "files": [], "error": "no logs/ dir"})
+
+    rotated = sorted(
+        [p for p in LOG_DIR.glob("wattplot.*.log.gz")],
+        key=lambda p: p.name, reverse=True,
+    )
+    current = LOG_DIR / "wattplot.log"
+    current_size = current.stat().st_size if current.exists() else 0
+
+    if which in ("current", "live"):
+        if not current.exists():
+            return web.json_response({"lines": [], "files": [], "error": "no wattplot.log"})
+        lines = tail_lines(current, n)
+    elif which == "rotated":
+        import gzip
+        all_lines = []
+        for f in rotated:
+            try:
+                with gzip.open(f, "rt", encoding="utf-8", errors="replace") as gz:
+                    all_lines.extend(gz.read().splitlines())
+            except Exception:
+                pass
+        lines = all_lines[-n:]
+    else:
+        return web.json_response({"lines": [], "files": [], "error": f"unknown file: {which}"})
+
+    level_prefixes = {
+        "error": ("E",),
+        "warn":  ("W",),
+        "info":  ("I",),
+        "debug": ("D", "V"),
+    }
+    if level in level_prefixes:
+        prefixes = level_prefixes[level]
+        lines = [ln for ln in lines if any(f"[{p}]" in ln for p in prefixes)]
+
+    files = [{
+        "name": p.name,
+        "size": p.stat().st_size,
+        "mtime": p.stat().st_mtime,
+    } for p in rotated]
+    files.insert(0, {
+        "name": "wattplot.log",
+        "size": current_size,
+        "mtime": current.stat().st_mtime if current.exists() else 0,
+        "current": True,
+    })
+
+    return web.json_response({
+        "lines": lines,
+        "files": files,
+        "current_size": current_size,
+        "total_size": sum(f["size"] for f in files),
+    })
+
+
+async def handle_logs_page(request):
+    """GET /logs.html — viewer page for the wattplot.log files."""
+    html_path = Path(__file__).resolve().parent.parent / "docs" / "logs.html"
+    if html_path.exists():
+        return web.Response(text=html_path.read_text(encoding="utf-8"),
+                            content_type="text/html")
+    return web.Response(text="<h1>docs/logs.html not found</h1>",
+                        content_type="text/html")
+
+
 # ---- App factory ----
+@web.middleware
+async def cors_middleware(request, handler):
+    """Allow the github.io site to read the public endpoints.
+
+    Scoped deliberately: only the read-only paths, only known origins,
+    and never with credentials. A plain GET of these paths needs no
+    preflight, so this stays a single response header and does not
+    interact with Cloudflare Access.
+    """
+    response = await handler(request)
+    origin = request.headers.get("Origin")
+    if origin in CORS_ORIGINS and request.path in CORS_PATHS:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        # Same URL answers differently per origin; keep caches honest.
+        response.headers["Vary"] = "Origin"
+    return response
+
+
+@web.middleware
+async def rate_limit_middleware(request, handler):
+    """Throttle the write endpoints per client IP.
+
+    Cloudflare Access is the primary auth gate. This middleware is
+    belt-and-suspenders: it limits what a single IP can do even if
+    it has a valid token. The read endpoints (`/api/state`,
+    `/api/logs`, `/api/whoami`) are NOT throttled -- the panel polls
+    `/api/state` every 2 s and the booth's own monitoring reads
+    `/api/logs` continuously.
+    """
+    if request.method == "POST" and request.path in WRITE_PATHS:
+        ip = request.headers.get("CF-Connecting-IP") or request.remote or "unknown"
+        bucket = _write_buckets.get(ip)
+        if bucket is None:
+            bucket = _TokenBucket(WRITE_BUCKET_CAPACITY)
+            _write_buckets[ip] = bucket
+        if not bucket.allow(WRITE_BUCKET_CAPACITY, WRITE_BUCKET_REFILL_PER_S):
+            return web.json_response({
+                "ok": False,
+                "error": "rate limit exceeded (max 30 burst, 1 per 2s sustained)",
+            }, status=429)
+    return await handler(request)
+
+
+@web.middleware
+async def link_down_middleware(request, handler):
+    """Turn a dead wattplot link into an honest 503 rather than a 500."""
+    try:
+        return await handler(request)
+    except LinkDown:
+        wp = request.app["wp"]
+        age = wp.stale_for()
+        return web.json_response({
+            "ok": False,
+            "error": "wattplot link is down — command not sent",
+            "stale_for_s": round(age, 1) if age is not None else None,
+        }, status=503)
+
+
+async def on_shutdown(app):
+    await app["wp"].stop()
+
+
 async def make_app():
-    app = web.Application()
+    app = web.Application(middlewares=[cors_middleware,
+                                      rate_limit_middleware,
+                                      link_down_middleware])
     wp = WattplotClient(WATTPLOT_HOST, WATTPLOT_KEY)
-    print(f"Connecting to wattplot @ {WATTPLOT_HOST} ...")
-    info = await wp.connect()
-    print(f"  device: {info.name}  (mac: {info.mac_address})  sw: {info.esphome_version}")
     app["wp"] = wp
+    print(f"Connecting to wattplot @ {WATTPLOT_HOST} (auto-reconnecting) ...")
+    # Non-blocking: the HTTP server comes up even when the wattplot is
+    # unreachable, and /api/state reports connected=false instead of the
+    # whole process failing to start.
+    await wp.start()
+    app.on_shutdown.append(on_shutdown)
     app.router.add_get("/", handle_index)
     app.router.add_get("/control.html", handle_index)
+    app.router.add_get("/logs.html", handle_logs_page)
     app.router.add_get("/api/state", handle_state)
+    app.router.add_get("/api/whoami", handle_whoami)
+    app.router.add_get("/login", handle_login)
+    app.router.add_get("/api/logs", handle_logs)
     app.router.add_post("/api/switch", handle_switch)
     app.router.add_post("/api/number", handle_number)
     app.router.add_post("/api/select", handle_select)
@@ -213,5 +595,158 @@ def main():
     web.run_app(make_app(), port=LOCAL_PORT, print=lambda *a, **k: None)
 
 
+def self_test():
+    """Boot-time sanity checks. Run with `python tools/wattplot_control.py --self-test`.
+
+    Catches the failure modes that would otherwise surface only
+    when the operator first hits the panel and the wattplot
+    isn't reachable:
+      - wattplot_params importable
+      - ENTITY_KEYS is non-empty and has unique integer keys
+      - the rate-limit bucket math works (allows the first N,
+        rejects the N+1th)
+      - all routes resolve to a handler (i.e. no typos in the
+        router.add_* block)
+      - /api/state handler returns valid JSON with the _meta block
+      - /api/whoami handler returns valid JSON
+
+    Exits 0 on success, 1 on any check failure. Prints a short
+    summary so the operator knows what passed.
+    """
+    # The script may be run from anywhere; wattplot_params lives
+    # at the repo root. Add it to sys.path before importing.
+    repo_root = Path(__file__).resolve().parent.parent
+    if str(repo_root) not in sys.path:
+        sys.path.insert(0, str(repo_root))
+
+    failures = []
+
+    def check(name, fn):
+        try:
+            fn()
+            print(f"  [OK]   {name}")
+        except Exception as exc:
+            print(f"  [FAIL] {name}: {exc}")
+            failures.append(name)
+
+    def check_imports():
+        import wattplot_params
+        # The validation at import time should have already fired
+        # if anything was wrong. Just confirm.
+        assert wattplot_params.PANEL_PRESETS, "PANEL_PRESETS is empty"
+
+    def check_entity_keys():
+        assert ENTITY_KEYS, "ENTITY_KEYS is empty"
+        keys = list(ENTITY_KEYS.values())
+        assert len(set(keys)) == len(keys), "ENTITY_KEYS has duplicate values"
+        assert all(isinstance(k, int) for k in keys), "ENTITY_KEYS values must be int"
+
+    def check_button_labels():
+        assert BUTTON_LABELS, "BUTTON_LABELS is empty"
+        for label in BUTTON_LABELS:
+            assert label in ENTITY_KEYS, f"button label {label!r} not in ENTITY_KEYS"
+
+    def check_rate_limit():
+        bucket = _TokenBucket(WRITE_BUCKET_CAPACITY)
+        for _ in range(WRITE_BUCKET_CAPACITY):
+            assert bucket.allow(WRITE_BUCKET_CAPACITY,
+                                WRITE_BUCKET_REFILL_PER_S)
+        # Next call should fail.
+        assert not bucket.allow(WRITE_BUCKET_CAPACITY,
+                                WRITE_BUCKET_REFILL_PER_S)
+
+    def check_routes():
+        # Build the app with a fake client; walk its router.
+        from aiohttp import web
+        app = web.Application(middlewares=[cors_middleware,
+                                          rate_limit_middleware,
+                                          link_down_middleware])
+        fake = type("F", (), {"connected": False, "_last_push_wall": 0.0,
+                                "get": lambda l: None,
+                                "stale_for": lambda: None})()
+        app["wp"] = fake
+        app.router.add_get("/",            handle_index)
+        app.router.add_get("/control.html", handle_index)
+        app.router.add_get("/logs.html",   handle_logs_page)
+        app.router.add_get("/api/state",   handle_state)
+        app.router.add_get("/api/whoami",  handle_whoami)
+        app.router.add_get("/login",       handle_login)
+        app.router.add_get("/api/logs",    handle_logs)
+        app.router.add_post("/api/switch",  handle_switch)
+        app.router.add_post("/api/number",  handle_number)
+        app.router.add_post("/api/select",  handle_select)
+        app.router.add_post("/api/button",  handle_button)
+        paths = [r.canonical for r in app.router.resources()]
+        for path in ("/api/state", "/api/whoami", "/api/switch",
+                     "/api/number", "/api/select", "/api/button",
+                     "/api/logs", "/control.html", "/logs.html"):
+            assert path in paths, f"route {path!r} not registered"
+
+    async def _async_handlers():
+        from aiohttp import web
+        from aiohttp.test_utils import make_mocked_request
+
+        # Build a minimal app with our fake client wired in, so the
+        # handler can read it from request.app['wp'].
+        app = web.Application(middlewares=[cors_middleware,
+                                          rate_limit_middleware,
+                                          link_down_middleware])
+
+        class FakeWattplot:
+            connected = True
+            _last_push_wall = 0.0
+            def stale_for(self):
+                return 0.5
+            def get(self, *args, **kwargs):
+                _values = {"Motor Current": 0.5, "Panel Power": 57.7}
+                if args:
+                    return _values.get(args[0])
+                return None
+        app["wp"] = FakeWattplot()
+
+        # /api/state with a fake client
+        req = make_mocked_request("GET", "/api/state", app=app)
+        resp = await handle_state(req)
+        body = resp.body.decode("utf-8")
+        assert "_meta" in body, "/api/state response missing _meta"
+        assert "Motor Current" in body, "/api/state response missing entity"
+
+        # /api/whoami
+        req = make_mocked_request("GET", "/api/whoami", app=app)
+        resp = await handle_whoami(req)
+        body = resp.body.decode("utf-8")
+        assert "authed" in body, "/api/whoami response missing authed"
+
+    def check_handlers():
+        try:
+            asyncio.run(_async_handlers())
+        except RuntimeError:
+            # If we're already inside a running loop (e.g.
+            # pytest-asyncio), fall back to the sync path.
+            loop = asyncio.new_event_loop()
+            try:
+                loop.run_until_complete(_async_handlers())
+            finally:
+                loop.close()
+
+    print(f"wattplot_control self-test ({len(ENTITY_KEYS)} entity keys, "
+          f"capacity {WRITE_BUCKET_CAPACITY} burst, "
+          f"refill {WRITE_BUCKET_REFILL_PER_S} tok/s):")
+    check("imports",               check_imports)
+    check("entity keys",            check_entity_keys)
+    check("button labels",          check_button_labels)
+    check("rate-limit math",        check_rate_limit)
+    check("routes registered",      check_routes)
+    check("handler responses",      check_handlers)
+    if failures:
+        print(f"\n{len(failures)} check(s) failed: {failures}")
+        sys.exit(1)
+    print("\nAll checks passed.")
+
+
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) > 1 and sys.argv[1] == "--self-test":
+        sys.argv.pop(1)
+        self_test()
+    else:
+        main()

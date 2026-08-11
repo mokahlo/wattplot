@@ -42,6 +42,8 @@
 # Free GPIOs (per schematic): 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 17, 18, 21 used.
 #   Remaining: GPIO 39, 40, 41, 42, 47, 48 (the on-board RGB is on
 #   GPIO 48 but unused).
+#   v3.3: GPIO 39 = frost heater relay, GPIO 40 = frost grow-light relay.
+#   41, 42, 47, 48 still available for future use.
 #
 # I2C bus (shared, 400 kHz, 4.7 kΩ pull-ups on SDA/SCL):
 #   0x40  INA219    — motor current + actuator bus V (shunt 0.1 Ω, 3.2 A)
@@ -63,7 +65,7 @@ substitutions:
 esphome:
   name: ${device_name}
   friendly_name: ${friendly_name}
-  comment: "Wattplot v2 — PI on motor current, IMU feedback, panel-side energy monitoring, soil-aware tilt. Charge control: external Sunapex 10A MPPT."
+  comment: "Wattplot v3.2 — PI on motor current, IMU feedback, panel-side energy monitoring, soil-aware tilt. Charge control: external Sunapex 10A MPPT."
   min_version: 2024.6.0
   on_boot:
     priority: -100
@@ -72,6 +74,27 @@ esphome:
           id: status_led
           brightness: 30%
       - delay: 1s
+      # v3.2: rich boot log — captures firmware version, restart
+      # reason, free heap, IP, and the build timestamp into the
+      # Last Event text sensor + emits structured ESP_LOGI lines.
+      # Every one of these lines is forwarded to the MQTT log
+      # topic (wattplot/log) by the existing mqtt: config.
+      - lambda: |-
+          // v3.2 boot log. ESPHome lambdas in 2026.7.2 don't have
+          // access to the WiFi global or ESP.getResetReason() wrapper;
+          // we use ESP-IDF's esp_reset_reason() and skip WiFi info
+          // (visible via web UI / HA's device tracker).
+          char buf[160];
+          snprintf(buf, sizeof(buf),
+                   "Boot: %s reason=%d heap=%u",
+                   __DATE__ " " __TIME__,
+                   (int)esp_reset_reason(),
+                   (unsigned)ESP.getFreeHeap());
+          id(g_last_event) = buf;
+          ESP_LOGI("boot", "=== Wattplot v3.2 ===");
+          ESP_LOGI("boot", "  build:       %s %s", __DATE__, __TIME__);
+          ESP_LOGI("boot", "  reason:      %d", (int)esp_reset_reason());
+          ESP_LOGI("boot", "  free heap:   %u bytes", (unsigned)ESP.getFreeHeap());
       - script.execute: actuator_stop
       - script.execute: state_to_folding
 
@@ -292,6 +315,29 @@ output:
     id: status_led_pwm
     pin: GPIO17
     frequency: 1000Hz
+  # ===== v3.3: Frost protection outputs =====
+  # Two independent GPIO outputs drive the user's choice of frost
+  # load. Each is a logic-level signal intended to switch an
+  # external relay (low-side MOSFET, opto-isolator, or mechanical
+  # relay coil). The wattplot PCB does NOT carry the relay or the
+  # load — the user wires their own.
+  #
+  # frost_heater_out (GPIO39) — intended for a 12V resistive
+  #   heating mat or similar. Typical load: 30W @ 12V = 2.5A.
+  #   Use a logic-level MOSFET or an automotive-style 12V relay
+  #   module (the kind with a screw terminal block).
+  # frost_grow_light_out (GPIO40) — intended for a USB grow
+  #   light. The PCB carries 5V from the MP1584EN buck; tap that
+  #   rail through a low-side MOSFET (or a 5V relay module) to
+  #   a USB-A jack, or use the GPIO to switch a 12V panel-style
+  #   grow light if you want more heat. Either way, the relay
+  #   coil is the only thing the GPIO drives.
+  - platform: gpio
+    id: frost_heater_out
+    pin: GPIO39
+  - platform: gpio
+    id: frost_grow_light_out
+    pin: GPIO40
 
 light:
   - platform: monochromatic
@@ -421,16 +467,25 @@ sensor:
   # motor_current × 0.5 V/A. Used by the state machine to detect
   # end-stop arrival via current spike (replaces the limit switches
   # removed in schematic rev B).
+  #
+  # v3.2 logging fix: this pin and its derived current used to be
+  # `name:`d (published to the API/MQTT/HA) at update_interval 100ms.
+  # At 10 Hz that alone drove ~294 MB/day of MQTT log traffic (see
+  # docs/logging.md, which budgets ~10 MB/day) — 29x over budget the
+  # day these landed. The 100ms cadence is real and needed, but only
+  # for the endstop-spike script below, not for a dashboard. Fix:
+  # keep the fast path `internal: true` (still fully readable via
+  # `id(...).state` from C++, just not published), and add a slower,
+  # throttled, publicly-named sensor underneath for the API/HA/logs.
   - platform: adc
     pin: GPIO4
     id: motor_ipropi_raw
-    name: "Motor IPROPI (raw V)"
-    attenuation: auto
+    internal: true
     update_interval: 100ms
 
   - platform: template
     id: motor_current_ipropi
-    name: "Motor IPROPI Current"
+    internal: true
     unit_of_measurement: "A"
     accuracy_decimals: 3
     update_interval: 100ms
@@ -448,21 +503,34 @@ sensor:
       if (i < 0.0f) i = 0.0f;
       return i;
 
+  # Dashboard/API-facing copy of the above, at a sane publish rate.
+  # Entity name is unchanged ("Motor IPROPI Current") so
+  # tools/wattplot_control.py's ENTITY_KEYS map and docs/control.html
+  # (which both key off this exact string) keep working untouched.
+  - platform: template
+    id: motor_current_ipropi_display
+    name: "Motor IPROPI Current"
+    unit_of_measurement: "A"
+    accuracy_decimals: 3
+    update_interval: 2s
+    lambda: return id(motor_current_ipropi).state;
+
   # ===== v3: Solenoid IPROPI (jam detect) =====
   # Same DRV8871 IPROPI feature, on U5b. A free-running irrigation
   # solenoid draws ~1.0 A continuous; a jammed one pulls ~1.5 A+ and
   # trips the DRV8871's internal current limit. Reading IPROPI lets the
   # state machine detect a stuck valve without waiting for nFAULT.
+  # Same fast-internal / throttled-display split as the motor IPROPI
+  # above, for the same logging-volume reason.
   - platform: adc
     pin: GPIO5
     id: solenoid_ipropi_raw
-    name: "Solenoid IPROPI (raw V)"
-    attenuation: auto
+    internal: true
     update_interval: 100ms
 
   - platform: template
     id: solenoid_current_ipropi
-    name: "Solenoid IPROPI Current"
+    internal: true
     unit_of_measurement: "A"
     accuracy_decimals: 3
     update_interval: 100ms
@@ -480,6 +548,16 @@ sensor:
       float i = v * 2.0f - 0.24f;
       if (i < 0.0f) i = 0.0f;
       return i;
+
+  # Dashboard/API-facing copy, entity name unchanged ("Solenoid IPROPI
+  # Current") for the same reason as the motor sensor above.
+  - platform: template
+    id: solenoid_current_ipropi_display
+    name: "Solenoid IPROPI Current"
+    unit_of_measurement: "A"
+    accuracy_decimals: 3
+    update_interval: 2s
+    lambda: return id(solenoid_current_ipropi).state;
 
   - platform: template
     id: battery_voltage
@@ -613,8 +691,13 @@ sensor:
       // is -0.471 hours. Civil noon becomes solar_hour 11.529,
       // hour angle -7.07° (sun is east of meridian, crosses at
       // solar noon ~12:28 civil time — the "apparent solar noon"
-      // for Phoenix's longitude). See firmware/logic/sun.py for
-      // the reference Python implementation; keep in sync.
+      // for Phoenix's longitude). The Python reference used to live
+      // in firmware/logic/sun.py:hour_angle_rad but that module
+      // was removed (it was only used as a development-time cross-
+      // check). The C++ lambda below IS the implementation; pvlib's
+      // solarposition.get_solarposition() is the cross-check during
+      // tuning. Keep the math here in sync with wattplot_params.
+      // LOCATION['longitude'] / ['timezone'].
       const float lon_correction = (-112.07 - (-105.0)) / 15.0;
       float solar_hour = hour + lon_correction;
       float hour_angle = (solar_hour - 12.0) * 15.0 * M_PI / 180.0;
@@ -630,11 +713,22 @@ sensor:
       // Panel tilt (from runtime state)
       float tilt = id(panel_tilt).state * M_PI / 180.0;
       if (isnan(tilt)) tilt = 0;
-      // For Phoenix south-facing panel, azimuth_sun ≈ 180° at noon,
-      // panel_azimuth = 180°, so cos(aoi) ≈ cos(altitude - tilt).
-      // Simplified aoi for south-facing panel:
-      float aoi = fabs(altitude - tilt);
-      if (aoi > M_PI / 2.0) return 0;
+      // Angle of incidence on a south-facing panel.
+      // For sun and panel both in the south, cos(aoi) simplifies to
+      // sin(altitude + tilt). The complementary angle is therefore
+      //   aoi = 90° - (altitude + tilt)
+      // (when the sun is above the panel's tilted normal) or its
+      // supplement (when the sun is below the panel's normal).
+      // v3.2 (2026-08-09): the previous `aoi = fabs(altitude - tilt)`
+      // was wrong — it under-read POA by ~20% at summer noon and
+      // over-read at sunrise. The dot-product math gives the real
+      // AOI; for a south-facing panel the simplification is the
+      // formula below. (For a non-south-facing panel we'd need the
+      // full solar-azimuth math — out of scope for the mini, which
+      // is fixed at due-south.)
+      //   aoi = |90° - (altitude + tilt)|  clamped to [0, 90°]
+      float aoi = fabs(M_PI / 2.0 - altitude - tilt);
+      if (aoi > M_PI / 2.0) aoi = M_PI - aoi;   // fold supplement into acute
       float poa_direct = dni * cos(aoi);
       // Diffuse: isotropic sky model, ~10% of DNI as DHI
       float dhi = 0.10 * dni;
@@ -782,6 +876,15 @@ text_sensor:
     id: wp_last_event
     update_interval: 1s
     lambda: 'return id(g_last_event);'
+  # v3.3: rolling frost state. Updated every frost_tick (60 s) with
+  # the most recent decision: "Off", "Heater", "Grow Light", "Both",
+  # "Battery low", or "Sensor error". Useful in HA for at-a-glance
+  # status and for automations that should react to "frost is on".
+  - platform: template
+    name: "Frost State"
+    id: wp_frost_state
+    update_interval: 5s
+    lambda: 'return id(g_frost_state);'
 
 # ===== DRV8871 nFAULT inputs (direct GPIO, no MCP23017) =====
 binary_sensor:
@@ -955,6 +1058,26 @@ switch:
     name: "Actuator H-bridge EN (U5a)"
     output: hb_en_out
 
+  # ===== v3.3: Frost protection switches =====
+  # The frost_tick interval drives these based on the Frost Mode
+  # select + temperature thresholds. When Mode is "Off" the user
+  # has full manual control via these HA switches; when Mode is
+  # "Heater" / "Grow Light" / "Both" the tick overrides any
+  # manual state. The tick is the automation — these switches
+  # are the manual fallback.
+  - platform: output
+    id: frost_heater_sw
+    name: "Frost Heater"
+    icon: "mdi:radiator"
+    output: frost_heater_out
+    restore_mode: RESTORE_DEFAULT_OFF
+  - platform: output
+    id: frost_grow_light_sw
+    name: "Frost Grow Light"
+    icon: "mdi:lightbulb-on"
+    output: frost_grow_light_out
+    restore_mode: RESTORE_DEFAULT_OFF
+
 # ===== Globals (persistent state) =====
 # (Merged into the main globals: section below)
 
@@ -1097,6 +1220,111 @@ number:
     optimistic: true
     restore_value: false
 
+  # ===== v3.3: Frost protection thresholds =====
+  # Soil temperature (°C) below which frost automation engages.
+  # 4.0°C is a safe value for tender annuals (tomato, pepper,
+  # basil) — root damage starts around 0°C but growth already
+  # stalls well above freezing. Tighter in spring when
+  # transplants are small, looser in fall when plants are
+  # mature and you only care about surviving the night.
+  - platform: template
+    id: frost_soil_threshold_c
+    name: "Frost Soil Threshold (°C)"
+    min_value: -5.0
+    max_value: 10.0
+    step: 0.5
+    initial_value: "4.0"
+    optimistic: true
+    restore_value: true
+  # Canopy air temperature (°C) below which frost automation
+  # engages. 2.0°C gives ~3°C of headroom above freezing to
+  # account for sensor lag and the fact that the canopy
+  # sensor sits at the panel's underside (warmer than the
+  # actual frost pocket near the soil).
+  - platform: template
+    id: frost_canopy_threshold_c
+    name: "Frost Canopy Threshold (°C)"
+    min_value: -5.0
+    max_value: 10.0
+    step: 0.5
+    initial_value: "2.0"
+    optimistic: true
+    restore_value: true
+  # Hysteresis: turn the load OFF only when BOTH temps rise
+  # above this. 6.0°C vs 4.0/2.0°C thresholds gives a 2-4°C
+  # deadband, preventing relay chatter at the threshold.
+  - platform: template
+    id: frost_warm_above_c
+    name: "Frost Warm-Above (°C)"
+    min_value: 0.0
+    max_value: 15.0
+    step: 0.5
+    initial_value: "6.0"
+    optimistic: true
+    restore_value: true
+  # Watchdog: max continuous on-time before force-off. 30 min
+  # is long enough to ride out a typical Phoenix cold snap
+  # (which usually lasts 2-4 hours) but short enough to catch
+  # a stuck relay before the LiFePO4 pack drains overnight.
+  # The pack holds ~5h at 30W.
+  - platform: template
+    id: frost_max_runtime_min
+    name: "Frost Max Runtime (min)"
+    min_value: 5
+    max_value: 240
+    step: 5
+    initial_value: "30"
+    optimistic: true
+    restore_value: true
+  # Battery floor for frost. Below this SOC, the frost
+  # automation force-off even if temps are still below
+  # threshold. 50% is generous — the MPPT will recover
+  # the pack the next day, and we'd rather lose a few
+  # plants than brick the battery.
+  - platform: template
+    id: frost_min_battery_soc
+    name: "Frost Min Battery SOC (%)"
+    min_value: 10
+    max_value: 80
+    step: 5
+    initial_value: "50"
+    optimistic: true
+    restore_value: true
+  # v3.3: NWS forecast preheat. If the forecast low for tonight
+  # is below this value, the frost_tick engages the load BEFORE
+  # the sensors say "cold" — saves the heater's first hour of
+  # warmup. Set higher than frost_soil_threshold_c to preheat
+  # earlier (and longer); set to -100 to disable forecast preheat.
+  # Default 2.0°C = preheat whenever the forecast says it'll
+  # drop below 2°C tonight, regardless of current sensor reading.
+  - platform: template
+    id: frost_forecast_threshold_c
+    name: "Frost Forecast Threshold (°C)"
+    min_value: -20.0
+    max_value: 10.0
+    step: 0.5
+    initial_value: "2.0"
+    optimistic: true
+    restore_value: true
+  # v3.3: Separate watchdog limit for the forecast-preheat path.
+  # frost_max_runtime_min (default 30) is for the sensor arm —
+  # a cold snap that's already underway, the heater should cycle
+  # in 30-min windows to catch a stuck relay before it kills
+  # the pack overnight. The forecast arm, by contrast, commits
+  # to an entire night of heating; the 30-min cap would trip
+  # prematurely. Default 480 min = 8 h, enough to cover a
+  # Phoenix winter overnight from 6 pm to 2 am (when the sun
+  # starts to warm the bed again).
+  - platform: template
+    id: frost_preheat_max_runtime_min
+    name: "Frost Preheat Max Runtime (min)"
+    min_value: 30
+    max_value: 1440
+    step: 15
+    initial_value: "480"
+    optimistic: true
+    restore_value: true
+
 # ===== State machine =====
 select:
   - platform: template
@@ -1134,6 +1362,29 @@ select:
       - "Off"
       - "Auto"
       - "Manual"
+    initial_option: "Off"
+    optimistic: true
+    restore_value: true
+
+  # ===== v3.3: Frost protection mode =====
+  # Master switch for the frost automation. Off disables the tick
+  # entirely (user can still toggle the switches manually). The
+  # other three options tell the tick which output(s) to drive:
+  #   Heater     — only frost_heater_sw responds to temps
+  #   Grow Light — only frost_grow_light_sw responds to temps
+  #   Both       — both respond
+  # The tick ALWAYS forces both switches off when the temperature
+  # hysteresis says so — there's no "manual override while the
+  # automation is on" mode. If you want manual control, set this
+  # to Off and use the switches.
+  - platform: template
+    id: frost_mode
+    name: "Frost Mode"
+    options:
+      - "Off"
+      - "Heater"
+      - "Grow Light"
+      - "Both"
     initial_option: "Off"
     optimistic: true
     restore_value: true
@@ -1181,6 +1432,21 @@ globals:
   - id: g_nws_last_poll_ms
     type: int
     initial_value: "0"
+    restore_value: false
+  # ===== v3.3: Frost forecast preheat =====
+  # NWS forecast low temperature for the current/next overnight
+  # period. Extracted by nws_poll from the first non-daytime
+  # period in the forecast. The frost_tick uses this to preheat
+  # BEFORE the sensors say "cold" — saves the heater's first
+  # hour of warmup.
+  #
+  # initial_value = 999.0 means "no forecast yet" — high enough
+  # that the comparison `forecast < threshold` is always false,
+  # so the forecast arm never triggers until the first NWS
+  # poll lands.
+  - id: g_nws_min_temp_tonight
+    type: float
+    initial_value: "999.0"
     restore_value: false
   - id: g_state_entered_ms
     type: int
@@ -1244,6 +1510,38 @@ globals:
   - id: g_actuator_fault_count
     type: int
     initial_value: "0"
+    restore_value: false
+  # ===== v3.3: Frost protection state =====
+  # Tracks when each frost output was last enabled, for the
+  # max-runtime watchdog. 0 means the output is currently off.
+  - id: g_frost_heater_on_since_ms
+    type: int
+    initial_value: "0"
+    restore_value: false
+  - id: g_frost_light_on_since_ms
+    type: int
+    initial_value: "0"
+    restore_value: false
+  # Latched sensor-error flag. Set true when BOTH soil and canopy
+  # temps are NaN at the same tick; cleared on the next tick that
+  # has at least one valid reading. Prevents a single bad DS18B20
+  # from permanently latching the load on (or off).
+  - id: g_frost_sensor_error
+    type: bool
+    initial_value: "false"
+    restore_value: false
+  # How many times the watchdog has tripped since boot. Visible
+  # in HA as a diagnostic sensor (see below).
+  - id: g_frost_watchdog_trips
+    type: int
+    initial_value: "0"
+    restore_value: false
+  # Mirrors the "Frost State" text sensor. Updated by the
+  # frost_tick interval — see the text_sensor block for the
+  # full list of values.
+  - id: g_frost_state
+    type: std::string
+    initial_value: '"Off"'
     restore_value: false
   # v3.2: rolling "last event" string. Updated by the 1Hz control loop,
   # calibration script, fault automations, and solenoid on/off. The
@@ -1561,6 +1859,14 @@ script:
                   json::parse_json(body, [](JsonObject root) -> bool {
                     float max_wind = 0.0;
                     bool rain = false;
+                    // v3.3: extract tonight's forecast low. NWS periods
+                    // are 12-hour blocks; the FIRST non-daytime period
+                    // in the forecast is always the current/next
+                    // overnight low. `temperature` is the forecast
+                    // temperature for that period (high for daytime,
+                    // low for overnight).
+                    float min_temp = 999.0;
+                    bool found_overnight = false;
                     for (int i = 0; i < 12 && i < root["properties"]["periods"].size(); i++) {
                       const char* ws = root["properties"]["periods"][i]["windSpeed"];
                       const char* fc = root["properties"]["periods"][i]["shortForecast"];
@@ -1572,11 +1878,34 @@ script:
                       if (fc != nullptr && (strstr(fc, "Rain") != nullptr || strstr(fc, "Showers") != nullptr)) {
                         rain = true;
                       }
+                      // Look for the first non-daytime period — its
+                      // temperature is tonight's forecast low. NWS
+                      // stores isDaytime as a bool; the JSON parser
+                      // returns it as a JsonVariant; we check truthiness.
+                      if (!found_overnight) {
+                        bool is_daytime = root["properties"]["periods"][i]["isDaytime"];
+                        if (!is_daytime) {
+                          const char* t = root["properties"]["periods"][i]["temperature"];
+                          if (t != nullptr) {
+                            min_temp = atof(t);
+                            found_overnight = true;
+                          }
+                        }
+                      }
                     }
                     id(g_nws_max_wind_mph) = max_wind;
                     id(g_nws_rain_forecast) = rain;
+                    if (found_overnight) {
+                      id(g_nws_min_temp_tonight) = min_temp;
+                    }
+                    // else: leave the previous forecast value alone.
+                    // A poll that returns no overnight period (rare)
+                    // doesn't clear the cached forecast — better to
+                    // act on stale data than on no data.
                     id(g_nws_last_poll_ms) = millis();
-                    ESP_LOGI("nws", "max wind=%.0f mph, rain=%d", max_wind, rain);
+                    ESP_LOGI("nws", "max wind=%.0f mph, rain=%d, min tonight=%.1f°C",
+                             max_wind, rain,
+                             found_overnight ? min_temp : -999.0);
                     return true;
                   });
 
@@ -1965,6 +2294,250 @@ interval:
           } else {
             spike_start_ms = 0;
           }
+
+  # ===== v3.3: Frost protection tick (60s) =====
+  # Reads soil + canopy temps, applies the Frost Mode select and
+  # the threshold/hysteresis logic, and drives the frost_heater_sw
+  # and/or frost_grow_light_sw accordingly. Watchdog enforces a
+  # max continuous on-time so a stuck relay can't drain the pack.
+  #
+  # Mode behavior:
+  #   "Off"       → both switches forced OFF, no automation
+  #   "Heater"    → only frost_heater_sw responds
+  #   "Grow Light"→ only frost_grow_light_sw responds
+  #   "Both"      → both respond (independent hysteresis)
+  #
+  # Sensor rules (per switch):
+  #   ON  when:  soil < soil_threshold  OR  canopy < canopy_threshold
+  #   OFF when:  soil > warm_above  AND  canopy > warm_above
+  #   (hysteresis deadband keeps the relay from chattering)
+  #   Hold the previous state when:
+  #     - either temp is NaN (sensor error)
+  #     - battery SOC < frost_min_battery_soc (force off only)
+  #   Force OFF when:
+  #     - on_time > max_runtime_min (watchdog)
+  #
+  # 60s cadence is fine for frost — temperature changes slowly
+  # (~0.5°C per hour on a calm night). Faster polling wastes
+  # the 1-Wire bus; slower loses the ability to catch a sudden
+  # cold-front arrival.
+  - interval: 60s
+    id: frost_tick
+    then:
+      - lambda: |-
+          // ---- read everything once ----
+          const char* mode = id(frost_mode).current_option().c_str();
+          float soil = id(soil_temperature).state;
+          float canopy = id(canopy_temperature).state;
+          float soc = id(battery_soc).state;
+          float soil_th = id(frost_soil_threshold_c).state;
+          float canopy_th = id(frost_canopy_threshold_c).state;
+          float warm_above = id(frost_warm_above_c).state;
+          int max_runtime_ms = (int)(id(frost_max_runtime_min).state * 60.0f * 1000.0f);
+          int preheat_max_runtime_ms = (int)(id(frost_preheat_max_runtime_min).state * 60.0f * 1000.0f);
+          int min_soc = (int)id(frost_min_battery_soc).state;
+          bool soil_bad = isnan(soil);
+          bool canopy_bad = isnan(canopy);
+          // ---- v3.3: NWS forecast preheat ----
+          // If the NWS forecast for tonight is cold (below
+          // frost_forecast_threshold_c) and the forecast is fresh
+          // (< 4h old), engage the load BEFORE the sensors say cold.
+          // Saves the heater's first hour of warmup. The preheat
+          // arm also blocks the hysteresis release — once we
+          // commit to a cold night, we hold the load on through
+          // the warm afternoon.
+          float forecast_th = id(frost_forecast_threshold_c).state;
+          float forecast_min = id(g_nws_min_temp_tonight);
+          unsigned long last_poll_ms = id(g_nws_last_poll_ms);
+          bool forecast_fresh = false;
+          if (last_poll_ms != 0) {
+            unsigned long age_ms = millis() - last_poll_ms;
+            // 4h = 14,400,000 ms. NWS updates every ~6h so anything
+            // older is suspect.
+            if (age_ms < 4UL * 3600UL * 1000UL) {
+              forecast_fresh = true;
+            }
+          }
+          bool forecast_preheat = forecast_fresh
+                                  && !isnan(forecast_min)
+                                  && forecast_min < forecast_th;
+          // ---- Mode "Off": both switches off, exit ----
+          if (strcmp(mode, "Off") == 0) {
+            if (id(frost_heater_sw).state) id(frost_heater_sw).turn_off();
+            if (id(frost_grow_light_sw).state) id(frost_grow_light_sw).turn_off();
+            id(g_frost_state) = "Off";
+            return;
+          }
+          // ---- Sensor error path: BOTH NaN ----
+          // If BOTH temps are bad AND no forecast, we have no
+          // signal at all. Latch the error and force off. If
+          // forecast is preheating, drive on the forecast alone —
+          // the weather outside doesn't care about our wiring.
+          if (soil_bad && canopy_bad && !forecast_preheat) {
+            if (!id(g_frost_sensor_error)) {
+              ESP_LOGE("frost", "Both temp sensors NaN — disabling frost");
+              id(g_frost_sensor_error) = true;
+            }
+            if (id(frost_heater_sw).state) id(frost_heater_sw).turn_off();
+            if (id(frost_grow_light_sw).state) id(frost_grow_light_sw).turn_off();
+            id(g_frost_state) = "Sensor error";
+            return;
+          }
+          if (soil_bad && canopy_bad && forecast_preheat) {
+            // Sensors bad but forecast says cold — fall back to
+            // forecast. Don't latch sensor_error (we have a valid
+            // signal: the forecast).
+            if (id(g_frost_sensor_error)) {
+              ESP_LOGW("frost", "Sensors bad, falling back to NWS forecast preheat");
+              id(g_frost_sensor_error) = false;
+            }
+          }
+          // One sensor recovered — clear the latch.
+          if (id(g_frost_sensor_error) && (!soil_bad || !canopy_bad)) {
+            ESP_LOGW("frost", "Temp sensors recovered");
+            id(g_frost_sensor_error) = false;
+          }
+          // ---- Battery floor check ----
+          // Force-off if SOC is known and below floor. NaN SOC
+          // (no recent INA219 read) is treated as "assume low" so
+          // we don't run a heater blindly overnight. The forecast
+          // preheat does NOT bypass this — a forecast can be
+          // wrong, and a depleted pack that can't be recharged is
+          // worse than a few frozen plants.
+          bool battery_low = (isnan(soc) || soc < (float)min_soc);
+          if (battery_low) {
+            if (id(frost_heater_sw).state || id(frost_grow_light_sw).state) {
+              ESP_LOGW("frost", "Battery low (SOC=%.0f%%) — forcing off", isnan(soc) ? -1.0f : soc);
+              if (id(frost_heater_sw).state) id(frost_heater_sw).turn_off();
+              if (id(frost_grow_light_sw).state) id(frost_grow_light_sw).turn_off();
+            }
+            id(g_frost_state) = "Battery low";
+            return;
+          }
+          // ---- Threshold + hysteresis, per enabled output ----
+          // Mode switch: which outputs the tick is allowed to drive.
+          bool heater_enabled    = (strcmp(mode, "Heater") == 0) || (strcmp(mode, "Both") == 0);
+          bool grow_light_enabled = (strcmp(mode, "Grow Light") == 0) || (strcmp(mode, "Both") == 0);
+          // Decision: should the load be ON?
+          //   - soil_bad: ignore soil (canopy-only mode)
+          //   - canopy_bad: ignore canopy (soil-only mode)
+          //   - both valid: standard OR rule
+          //   - forecast_preheat: engage (or hold) regardless of
+          //     current sensor readings. The preheat arm also
+          //     blocks the hysteresis release — once committed to
+          //     a cold night, we hold through the warm afternoon.
+          bool want_on_heater = false;
+          bool want_on_light = false;
+          auto compute_want = [&](bool is_on, bool bad_a, bool bad_b,
+                                  float a, float b,
+                                  float th_a, float th_b, float warm,
+                                  bool preheat) -> bool {
+            if (is_on) {
+              // Currently ON: turn OFF only when (a) BOTH valid
+              // temps are above warm_above, AND (b) forecast is
+              // not preheating. The preheat arm holds the relay
+              // on overnight even when afternoon temps are warm.
+              bool a_warm = bad_a || a > warm;
+              bool b_warm = bad_b || b > warm;
+              bool sensor_released = a_warm && b_warm;
+              return !(sensor_released && !preheat);
+            }
+            // Currently OFF: turn ON if (a) EITHER valid temp is
+            // below its threshold, OR (b) forecast is preheating.
+            bool a_cold = !bad_a && a < th_a;
+            bool b_cold = !bad_b && b < th_b;
+            return a_cold || b_cold || preheat;
+          };
+          want_on_heater = compute_want(
+              id(frost_heater_sw).state,
+              soil_bad, canopy_bad,
+              soil, canopy,
+              soil_th, canopy_th, warm_above,
+              forecast_preheat);
+          want_on_light = compute_want(
+              id(frost_grow_light_sw).state,
+              soil_bad, canopy_bad,
+              soil, canopy,
+              soil_th, canopy_th, warm_above,
+              forecast_preheat);
+          // Mask by mode select.
+          if (!heater_enabled)     want_on_heater = false;
+          if (!grow_light_enabled) want_on_light  = false;
+          if (forecast_preheat && (want_on_heater || want_on_light)) {
+            ESP_LOGI("frost", "NWS preheat: min tonight %.1f°C < threshold %.1f°C",
+                     forecast_min, forecast_th);
+          }
+          // ---- Watchdog enforcement ----
+          // Two runtime limits:
+          //   - max_runtime_ms (frost_max_runtime_min, default 30)
+          //     for the sensor arm — short, catches a stuck relay
+          //     before it kills the pack overnight.
+          //   - preheat_max_runtime_ms (frost_preheat_max_runtime_min,
+          //     default 480) for the forecast arm — covers an
+          //     entire night of preheat (6 pm to 2 am).
+          // When forecast_preheat is active, the larger limit
+          // applies. After the forecast clears (next morning),
+          // the watchdog reverts to the sensor limit. The user
+          // can tune both independently.
+          int effective_max_runtime_ms = forecast_preheat
+              ? preheat_max_runtime_ms
+              : max_runtime_ms;
+          auto apply_watchdog = [&](bool &want_on, int on_since_ms, const char *name) {
+            if (want_on && on_since_ms != 0) {
+              unsigned long elapsed = millis() - (unsigned long)on_since_ms;
+              if ((int)elapsed > effective_max_runtime_ms) {
+                ESP_LOGW("frost", "%s watchdog tripped (%lus > %ds, preheat=%d)",
+                         name, elapsed/1000, effective_max_runtime_ms/1000,
+                         forecast_preheat ? 1 : 0);
+                id(g_frost_watchdog_trips) = id(g_frost_watchdog_trips) + 1;
+                want_on = false;
+              }
+            }
+          };
+          apply_watchdog(want_on_heater, id(g_frost_heater_on_since_ms), "heater");
+          apply_watchdog(want_on_light,  id(g_frost_light_on_since_ms),  "light");
+          // ---- Apply to switches ----
+          if (want_on_heater != id(frost_heater_sw).state) {
+            if (want_on_heater) {
+              id(g_frost_heater_on_since_ms) = millis();
+              ESP_LOGI("frost", "Heater ON (soil=%.1f canopy=%.1f)", soil, canopy);
+              id(frost_heater_sw).turn_on();
+              char buf[96];
+              snprintf(buf, sizeof(buf),
+                       "Frost heater ON (soil=%.1f°C canopy=%.1f°C)",
+                       soil, canopy);
+              id(g_last_event) = buf;
+            } else {
+              id(g_frost_heater_on_since_ms) = 0;
+              ESP_LOGI("frost", "Heater OFF");
+              id(frost_heater_sw).turn_off();
+              id(g_last_event) = "Frost heater OFF";
+            }
+          }
+          if (want_on_light != id(frost_grow_light_sw).state) {
+            if (want_on_light) {
+              id(g_frost_light_on_since_ms) = millis();
+              ESP_LOGI("frost", "Grow light ON (soil=%.1f canopy=%.1f)", soil, canopy);
+              id(frost_grow_light_sw).turn_on();
+              char buf[96];
+              snprintf(buf, sizeof(buf),
+                       "Frost grow light ON (soil=%.1f°C canopy=%.1f°C)",
+                       soil, canopy);
+              id(g_last_event) = buf;
+            } else {
+              id(g_frost_light_on_since_ms) = 0;
+              ESP_LOGI("frost", "Grow light OFF");
+              id(frost_grow_light_sw).turn_off();
+              id(g_last_event) = "Frost grow light OFF";
+            }
+          }
+          // ---- Update state string ----
+          bool h_on = id(frost_heater_sw).state;
+          bool l_on = id(frost_grow_light_sw).state;
+          if (h_on && l_on)      id(g_frost_state) = "Both";
+          else if (h_on)         id(g_frost_state) = "Heater";
+          else if (l_on)         id(g_frost_state) = "Grow Light";
+          else                   id(g_frost_state) = "Standby";
 
   - interval: 5s
     id: alive_tick

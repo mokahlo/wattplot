@@ -373,7 +373,7 @@ def build_wood_frame(doc=None, name="WoodFrame", group_by_subsystem=True,
 
     bed_L = P.BED["outer_L_in"]
     bed_W = P.BED["outer_W_in"]
-    wall_h = P.BED["wall_h_in"]              # 22.0 (1x6 cedar, 4 courses)
+    wall_h = P.BED["wall_h_in"]              # 27.5 (1x6 cedar, 5 courses; v1 was 22.0 / 4 courses)
     sk_id_h = P.BED["skid_h_in"]              # 3.0
     cap_t = LUMBER["2x6"]["actual_t"]         # 1.5
     # Post (upright) height: parametric, default 6 ft. The post extends

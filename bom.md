@@ -184,15 +184,37 @@ cross-reference to `docs/schematic.html`.
 | 1 | 3 mm LED, monochrome (status) | HMI / Status | Amazon | <$1 |
 | 1 | 330 Ω resistor (LED current limit) | HMI / Status | Amazon | <$1 |
 
+### Watering (v3 — full-size, taps off the same 12 V solenoid above)
+| Qty | Item | Subsystem | Source | Cost |
+|---|---|---|---|---|
+| 1 | ½" cold-water tee, brass (for tap line) | Watering | Home Depot | ~$3 |
+| 1 | (Optional) Pressure regulator 5-30 PSI, ½" NPT — not strictly required for pressure-compensating emitters, but cheap insurance against drip-line blowout | Watering | Amazon | ~$10 |
+| 10 ft | ¼" vinyl tubing, food-safe (drip manifold) | Watering | Amazon | ~$8 |
+| 6 | Pressure-compensating drip emitters, 2 GPH (one per tomato plant; 4×8 bed takes 4-6 plants) | Watering | Amazon (10-pack) | ~$10 |
+| 6 | ¼" barbed tees (solenoid → manifold → emitters) | Watering | Amazon | ~$6 |
+| 4 | Zip ties (secure drip line) | Watering | Home Depot | ~$2 |
+
+**Watering subtotal: ~$29-39** (one emitter per plant beats the
+one-emitter-only mistake of v2.4). 4×8 ft bed at 1-2 GPH per tomato
+gets ~1-2" water per week per plant at the recommended 2 GPH, 30 min
+every other day — matches the firmware's soil-moisture-driven schedule.
+
 ### Power components external to the PCB
 | Qty | Item | Subsystem | Source | Cost |
 |---|---|---|---|---|
-| 1 | Sunapex 10 A MPPT (mini) / Victron SmartSolar 75/15 (full-size) | Solar charging | Amazon / vendor | $40-$90 |
-| 1 | 12 V LiFePO4 battery, 50-100 Ah (mini: 10-20 Ah) | Solar charging | Amazon / LiTime | $90-$400 |
-| 1 | Solar panel, 100 W (mini) / 620 W bifacial (full-size) | Solar charging | Longi / ECO-WORTHY | $80-$200 |
+| 1 | **Victron SmartSolar 75/15** MPPT (75 V input, 15 A) — full-size; 620W Longi panel has ~50 V Voc, needs the 75 V input rating. Mini uses Sunapex 10 A (see `bom_mini.md`). | Solar charging | Amazon / Victron | ~$80 |
+| 1 | 12 V LiFePO4 battery, 50-100 Ah | Solar charging | Amazon / LiTime | $90-$400 |
+| 1 | Solar panel — **Longi 620 W bifacial** (LR7-72HGD-620M) | Solar charging | Longi / distributor | ~$200 |
+| 1 | (Optional, bench testing) 12 V wall adapter, 30 W — Mean Well HDR-30-12 or equiv. Lets you run the controller + actuator + solenoid off mains during development without sun or a charged battery. | Test | Digi-Key / Amazon | ~$15 |
 
 **Electronics total: ~$260-$330 (full-size, including solar charging components)**
 or **~$120-$170 (mini)** — see `bom_mini.md` for the mini-specific list.
+
+> **Future add (ADR-004, proposed):** A TPL5110 hardware watchdog on the
+> v3 PCB would force an ESP32 reset if firmware hangs. Adds 5 parts
+> (TPL5110 + 1 cap + 3 resistors), ~$2. Not in the as-built BOM yet —
+> add to the next PCB rev once the PE review on the actuator
+> thermal budget closes.
 
 ---
 
@@ -222,8 +244,10 @@ or **~$120-$170 (mini)** — see `bom_mini.md` for the mini-specific list.
 | Fasteners | $30 |
 | **Total structural parts** | **~$290–$350** |
 | Electronics (PCB, drivers, sensors, MCU) | $80–$130 |
-| Solar charging (MPPT, battery, panel) | $210–$690 |
-| **Total with electronics** | **~$580–$1,170** |
+| Watering (drip manifold + emitters) | $29–$39 |
+| Solar charging (Victron 75/15, battery, Longi 620W) | $370–$680 |
+| Test (12 V wall adapter, optional) | $0 / $15 |
+| **Total with electronics** | **~$770–$1,210** |
 
 No welding required. No concrete. No 120V power tools beyond a drill + impact driver
 + circular saw (or a lumber yard can cut to length for you).

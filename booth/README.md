@@ -1,16 +1,23 @@
 # Wattplot, Maker Faire Bay Area 2026, Booth Package
 
-> **Show:** Sept 25–27, 2026 (Fri–Sun), 64 days from project start.
+> **Show:** Sept 25–27, 2026 (Fri–Sun), 47 days from today (2026-08-09).
 > **Venue:** Historic Mare Island Naval Shipyard, Vallejo CA.
 > **Booth:** 10×10 ft (typical BA Faire Maker space).
 > **Demo shape:** Working Mini v2.4 on a table, 24" live-sim screen next to it,
 >   printed poster, take-home cut-list cards.
+>
+> **Project week: W3 of 9.** Mini is built and on the bench. Calibrating
+> IMU + running closed-loop tilt tests this week. Collateral (poster,
+> cards) prints W4. Dry runs W5–W7. Travel/pack W8. Final fixes W9.
 
 ## Why this booth
 
-- **The story is upcycling.** ~10M tons of solar panel waste by 2050.
-  Wattplot gives a decommissioned panel a second life as shade + food
-  + some power. Strong sustainability hook for a Maker Faire audience.
+- **The story is optimization.** Two outputs — tomatoes and kilowatt-hours
+  — from the same square foot. The panel canopy is what the frame would
+  have been lumber for anyway, so the bed is doing more work, not the
+  panel displacing the garden. (Sustainability angle: ~10M tons of solar
+  panel waste by 2050, and a Wattplot gives any decommissioned panel a
+  job. Strong hook for the Maker Faire audience without being the lead.)
 - **Mini v2.4 fits the 10×10 footprint** (it's 18×14×12 inches on a table).
 - **It's fully functional**, not a render: real panel, real MPPT, real
   actuator, real sensors, real soil. The "wow" moment is a kid pressing a

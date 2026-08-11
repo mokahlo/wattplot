@@ -32,3 +32,10 @@ extend-ignore = [
     "E402",
     "RUF100",  # noqa directives become "unused" when the rule they suppress is ignored
 ]
+
+# pytest-asyncio: auto-detect async tests so test_control_api.py can
+# use async fixtures + aiohttp's TestClient without per-test
+# @pytest.mark.asyncio markers. Strict mode (default in 1.x) would
+# require the marker; auto is more ergonomic for a small suite.
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

@@ -232,22 +232,46 @@ def main():
     print(f"  Rationale: {mppt['rationale']}")
     print()
 
-    # ---- Estimated power output ----
-    # Phoenix, 35° tilt, system_derate, bifacial bonus
+# ---- Estimated power output ----
+    # Phoenix, 35° tilt, system_derate, bifacial bonus. Prefer the
+    # actual sun_simulator result (pvlib + TMY weather) when available;
+    # fall back to the heuristic if the simulator can't run.
     if final_wattage <= 0:
         print("ERROR: final_wattage is 0")
         sys.exit(1)
-    annual_kwh = final_wattage * 0.85 * 1.5 * (1 + (0.10 if panel_bifacial else 0))
-    # 0.85 = typical capacity factor, 1.5 kWh per installed W per year in Phoenix
-    # Actually a better formula: 1 kWh/W/yr is closer to reality for Phoenix 35° tilt
-    annual_kwh = final_wattage * 1.4  # 1.4 kWh/W/yr at 35° tilt, Phoenix
-    if panel_bifacial:
-        annual_kwh *= 1.10
+    annual_kwh = None
+    annual_kwh_schedule = None
+    try:
+        from sun_simulator import run_simulation
+        results, _df = run_simulation()      # (dict, dataframe)
+        annual_kwh_schedule = {
+            "static_35":   results.get("Static 35° (max power)", {}).get("annual_kwh"),
+            "seasonal":    results.get("Seasonal 90/35°",        {}).get("annual_kwh"),
+            "az_tracking": results.get("Azimuth tracking 35°",   {}).get("annual_kwh"),
+        }
+        annual_kwh = annual_kwh_schedule["static_35"]
+    except (ImportError, OSError, RuntimeError, ValueError, KeyError, AttributeError) as exc:
+        # pvlib / TMY data not available (offline install, etc.)
+        # Fall back to the heuristic: 2.5 kWh/W/yr at static 35° tilt in
+        # Phoenix. Calibrated against sun_simulator for the LONGi 620W
+        # preset (1539 / 620 = 2.48). +10% for bifacial.
+        annual_kwh = final_wattage * 2.5 * (1.10 if panel_bifacial else 1.0)
+        annual_kwh_schedule = None
+        sim_warning = f"  (sun_simulator unavailable: {exc}; using heuristic)"
 
-    print("Estimated annual power (Phoenix, 35° tilt)")
+    print("Estimated annual power (Phoenix, 35° tilt, pvlib + TMY)")
     print("=" * 80)
-    print(f"  {final_wattage} W panel × 1.4 kWh/W/yr = ~{annual_kwh:.0f} kWh/yr "
-          f"({'$' if annual_kwh > 0 else ''}{int(annual_kwh * 0.13)}/yr at AZ rates)")
+    print(f"  {final_wattage} W panel -> ~{annual_kwh:.0f} kWh/yr at static 35° "
+          f"(${int(annual_kwh * 0.13)}/yr at AZ rates)")
+    if annual_kwh_schedule:
+        for label, key in (("Static 35° (max power)",  "static_35"),
+                           ("Seasonal 90/35°",        "seasonal"),
+                           ("Azimuth tracking 35°",   "az_tracking")):
+            v = annual_kwh_schedule.get(key)
+            if v is not None:
+                print(f"    {label:<28} {v:>6.0f} kWh/yr")
+    if 'sim_warning' in locals():
+        print(sim_warning)
     print()
 
     # ---- Total cost estimate ----

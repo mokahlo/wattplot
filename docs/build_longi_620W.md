@@ -1,14 +1,5 @@
 # Wattplot Build Guide: longi_620W
 
-> **STALE — auto-generated from the same template as `build_guide.md`
-> (which is itself stale).** The panel-preset-specific geometry (Phase 0
-> lumber cut list, Phase 1 bed dimensions) is correct for the LONGi 620 W
-> preset; the **electronics phases** (Phase 7 onward) reference the v2.4
-> architecture (ESP32-WROOM-32E, BMI160, limit switches, GPIO4/16/17/18,
-> DPS5005) that no longer exists. See `firmware/README.md` and
-> `docs/pinmap.html` for the current truth. Tracked in
-> [ROADMAP.md](../ROADMAP.md).
-
 Step-by-step assembly of the entire apparatus. Follow the order below. Each step lists the **time**, **tools**, **parts**, and **verification**.
 
 **Total build time:** ~8.7 hr over a weekend (with lumber pre-cut).
@@ -24,14 +15,16 @@ Step-by-step assembly of the entire apparatus. Follow the order below. Each step
 
 | Nominal | Qty | Length | Use |
 |---|---|---|---|
-| 2x12 | 2 | 96.0" (8.00 ft) | long bed wall (north/south) |
-| 2x12 | 2 | 41.6" (3.47 ft) | short bed wall (west/east) |
+| 1x6 | 10 | 96.0" (8.00 ft) | long wall skin (N/S), 5 courses |
+| 1x6 | 10 | 43.1" (3.59 ft) | short wall skin (W/E), 5 courses |
+| 2x4 | 16 | 27.5" (2.29 ft) | wall cleat (vertical, <=24" o.c.) |
+| 2x6 | 2 | 96.0" (8.00 ft) | wall cap, hinge + strut walls |
 | 2x6 | 2 | 96.0" (8.00 ft) | long frame rail |
 | 2x6 | 2 | 41.6" (3.47 ft) | cross frame rail |
 | 2x4 | 1 | 105.9" (8.82 ft) | diagonal brace |
 | 4x4 | 2 | 96.0" (8.00 ft) | long skid |
 
-**Source from 8-ft stock:** 4× 2x12, 2× 2x6, 2× 4x4
+**Source from 8-ft stock:** 15× 1x6, 6× 2x4, 5× 2x6, 2× 4x4
 **Source from 10-ft stock:** 1× 2x4
 
 **Tip:** many yards will cut to length for free or a small fee. Have them cut each piece on the list above. None of the cuts are mitered (90° square cut only).

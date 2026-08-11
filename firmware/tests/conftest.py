@@ -1,9 +1,13 @@
 """
 Shared pytest fixtures for the firmware test suite.
 
-Build artifacts (esp32c3, IDF toolchain) are slow to produce (~5 min on
+Build artifacts (esp32-s3, IDF toolchain) are slow to produce (~5 min on
 cold cache) and Linux-only in CI, so we gate the codegen test on a
 marker and skip if esphome isn't installed.
+
+Keep that marker on compile/validate tests only. Checks that merely read
+wattplot.yaml as text must stay ungated so CI runs them without an
+esphome install.
 """
 from __future__ import annotations
 

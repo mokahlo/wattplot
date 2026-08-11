@@ -1,0 +1,28 @@
+# Normalize line endings: LF for source, CRLF for Windows-only scripts.
+# Suppresses "LF will be replaced by CRLF" warnings on every commit.
+
+*                 text=auto eol=lf
+
+*.ps1             text eol=crlf
+*.bat             text eol=crlf
+*.cmd             text eol=crlf
+
+# Binary assets
+*.png             binary
+*.jpg             binary
+*.jpeg            binary
+*.gif             binary
+*.ico             binary
+*.pdf             binary
+*.stl             binary
+*.step            binary
+*.fcstd           binary
+*.FCBak           binary
+*.svg             binary
+*.woff            binary
+*.woff2           binary
+
+# Force diff driver for YAML/Markdown so renames + whitespace show correctly
+*.yml             diff=yaml
+*.yaml            diff=yaml
+*.md              diff=markdown

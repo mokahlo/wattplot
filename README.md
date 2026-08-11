@@ -1,6 +1,12 @@
 # Wattplot
 
-**Give an old solar panel a second life.**
+[![Tests](https://github.com/mokahlo/wattplot/actions/workflows/test.yml/badge.svg)](https://github.com/mokahlo/wattplot/actions/workflows/test.yml)
+[![Lint](https://img.shields.io/badge/lint-ruff-blue)](https://github.com/astral-sh/ruff)
+[![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)](https://www.python.org)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Status](https://img.shields.io/badge/status-prototype-orange)](https://github.com/mokahlo/wattplot#status--roadmap)
+
+**One bed. Two harvests.**
 
 A raised garden bed whose canopy is a working solar panel — the same
 square foot grows tomatoes *and* generates electricity. Symbiosis of
@@ -19,9 +25,9 @@ a GitHub Pages site. MIT license, no paywalls, no telemetry.
 > ready to flash (the chip is currently wedged; see [Status &
 > roadmap](#status--roadmap) below).
 
-**Live site:** [mokahlo.github.io/wattplot](https://mokahlo.github.io/wattplot/) ·
-**3D booth viewer:** [mokahlo.github.io/wattplot/booth/](https://mokahlo.github.io/wattplot/booth/) ·
-**Data dashboard:** [mokahlo.github.io/wattplot/data.html](https://mokahlo.github.io/wattplot/data.html)
+**Live site:** [wattplot.org](https://wattplot.org/) ·
+**3D booth viewer:** [wattplot.org/booth/](https://wattplot.org/booth/) ·
+**Data dashboard:** [wattplot.org/data.html](https://wattplot.org/data.html)
 
 ## Two builds, one structure
 
@@ -82,7 +88,7 @@ Three constraints guide every part of the design:
 
 ## Interactive 3D model
 
-[**Open the 3D viewer**](https://mokahlo.github.io/wattplot/) - drag to orbit, scroll to zoom. Loads the live STEP-derived STL.
+[**Open the 3D viewer**](https://wattplot.org/) - drag to orbit, scroll to zoom. Loads the live STEP-derived STL.
 
 ---
 
@@ -190,7 +196,7 @@ Add your photos to `renders/build_photos/` and link them in this section.
 wattplot.py                            ← top-level pipeline:  python wattplot.py
 wattplot_params.py                     ← single source of truth for ALL parameters
 models/
-  freecad/                             ← FreeCAD parametric 3D model
+  freecad/                             ← FreeCAD parametric 3D model (authoritative)
     materials.py                       ← wood species, fasteners, hardware
     parts/                             ← one file per part (bed_wall, frame,
       _helpers.py, bed_wall.py,        ←   hinge, panel_clamp, actuator_mount,
@@ -199,6 +205,9 @@ models/
       actuator_mount.py
     assemble.py                         ← imports all parts, exports STEP+STL+FCStd
     _run.py                             ← freecadcmd entry point
+  openscad/                             ← OpenSCAD text model (no GUI, no Python)
+    wattplot.scad                       ← full assembly, 35° tilt, LONGi preset
+    wattplot_params.scad                ← mirror of wattplot_params.py (CI parity)
   shadow_raycaster.py                  ← geometric bed-shadow from 3D panel
   render_3d_views.py, render_svg_views.py
 analysis/
@@ -300,8 +309,10 @@ available). Hardware (hinges, panel clamps) is metal where the load demands.
   The bed depth is set by dry-soil risk: at 4 wall courses a bone-dry bed
   falls to SF 1.53, so the build ships 5 courses.
 - **Power (azimuth tracking 35° tilt, Phoenix 2025):** 2,240 kWh/year.
-- **Tomato yield (35° tilt):** ~124 kg/year from 4 plants. Vertical (90°)
-  gives full bed sun but ~50% less power and more heat stress.
+- **Tomato yield (35° tilt):** ~84 kg/year from 4 plants (the sun
+  simulator caps at 83.8 kg at 35° tilt, seasonal 90/35°, and
+  azimuth tracking 35°; the 90° "bed sun" schedule gives 52.7 kg
+  with much more heat stress and ~63% less power).
 - **Best balance:** static 35° or azimuth tracking 35°, depending on whether
   you value simplicity or kWh.
 
@@ -522,9 +533,34 @@ You are free to use, modify, and sell products based on this design. Attribution
 
 ## Contributing
 
-Issues, PRs, and forks welcome. The system is small enough that you should be able to read the whole codebase in an afternoon.
+Issues, PRs, and forks welcome. See [CONTRIBUTING.md](CONTRIBUTING.md)
+for the workflow, conventional-commit style, and how to run the
+firmware + analysis test suite locally. Pre-commit hooks (ruff +
+the firmware pytest smoke) run on every commit.
 
 If you build one, send photos.
+
+## What this isn't
+
+- **Not a turn-key product.** No PE-stamped design, no UL-listed
+  inverter, no warranty. You build it; you own the risk.
+- **Not a replacement for an electrician.** The LiFePO4 / MPPT /
+  microinverter chain needs to be installed per local code. See
+  [disclaimers.html](docs/disclaimers.html) §5.
+- **Not certified for sale.** MIT-licensed hardware with no
+  regulatory pathway. Selling units requires your own compliance
+  work (UL 61730 for the panel, UL 1741 for the inverter, NDS / PE
+  review for the structure).
+- **Not a "smart solar tracker" product.** It's a single-axis
+  tilt actuator with a 35° structural cap, not a dual-axis
+  tracker. The "azimuth tracking" schedules in the sun simulator
+  are sim-only — no firmware implements them yet.
+- **Not a replacement for an off-grid solar kit.** No battery
+  monitoring app, no remote firmware updates beyond ESPHome's
+  OTA, no commercial support.
+- **Not free of upfront work.** The Mini v2.4 has ~3-4 hours of
+  build time + a custom PCB order. The full-size has 10-15 hours
+  + a PE review.
 
 ## Acknowledgments
 

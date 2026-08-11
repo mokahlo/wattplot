@@ -94,7 +94,19 @@
     <div><span class="key">Bed:</span> 8.0 × 3.72 ft, ~12" soil depth</div>
     <div><span class="key">Panel:</span> 8.08 × 3.72 ft, 620 W bifacial</div>
     <div><span class="key">View:</span> <span id="view-label" class="val">power</span> · <span id="tilt-readout-top" class="val">35°</span> <span style="color:var(--muted)">— <span id="mode-label">power mode (max kWh)</span></span></div>
-    <div><span class="key">Annual kWh:</span> <span class="val">2,240</span> · <span class="key">Tomatoes:</span> <span class="val">~124 kg/yr</span></div>
+    <div><span class="key">Annual kWh:</span> <span class="val">2,240</span> · <span class="key">Tomatoes:</span> <span class="val">~84 kg/yr</span></div>
+  </div>
+  <hr>
+  <div id="callout-legend" style="display:none;">
+    <div class="row" style="font-size:12px; color:var(--muted); margin-bottom:6px;">Callouts</div>
+    <div class="row" style="font-size:12px; line-height:1.5;">
+      <div><span style="color:var(--accent); font-weight:700;">1</span> &nbsp;Bed (planter, ~25" of soil ballast)</div>
+      <div><span style="color:var(--accent); font-weight:700;">2</span> &nbsp;4×4 post (72" walk-under upright)</div>
+      <div><span style="color:var(--accent); font-weight:700;">3</span> &nbsp;Frame (2×6 panel rail)</div>
+      <div><span style="color:var(--accent); font-weight:700;">4</span> &nbsp;Hinge axis (continuous ½" rod)</div>
+      <div><span style="color:var(--accent); font-weight:700;">5</span> &nbsp;Linear actuator (12V, 330 lbf)</div>
+      <div><span style="color:var(--accent); font-weight:700;">6</span> &nbsp;Soil (the actual garden)</div>
+    </div>
   </div>
   <hr>
   <div class="row" style="font-size:12px; color:var(--muted);">
@@ -111,6 +123,7 @@
   <button id="btn-wood" onclick="setState('wood')">Wood Only</button>
   <button id="btn-rotate" onclick="toggleRotate()">Auto Rotate</button>
   <button id="btn-edges" onclick="toggleEdges()">Edges</button>
+  <button id="btn-callouts" onclick="toggleCallouts()">Callouts</button>
   <div class="slider-group">
     <span>Panel Tilt:</span>
     <input id="tilt-slider" type="range" min="0" max="90" value="35" />
@@ -156,6 +169,14 @@ import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 
 // ---- App version (single source of truth — bump on release) ----
 // Semver: MAJOR.MINOR.PATCH. No "v" prefix per project convention.
+// 3.6.0 — MINOR: callouts overlay. New "Callouts" button toggles six
+//   numbered pins anchored to the major parts (bed, post, frame,
+//   hinge, actuator, soil). A legend in the HUD explains each. Pins
+//   are Three.js Sprites, always camera-facing, computed from the
+//   model's bounding box so they track the loaded STL regardless of
+//   coordinate origin. Rendered with depthTest off so they stay
+//   visible when behind the model — this is a "learn the parts" mode,
+//   not a strict occlusion render.
 // 3.5.8 — PATCH: footers are now 2x4 PT laid on the wide side (1.5"
 //   tall × 3.5" wide) instead of 2x2. The 2.75" of slat-bearing
 //   surface that extends INSIDE the wall is not detected by the old
@@ -318,7 +339,7 @@ import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 //   the long rails' span. Renamed the export from wattplot_wood_only.stl
 //   to wattplot.stl ("build the entire setup piece by piece").
 // 3.3.0 also fixed the `pt` ReferenceError that crashed model loading.
-const VERSION = '3.5.7';
+const VERSION = '3.6.0';
 const APP_NAME = 'Wattplot';
 document.title = `${APP_NAME} ${VERSION} — Interactive 3D`;
 document.getElementById('app-title').textContent = `${APP_NAME} ${VERSION}`;
@@ -452,6 +473,14 @@ scene.add(axes);
 // Container for the loaded mesh
 const modelGroup = new THREE.Group();
 scene.add(modelGroup);
+
+// Container for callout pins. Sibling of modelGroup, hidden by default.
+// Pins are created after the model loads (so positions can be derived
+// from the model's actual bounding box).
+const calloutsGroup = new THREE.Group();
+calloutsGroup.visible = false;
+scene.add(calloutsGroup);
+let calloutsBuilt = false;
 
 // ---- Tilt parameters ----
 // The wood structure (corner posts + joists + walls + slats) is fully
@@ -636,11 +665,14 @@ const loader = new STLLoader();
 let currentMesh = null;
 
 const STATES = {
-  // "power" loads the full-setup STL (bed + joists + slats + posts + rails)
-  // and adds a procedural solar panel on top. The wood is stationary;
-  // only the panel tilts via its own pivot group.
-  // "wood" loads the same STL but no panel.
-  power: { file: 'booth/wattplot.stl', label: '35°', mode: 'assembly (joists + panel)', kind: 'tilt' },
+  // The OpenSCAD-rendered STL (renders/wattplot_longi_620W_nopanel.stl
+  // copied to docs/booth/wattplot.stl) has the bed, posts, frame,
+  // hinges, clamps, and actuator but NO panel. The procedural panel
+  // (created with createProceduralPanel) is added on top for the
+  // "tilt" state so the booth operator can demonstrate the tilt
+  // animation. The "wood" state skips the procedural panel and
+  // shows just the structure.
+  power: { file: 'booth/wattplot.stl', label: '35°', mode: 'assembly (no panel — procedural tilts to 35°)', kind: 'tilt' },
   wood:  { file: 'booth/wattplot.stl', label: 'wood', mode: 'wood frame only (no panel)',     kind: 'wood' },
 };
 
@@ -737,6 +769,10 @@ function loadState(stateKey, withTransition = true) {
       controls.target.set(center.x, size.y * 0.4, center.z);
       controls.update();
       loadingEl.style.display = 'none';
+
+      // (Re)build callout pins for the loaded model. Pins are placed
+      // relative to the model bbox so they track whatever STL is loaded.
+      buildCallouts(box);
     },
     undefined,
     (err) => {
@@ -902,6 +938,94 @@ function toggleEdges() {
 }
 window.toggleEdges = toggleEdges;
 document.getElementById('btn-edges').classList.add('active');
+
+// ---- Callouts (numbered pins for the major parts) ----
+// Positions are derived from the model's bounding box so they track
+// whatever STL is loaded. The pins are Three.js Sprites with a
+// CanvasTexture, always camera-facing. depthTest is off so a pin
+// behind the model still shows (this is "learn the parts" mode, not
+// a strict z-occluded render — a kid at the booth should be able to
+// find each pin without having to orbit perfectly).
+let calloutsOn = false;
+function makeCalloutPin(number) {
+  const size = 96;
+  const canvas = document.createElement('canvas');
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  // Soft drop shadow for legibility on bright backgrounds
+  ctx.shadowColor = 'rgba(0,0,0,0.55)';
+  ctx.shadowBlur = 6;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 2;
+  // Filled disc
+  ctx.fillStyle = '#ff9a5e';
+  ctx.beginPath();
+  ctx.arc(size/2, size/2, 36, 0, Math.PI * 2);
+  ctx.fill();
+  // White ring
+  ctx.shadowColor = 'transparent';
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  // Number
+  ctx.fillStyle = '#14171e';
+  ctx.font = 'bold 44px "Outfit", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(number.toString(), size/2, size/2 + 2);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const material = new THREE.SpriteMaterial({
+    map: texture,
+    depthTest: false,    // always show, even when behind the model
+    transparent: true,
+  });
+  const sprite = new THREE.Sprite(material);
+  sprite.renderOrder = 999;  // draw after the model
+  return sprite;
+}
+
+function buildCallouts(box) {
+  // Clear any prior callouts (rebuild on state change)
+  while (calloutsGroup.children.length) {
+    const c = calloutsGroup.children.pop();
+    if (c.material && c.material.map) c.material.map.dispose();
+    if (c.material) c.material.dispose();
+  }
+  const min = box.min, max = box.max;
+  const cx = (min.x + max.x) / 2;
+  const cz = (min.z + max.z) / 2;
+  // Six positions, anchored to the model bbox. The numbers map to the
+  // legend in the HUD.
+  const positions = [
+    { n: 1, p: new THREE.Vector3(cx, min.y + (max.y - min.y) * 0.18, min.z + 0.5) }, // Bed (south wall, near ground)
+    { n: 2, p: new THREE.Vector3(max.x - 0.5, (min.y + max.y) * 0.5, max.z - 0.5) }, // Post (NE corner, mid-height)
+    { n: 3, p: new THREE.Vector3(cx, max.y - 0.5, cz) },                             // Frame (top, center)
+    { n: 4, p: new THREE.Vector3(cx, min.y + (max.y - min.y) * 0.22, min.z + 0.5) }, // Hinge (top of south wall — same Y as bed top, just south edge)
+    { n: 5, p: new THREE.Vector3(cx, min.y + (max.y - min.y) * 0.55, max.z - 0.5) }, // Actuator (mid-height, front)
+    { n: 6, p: new THREE.Vector3(cx, min.y + (max.y - min.y) * 0.08, cz) },          // Soil (interior, low)
+  ];
+  positions.forEach(({n, p}) => {
+    const pin = makeCalloutPin(n);
+    pin.position.copy(p);
+    // Scale relative to the bbox so pins are readable at any zoom.
+    // ~3% of the bbox diagonal, min 6 inches, max 14 inches.
+    const diag = box.getSize(new THREE.Vector3()).length();
+    const s = Math.min(14, Math.max(6, diag * 0.03));
+    pin.scale.set(s, s, 1);
+    calloutsGroup.add(pin);
+  });
+  calloutsGroup.visible = calloutsOn;
+  calloutsBuilt = true;
+}
+
+function toggleCallouts() {
+  calloutsOn = !calloutsOn;
+  calloutsGroup.visible = calloutsOn;
+  document.getElementById('btn-callouts').classList.toggle('active', calloutsOn);
+  document.getElementById('callout-legend').style.display = calloutsOn ? 'block' : 'none';
+}
+window.toggleCallouts = toggleCallouts;
 
 // ---- Dimension dashboard ----
 // ---- Resize ----

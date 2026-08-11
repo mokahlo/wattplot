@@ -15,7 +15,7 @@
 
 # Wattplot
 
-### Give an old solar panel a second life. Shade + food + power, in one raised bed.
+### One bed. Two harvests. Shade + food + power, in one raised bed.
 
 A planter up to 8 ft × 5 ft with a hinged, ballast-mounted solar
 canopy. Fits **any panel up to 97" × 61"**, new bifacial from the
@@ -49,7 +49,7 @@ recycling by 10-20 years.
 |---|---|
 | Power (35° tilt, 235W salvage) | ~850 kWh/yr |
 | Power (35° tilt, 620W new bifacial) | ~2,240 kWh/yr |
-| Tomato yield (4 plants) | ~124 kg/yr, about 250 lb |
+| Tomato yield (4 plants) | ~84 kg/yr at 35° tilt (about 185 lb) |
 | Wind design | 115 mph 3-sec gust (ASCE 7-22, Cat II 700-yr) |
 | Tilt range | 0° (storm, stowed flat) to 35° (structural max) |
 | Panel | Any up to 97"×61", 30+ year life |
@@ -162,7 +162,7 @@ works, the full-size works.
 Wattplot is MIT-licensed, open-source, code-first.
 
 - **Repo:** github.com/mokahlo/wattplot
-- **3D viewer:** mokahlo.github.io/wattplot
+- **3D viewer:** wattplot.org
 - **Upcycling guide:** docs/upcycling.md
 - **License:** MIT (use, modify, sell, attribution appreciated)
 

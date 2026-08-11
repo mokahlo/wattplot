@@ -9,12 +9,15 @@
 > designer (Fiverr, local student) for visual execution. Print at
 > FedEx Kinko's on foam core, ~$40.
 
-## Headline (re-framed for upcycling)
+## Headline (optimization lead, upcycling as a benefit)
 
-Old solar panels are a growing waste stream. Wattplot gives them a
-second life: shade + food + some power, in a planter you build from
+One bed. Two harvests. The panel canopy is what the frame would
+have been lumber for anyway, so the bed is doing more work, not
+the panel displacing the garden. (Upcycling angle: ~10M tons of
+panel waste by 2050. A Wattplot gives any decommissioned panel a
+job — shade + food + some power, in a planter you build from
 8-ft lumber stock. Bring your own panel, 8×5 ft fits any
-residential.
+residential.)
 
 ## Layout
 
@@ -22,7 +25,7 @@ residential.
 ┌────────────────────────── 24" ──────────────────────────┐
 │  ┌──────────────────────────────────────────────────┐   │
 │  │  WATTPLOT                                          │   │
-│  │  Give an old panel a second life.                  │   │
+│  │  One bed. Two harvests.                            │   │
 │  │  Shade + food + power, in one raised bed.          │   │
 │  └──────────────────────────────────────────────────┘   │
 │                                                            │
@@ -69,8 +72,9 @@ residential.
 │  │  Most panels are removed because the racking       │  │
 │  │  or inverter failed, not the cells.                │  │
 │  │  A 12-year-old 250W panel is still 235W.           │  │
-│  │  Wattplot: a second life that delays recycling     │  │
-│  │  by 10-20 years and recovers 50-90% of original.   │  │
+│  │  Wattplot gives that panel a job: shade + food     │  │
+│  │  + some power, delaying recycling 10-20 years and  │  │
+│  │  recovering 50-90% of the original.                │  │
 │  └────────────────────────────────────────────────────┘  │
 │                                                            │
 │  ┌────────────────────────────────────────────────────┐  │
@@ -98,7 +102,7 @@ residential.
   Off-white reads better in daylight. Matte black pops under spotlights.
 - **Title font:** 96pt, sans-serif bold, dark.
 - **Body font:** 24-32pt, sans-serif regular.
-- **Numbers ($193, 2,240 kWh, 124 kg):** 64pt, bold, accent color.
+- **Numbers ($193, 2,240 kWh, 84 kg):** 64pt, bold, accent color.
 - **QR code:** 4"×4" minimum, high-contrast, in the bottom corner.
 
 ## Source files

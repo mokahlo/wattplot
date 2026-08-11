@@ -67,7 +67,7 @@ BED = {
                                     # 4 courses / 20" soil the structure only
                                     # reaches SF_overturning 1.81 at 35° tilt
                                     # (FAIL). 5 courses / 25.5" soil gives
-                                    # SF 2.26, rated ~122 mph. 6 courses would
+                                    # SF 2.55, rated ~130 mph. 6 courses would
                                     # give more margin but puts the rim at
                                     # 34.5", breaking accessibility - so the
                                     # tilt cap (35°, CONTROL below) is what
@@ -128,19 +128,6 @@ POSTS = {
     "rail_nominal": "2x6",             # panel rails laid flat on the post tops
     "rail_thickness_in": 1.5,
     "rail_width_in": 5.5,
-}
-
-# =============================================================================
-# STRUCTURE (posts + beam, hinged at bed)
-# =============================================================================
-STRUCTURE = {
-    "post_side_in": 5.5,               # 6x6 nominal
-    "post_height_in": 120.0,           # 10 ft
-    "post_inset_in": 6.0,              # from bed end
-    "beam_side_in": 5.5,               # 6x6
-    "beam_length_in": 84.0,            # 7 ft between posts
-    "beam_attach_h_in": 108.0,         # height to beam centerline
-    "hinge_d_in": 0.5,                 # 1/2" continuous hinge
 }
 
 # =============================================================================
@@ -500,7 +487,7 @@ CONTROL = {
                                      # lever arm about the bed edge. With
                                      # 25.5" of soil ballast the structure
                                      # passes SF_overturning >= 2.0 only to
-                                     # ~35° (SF 2.26); 45° drops to 1.55 and
+                                     # ~35° (SF 2.55); 45° drops to 1.89 and
                                      # 90° is far below 1. Do not raise this
                                      # without re-running analysis/wind_load.py.
     "target_current_A": 0.5,            # PI setpoint (motor current)
@@ -542,7 +529,6 @@ P = {
     "bed": BED,
     "bed_wall": BED_WALL,
     "posts": POSTS,
-    "structure": STRUCTURE,
     "frame": FRAME,
     "panel": PANEL,
     "soil": SOIL,
@@ -686,3 +672,76 @@ MINI = {
     "pin_limit_0": 6,                   # 0-deg limit switch
     "pin_limit_35": 7,                  # 35-deg limit switch
 }
+
+
+# ----------------------------------------------------------------------------
+# Self-validation
+# ----------------------------------------------------------------------------
+# Catch obvious bugs at import time rather than deep inside apply_panel_preset
+# or the wind / sun / shadow calculators. Validates:
+#   - every PANEL_PRESETS entry has the required keys with positive values
+#   - the default PANEL dict references the same keys
+#   - LOCATION latitude is in [-90, 90] and longitude is in [-180, 180]
+#   - PANEL fits inside MAX_PLANTER + 2 * overhang
+#   - POSTS count is even and the post height clears the canopy
+# Raises WattplotConfigError if any of these fail.
+
+_REQUIRED_PANEL_KEYS = (
+    "label", "L_in", "W_in", "thickness_in", "mass_lb", "wattage",
+    "panel_age_years", "panel_bifacial", "panel_efficiency_pct",
+)
+
+# label is required for presets (they show up in docs) but the default
+# PANEL dict can omit it -- apply_panel_preset always populates it.
+_REQUIRED_PRESET_KEYS = _REQUIRED_PANEL_KEYS
+_REQUIRED_DEFAULT_KEYS = tuple(k for k in _REQUIRED_PANEL_KEYS if k != "label")
+
+for _preset_name, _preset in PANEL_PRESETS.items():
+    _missing = [k for k in _REQUIRED_PRESET_KEYS if k not in _preset]
+    if _missing:
+        raise RuntimeError(
+            f"PANEL_PRESETS[{_preset_name!r}] is missing required keys: "
+            f"{_missing}. Check the preset dict against _REQUIRED_PRESET_KEYS "
+            f"in wattplot_params.py."
+        )
+    _bad = [
+        k for k in ("L_in", "W_in", "thickness_in", "mass_lb", "wattage")
+        if not isinstance(_preset[k], (int, float)) or _preset[k] <= 0
+    ]
+    if _bad:
+        raise RuntimeError(
+            f"PANEL_PRESETS[{_preset_name!r}] has non-positive values for: "
+            f"{_bad}. Got: {{k: _preset[k] for k in _bad}}."
+        )
+
+_missing_in_default = [k for k in _REQUIRED_DEFAULT_KEYS if k not in PANEL]
+if _missing_in_default:
+    raise RuntimeError(
+        f"Default PANEL dict is missing keys that PANEL_PRESETS expects: "
+        f"{_missing_in_default}. Keep them in sync."
+    )
+
+if not (-90.0 <= LOCATION["latitude"] <= 90.0):
+    raise RuntimeError(
+        f"LOCATION['latitude'] = {LOCATION['latitude']} is out of range "
+        f"[-90, 90]. pvlib will reject it."
+    )
+if not (-180.0 <= LOCATION["longitude"] <= 180.0):
+    raise RuntimeError(
+        f"LOCATION['longitude'] = {LOCATION['longitude']} is out of range "
+        f"[-180, 180]. pvlib will reject it."
+    )
+
+if POSTS["count"] % 2 != 0:
+    raise RuntimeError(
+        f"POSTS['count'] = {POSTS['count']} is odd. The wind calc assumes "
+        f"a symmetric 2- or 4-post layout; an odd count breaks the "
+        f"'leeward pair is fully shielded' assumption."
+    )
+
+if PANEL["L_in"] > MAX_PLANTER_L_IN + 1.0:
+    raise RuntimeError(
+        f"Default PANEL['L_in'] = {PANEL['L_in']}\" exceeds the max "
+        f"({MAX_PLANTER_L_IN}\" + 1\" overhang). The default should be the "
+        f"largest preset; check PANEL_PRESETS."
+    )

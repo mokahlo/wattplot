@@ -63,7 +63,7 @@ Two different things, two different audiences.
 My ask: are you comfortable with coexistence? Specifically, I'd
 continue using "Wattplot" for the open-source hardware project at
 github.com/mokahlo/wattplot and on the documentation site
-mokahlo.github.io/wattplot/, clearly identifying it as an independent
+wattplot.org/, clearly identifying it as an independent
 open-source effort. I'd keep the WattPlot name out of any monitoring or
 SaaS context where you operate.
 

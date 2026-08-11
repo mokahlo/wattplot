@@ -1,6 +1,6 @@
 # Wattplot - Concept Brief
 
-**Give an old solar panel a second life.**
+**One bed. Two harvests.**
 
 A DIY, open-source 4×8 ft planter whose canopy is a working solar panel.
 The same square foot grows tomatoes *and* generates electricity — not
