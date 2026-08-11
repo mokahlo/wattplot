@@ -6,7 +6,7 @@ hypothesis==6.156.1
 matplotlib-inline==0.2.1
 matplotlib==3.10.7
 numpy==2.3.4
-paho-mqtt==1.6.1
+paho-mqtt==2.1.0
 pandas==2.3.3
 pillow==12.3.0
 pvlib==0.15.2

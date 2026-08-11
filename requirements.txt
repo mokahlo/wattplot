@@ -10,7 +10,7 @@ shapely>=2.0
 scipy>=1.10
 
 # v2.5: MQTT log subscriber (tools/log_subscriber.py)
-paho-mqtt>=2.0
+paho-mqtt>=2.1.0
 
 # Optional: 3D model + exports + visualizations
 # cadquery>=2.4
