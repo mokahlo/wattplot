@@ -6,7 +6,7 @@
 # the test suite (`pytest firmware/tests/`) and the linter.
 
 pytest>=8.0
-ruff>=0.6          # lint (CI pins its own version)
+ruff>=0.16.2          # lint (CI pins its own version)
 
 # Optional: ESPHome itself. The firmware tests that compile/validate the
 # YAML are skipped (via the `requires_esphome` marker in conftest.py) when
