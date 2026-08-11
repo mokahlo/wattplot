@@ -2415,6 +2415,181 @@
     "body": "### 9.4 End-to-end test 1. Open Home Assistant. Verify all sensors reporting. 2. Trigger a manual tilt from HA. Verify panel moves. 3. Press the user-override button. Verify it overrides the decision stack. 4. Leave it running for 24 hours. Check logs for any errors. --- Total time: ~7.9 hr (with pre-cut lumber and a clean workspace). Total cost: see for an itemized estimate. Next: see for per-component and per-system tests."
   },
   {
+    "title": "Cloudflare API Reference",
+    "url": "/cloudflare.html",
+    "excerpt": "# Cloudflare API Reference",
+    "section": "(top)",
+    "body": "# Cloudflare API Reference"
+  },
+  {
+    "title": "Overview",
+    "url": "/cloudflare.html",
+    "excerpt": "## Overview Wattplot uses Cloudflare for DNS, Cloudflare Tunnel (zero-trust access), and Cloudflare Access (auth policies). All automation uses the Cloudflare API v4 with API tokens (not Global API...",
+    "section": "Cloudflare API Reference",
+    "body": "## Overview Wattplot uses Cloudflare for DNS, Cloudflare Tunnel (zero-trust access), and Cloudflare Access (auth policies). All automation uses the Cloudflare API v4 with API tokens (not Global API Keys). - Base URL: - Auth: - Account ID: ---"
+  },
+  {
+    "title": "API Token Setup",
+    "url": "/cloudflare.html",
+    "excerpt": "## API Token Setup",
+    "section": "Cloudflare API Reference",
+    "body": "## API Token Setup"
+  },
+  {
+    "title": "Minimum Required Permissions (for Wattplot migration)",
+    "url": "/cloudflare.html",
+    "excerpt": "### Minimum Required Permissions (for Wattplot migration) | Permission | Type | Resource | |---|---|---| | | Zone | All zones | | | Zone | | | | Account | | | | Account | | > Token must be a User API...",
+    "section": "API Token Setup",
+    "body": "### Minimum Required Permissions (for Wattplot migration) | Permission | Type | Resource | |---|---|---| | | Zone | All zones | | | Zone | | | | Account | | | | Account | | > Token must be a User API Token (My Profile \u2192 API Tokens \u2192 Create Token \u2192 Custom Template). > Account-level tokens (Manage Account \u2192 API Tokens) do not work for zone creation."
+  },
+  {
+    "title": "Token Verification",
+    "url": "/cloudflare.html",
+    "excerpt": "### Token Verification Success response: Error \u2192 token is invalid or expired. Delete and recreate. ---",
+    "section": "API Token Setup",
+    "body": "### Token Verification Success response: Error \u2192 token is invalid or expired. Delete and recreate. ---"
+  },
+  {
+    "title": "Zones",
+    "url": "/cloudflare.html",
+    "excerpt": "## Zones",
+    "section": "Cloudflare API Reference",
+    "body": "## Zones"
+  },
+  {
+    "title": "Create Zone",
+    "url": "/cloudflare.html",
+    "excerpt": "### Create Zone Creates a zone (domain) in Cloudflare. Required permission: (Account or User level).",
+    "section": "Zones",
+    "body": "### Create Zone Creates a zone (domain) in Cloudflare. Required permission: (Account or User level)."
+  },
+  {
+    "title": "List Zones",
+    "url": "/cloudflare.html",
+    "excerpt": "### List Zones",
+    "section": "Zones",
+    "body": "### List Zones"
+  },
+  {
+    "title": "Delete Zone",
+    "url": "/cloudflare.html",
+    "excerpt": "### Delete Zone Required permission: . ---",
+    "section": "Zones",
+    "body": "### Delete Zone Required permission: . ---"
+  },
+  {
+    "title": "DNS Records",
+    "url": "/cloudflare.html",
+    "excerpt": "## DNS Records",
+    "section": "Cloudflare API Reference",
+    "body": "## DNS Records"
+  },
+  {
+    "title": "Create DNS Record",
+    "url": "/cloudflare.html",
+    "excerpt": "### Create DNS Record Common Wattplot records: GitHub Pages IPs (apex A records): - - - -",
+    "section": "DNS Records",
+    "body": "### Create DNS Record Common Wattplot records: GitHub Pages IPs (apex A records): - - - -"
+  },
+  {
+    "title": "Delete DNS Record",
+    "url": "/cloudflare.html",
+    "excerpt": "### Delete DNS Record ---",
+    "section": "DNS Records",
+    "body": "### Delete DNS Record ---"
+  },
+  {
+    "title": "Cloudflare Tunnel (Zero Trust)",
+    "url": "/cloudflare.html",
+    "excerpt": "## Cloudflare Tunnel (Zero Trust)",
+    "section": "Cloudflare API Reference",
+    "body": "## Cloudflare Tunnel (Zero Trust)"
+  },
+  {
+    "title": "Tunnel IDs (Wattplot)",
+    "url": "/cloudflare.html",
+    "excerpt": "### Tunnel IDs (Wattplot) - \u2014 - Credentials:",
+    "section": "Cloudflare Tunnel (Zero Trust)",
+    "body": "### Tunnel IDs (Wattplot) - \u2014 - Credentials:"
+  },
+  {
+    "title": "Get Tunnel Config",
+    "url": "/cloudflare.html",
+    "excerpt": "### Get Tunnel Config",
+    "section": "Cloudflare Tunnel (Zero Trust)",
+    "body": "### Get Tunnel Config"
+  },
+  {
+    "title": "Update Tunnel Config (add ingress hostnames)",
+    "url": "/cloudflare.html",
+    "excerpt": "### Update Tunnel Config (add ingress hostnames) > Note: GET the current config first, merge the new ingress rule (at position 0, before the catchall), then PUT the full updated config. > > The DNS...",
+    "section": "Cloudflare Tunnel (Zero Trust)",
+    "body": "### Update Tunnel Config (add ingress hostnames) > Note: GET the current config first, merge the new ingress rule (at position 0, before the catchall), then PUT the full updated config. > > The DNS CNAME for must exist before the tunnel will route it."
+  },
+  {
+    "title": "Tunnel DNS CNAME Format",
+    "url": "/cloudflare.html",
+    "excerpt": "### Tunnel DNS CNAME Format e.g. ---",
+    "section": "Cloudflare Tunnel (Zero Trust)",
+    "body": "### Tunnel DNS CNAME Format e.g. ---"
+  },
+  {
+    "title": "Cloudflare Access Policies",
+    "url": "/cloudflare.html",
+    "excerpt": "## Cloudflare Access Policies",
+    "section": "Cloudflare API Reference",
+    "body": "## Cloudflare Access Policies"
+  },
+  {
+    "title": "Reusable Policies (Account-level)",
+    "url": "/cloudflare.html",
+    "excerpt": "### Reusable Policies (Account-level)",
+    "section": "Cloudflare Access Policies",
+    "body": "### Reusable Policies (Account-level)"
+  },
+  {
+    "title": "Application Policies (Zone-level)",
+    "url": "/cloudflare.html",
+    "excerpt": "### Application Policies (Zone-level)",
+    "section": "Cloudflare Access Policies",
+    "body": "### Application Policies (Zone-level)"
+  },
+  {
+    "title": "Policy Schema (Create / POST)",
+    "url": "/cloudflare.html",
+    "excerpt": "### Policy Schema (Create / POST) For path bypass policies:",
+    "section": "Cloudflare Access Policies",
+    "body": "### Policy Schema (Create / POST) For path bypass policies:"
+  },
+  {
+    "title": "Get Access Application ID",
+    "url": "/cloudflare.html",
+    "excerpt": "### Get Access Application ID ---",
+    "section": "Cloudflare Access Policies",
+    "body": "### Get Access Application ID ---"
+  },
+  {
+    "title": "GitHub Pages DNS (relevant only)",
+    "url": "/cloudflare.html",
+    "excerpt": "## GitHub Pages DNS (relevant only) GitHub Pages requires apex A records (not CNAME) for the apex domain to work with SSL. A records must point to one of: These must be unproxied ( ) so GitHub can...",
+    "section": "Cloudflare API Reference",
+    "body": "## GitHub Pages DNS (relevant only) GitHub Pages requires apex A records (not CNAME) for the apex domain to work with SSL. A records must point to one of: These must be unproxied ( ) so GitHub can validate the domain. ---"
+  },
+  {
+    "title": "phxtraffic.com Zone (kill target)",
+    "url": "/cloudflare.html",
+    "excerpt": "## phxtraffic.com Zone (kill target) The zone will be deleted \u2014 no redirect, no parking. All DNS records removed. This is a one-way operation. The domain will go dark unless re-created. ---",
+    "section": "Cloudflare API Reference",
+    "body": "## phxtraffic.com Zone (kill target) The zone will be deleted \u2014 no redirect, no parking. All DNS records removed. This is a one-way operation. The domain will go dark unless re-created. ---"
+  },
+  {
+    "title": "Reference: Token Permissions Needed",
+    "url": "/cloudflare.html",
+    "excerpt": "## Reference: Token Permissions Needed | Operation | Permission | Resource | |---|---|---| | Create zone | | User or Account | | List zones | | Account | | Delete zone | | Zone | | Create DNS record...",
+    "section": "Cloudflare API Reference",
+    "body": "## Reference: Token Permissions Needed | Operation | Permission | Resource | |---|---|---| | Create zone | | User or Account | | List zones | | Account | | Delete zone | | Zone | | Create DNS record | | Zone | | List DNS records | | Zone | | Delete DNS record | | Zone | | Get tunnel config | | Account | | Update tunnel config | | Account | | List Access policies | | Account | | Create Access policy | | Account | | Delete Access policy | | Account | Source:"
+  },
+  {
     "title": "Wattplot v2 \u2014 Control Law",
     "url": "/control_law.html",
     "excerpt": "# Wattplot v2 \u2014 Control Law > ASPIRATIONAL \u2014 the 10-priority decision stack described in this doc > is not all implemented in firmware. The current implementation > ( v3.2) runs only the wind-safety...",
@@ -3143,6 +3318,321 @@
     "body": "## When you don't know > \"Good question, let me look that up tonight and post the answer in > the repo discussion. The repo's on the card, drop me a line.\" Then actually do it. This is how open-source projects get good documentation. Every \"I don't know\" at the faire is a free contribution to the docs."
   },
   {
+    "title": "Frost Protection",
+    "url": "/frost_protection.html",
+    "excerpt": "# Frost Protection Wattplot v3.3 adds a frost-prevention feature that drives either a resistive heating mat or a USB grow light (or both) when soil and/or canopy air temperature drops below a...",
+    "section": "(top)",
+    "body": "# Frost Protection Wattplot v3.3 adds a frost-prevention feature that drives either a resistive heating mat or a USB grow light (or both) when soil and/or canopy air temperature drops below a user-set threshold. The feature is opt-in: by default the select is set to and nothing happens. The user picks what to wire up and how to control it."
+  },
+  {
+    "title": "What it does",
+    "url": "/frost_protection.html",
+    "excerpt": "## What it does Every 60 seconds the interval in : 1. Reads and (DS18B20 1-Wire sensors). 2. Reads (LiFePO4 voltage lookup). 3. Checks : - \u2192 both switches forced off, no automation. - \u2192 only the...",
+    "section": "Frost Protection",
+    "body": "## What it does Every 60 seconds the interval in : 1. Reads and (DS18B20 1-Wire sensors). 2. Reads (LiFePO4 voltage lookup). 3. Checks : - \u2192 both switches forced off, no automation. - \u2192 only the heater relay responds to the temp logic. - \u2192 only the grow light relay responds. - \u2192 both respond, independently. 4. For each enabled output, applies: | State | Condition | |---|---| | ON | OR | | OFF | AND | | hold | anything in the deadband (between threshold and warmabove) | 5. Applies a watchdog that force-off after (default 30 min) \u2014 catches a stuck relay before it can drain the pack overnight. 6. Applies a battery floor: if SOC drops below (default 50%), force off. We'd rather lose a few plants than brick the LiFePO4 pack. 7. Applies a sensor-error latch**: if BOTH temperatures are NaN at the same tick, the tick disables both switches and reports in the text sensor. The latch clears on the next tick that has at least one valid reading."
+  },
+  {
+    "title": "Hysteresis",
+    "url": "/frost_protection.html",
+    "excerpt": "## Hysteresis The two thresholds and the parameter form a deadband: The relay turns ON when either sensor drops below its threshold. It turns OFF only when both sensors are above . This deadband...",
+    "section": "Frost Protection",
+    "body": "## Hysteresis The two thresholds and the parameter form a deadband: The relay turns ON when either sensor drops below its threshold. It turns OFF only when both sensors are above . This deadband prevents relay chatter at the threshold edge \u2014 without it, a sensor reading right at 4.000\u00b0C would oscillate every tick. The deadband is asymmetric (4\u00b0C threshold, 6\u00b0C warm_above) so the load has hysteresis even on slow temperature trends."
+  },
+  {
+    "title": "Forecast preheat (NWS)",
+    "url": "/frost_protection.html",
+    "excerpt": "## Forecast preheat (NWS) The script runs every 15 min and pulls the NWS forecast for the wattplot's gridpoint (Phoenix PSR/153,87). The frost tick consumes the forecast and engages the load before...",
+    "section": "Frost Protection",
+    "body": "## Forecast preheat (NWS) The script runs every 15 min and pulls the NWS forecast for the wattplot's gridpoint (Phoenix PSR/153,87). The frost tick consumes the forecast and engages the load before the sensors say cold \u2014 saves the heater's first hour of warmup."
+  },
+  {
+    "title": "How it works",
+    "url": "/frost_protection.html",
+    "excerpt": "### How it works Every 60 s, the tick computes: If is true: - Engage: turn ON the load, even if current sensors are warm. - Hold: keep the load ON overnight, even when the afternoon hysteresis arm...",
+    "section": "Forecast preheat (NWS)",
+    "body": "### How it works Every 60 s, the tick computes: If is true: - Engage: turn ON the load, even if current sensors are warm. - Hold: keep the load ON overnight, even when the afternoon hysteresis arm would release. The forecast committed us to a cold night, so we don't release just because it's 7\u00b0C at 6 pm. - Subject to: Mode select (off when ), battery floor, watchdog. Forecast does NOT bypass the battery floor \u2014 a wrong forecast shouldn't kill the pack."
+  },
+  {
+    "title": "Why the hysteresis arm is suppressed",
+    "url": "/frost_protection.html",
+    "excerpt": "### Why the hysteresis arm is suppressed A typical scenario: it's 6 pm, the soil is 7\u00b0C (above ), and the forecast says 0\u00b0C tonight. Without the forecast arm, the hysteresis would release the heater...",
+    "section": "Forecast preheat (NWS)",
+    "body": "### Why the hysteresis arm is suppressed A typical scenario: it's 6 pm, the soil is 7\u00b0C (above ), and the forecast says 0\u00b0C tonight. Without the forecast arm, the hysteresis would release the heater (both temps > 6\u00b0C). Then when temps drop to 4\u00b0C at 1 am, the sensor arm engages, but the heater takes 30+ minutes to warm up the bed. Plants are already cold by then. With the forecast arm, the heater stays on from 6 pm through morning, holding the bed at a warmer temperature. The preheat is the entire point of consuming the forecast."
+  },
+  {
+    "title": "Stale-forecast handling",
+    "url": "/frost_protection.html",
+    "excerpt": "### Stale-forecast handling NWS updates forecasts roughly every 6 hours. A poll that's older than 4 hours is considered stale and ignored. This prevents the preheat from running on day-old data (the...",
+    "section": "Forecast preheat (NWS)",
+    "body": "### Stale-forecast handling NWS updates forecasts roughly every 6 hours. A poll that's older than 4 hours is considered stale and ignored. This prevents the preheat from running on day-old data (the forecast was for yesterday's overnight, not tonight's). A failing NWS poll leaves the previous forecast value intact (rather than clearing it). Better to act on stale data than on no data."
+  },
+  {
+    "title": "Sensors broken? Forecast still works.",
+    "url": "/frost_protection.html",
+    "excerpt": "### Sensors broken? Forecast still works. If both DS18B20s return NaN, the sensor-error path normally force-off. But if the forecast is preheating, the tick drives the load on the forecast alone. The...",
+    "section": "Forecast preheat (NWS)",
+    "body": "### Sensors broken? Forecast still works. If both DS18B20s return NaN, the sensor-error path normally force-off. But if the forecast is preheating, the tick drives the load on the forecast alone. The weather outside doesn't care about our wiring \u2014 and the user is more likely to be troubleshooting the sensors in the morning than in a cold snap, so the forecast keeps things running until they can fix the sensor."
+  },
+  {
+    "title": "Disable forecast preheat",
+    "url": "/frost_protection.html",
+    "excerpt": "### Disable forecast preheat Set to -100. The comparison is then always false, and the preheat arm never fires. The tick falls back to sensor-only logic.",
+    "section": "Forecast preheat (NWS)",
+    "body": "### Disable forecast preheat Set to -100. The comparison is then always false, and the preheat arm never fires. The tick falls back to sensor-only logic."
+  },
+  {
+    "title": "Two watchdog limits",
+    "url": "/frost_protection.html",
+    "excerpt": "## Two watchdog limits The frost protection has TWO watchdog limits, one per arm: | Knob | Default | Used when | |---|---|---| | | 30 | Sensor arm (sensors say cold) | | | 480 | Forecast arm (NWS...",
+    "section": "Frost Protection",
+    "body": "## Two watchdog limits The frost protection has TWO watchdog limits, one per arm: | Knob | Default | Used when | |---|---|---| | | 30 | Sensor arm (sensors say cold) | | | 480 | Forecast arm (NWS says cold) | The tick picks the right one based on which arm is keeping the load on:"
+  },
+  {
+    "title": "Why two limits?",
+    "url": "/frost_protection.html",
+    "excerpt": "### Why two limits? The sensor arm limit (30 min) is the safety net for a stuck relay during an active cold snap. A 30 W heater at 12 V pulls 2.5 A; a 10 Ah LiFePO4 pack dies in 4 hours if the relay...",
+    "section": "Two watchdog limits",
+    "body": "### Why two limits? The sensor arm limit (30 min) is the safety net for a stuck relay during an active cold snap. A 30 W heater at 12 V pulls 2.5 A; a 10 Ah LiFePO4 pack dies in 4 hours if the relay is stuck. The 30 min cap means a stuck relay costs at most 0.8 Ah before the watchdog trips \u2014 leaves plenty of margin for a real fault. The forecast arm limit (8 h) is for overnight preheat. The whole point of preheat is to run the heater for the whole cold night, not for 30 minutes. With a 30 min cap, the preheat would trip at 6:30 am and the bed would freeze by 7. With an 8 h cap, the preheat can run from 6 pm to 2 am \u2014 when the sun starts to warm the bed again."
+  },
+  {
+    "title": "When the limit flips",
+    "url": "/frost_protection.html",
+    "excerpt": "### When the limit flips - Forecast is cold (preheat): uses the preheat cap (8h). The overnight preheat can run uninterrupted. - Forecast clears (morning): switches to the sensor cap (30 min) for any...",
+    "section": "Two watchdog limits",
+    "body": "### When the limit flips - Forecast is cold (preheat): uses the preheat cap (8h). The overnight preheat can run uninterrupted. - Forecast clears (morning): switches to the sensor cap (30 min) for any subsequent heating. The hysteresis should release the load when temps recover, so the watchdog rarely fires in this path. - Sensor says cold, forecast also says cold: the load is on; the tick uses the LARGER cap (preheat = 8h). This keeps the load on overnight even though the sensor arm was the trigger."
+  },
+  {
+    "title": "Power budget at the limits",
+    "url": "/frost_protection.html",
+    "excerpt": "### Power budget at the limits For the wattplot mini (10 W panel, 12 V 10 Ah LiFePO4 pack): | Load | Power | 8h runtime | Pack drain | |---|---|---|---| | 30 W heating mat | 30 W | 240 Wh | 200% of...",
+    "section": "Two watchdog limits",
+    "body": "### Power budget at the limits For the wattplot mini (10 W panel, 12 V 10 Ah LiFePO4 pack): | Load | Power | 8h runtime | Pack drain | |---|---|---|---| | 30 W heating mat | 30 W | 240 Wh | 200% of pack \u2014 pack dies | | 10 W USB grow light | 10 W | 80 Wh | 67% of pack \u2014 pack survives | | 5 W LED panel | 5 W | 40 Wh | 33% of pack \u2014 pack comfortable | A 30 W heater at the default 8 h preheat will deplete the battery. For overnight preheat, use a 5-10 W load (USB grow light or low-power LED panel), not a 30 W mat. The battery floor ( , default 50%) trips first for a heater that draws more than the pack can supply overnight. For the full-size build (larger battery, 620 W panel), the battery floor and the watchdog are both fine. The 30 W mat can run a full night if the pack is sized accordingly."
+  },
+  {
+    "title": "Hardware",
+    "url": "/frost_protection.html",
+    "excerpt": "## Hardware The firmware does NOT include the relay or the load. The ESP32 just drives a logic-level GPIO; you wire your own relay.",
+    "section": "Frost Protection",
+    "body": "## Hardware The firmware does NOT include the relay or the load. The ESP32 just drives a logic-level GPIO; you wire your own relay."
+  },
+  {
+    "title": "Pin assignments",
+    "url": "/frost_protection.html",
+    "excerpt": "### Pin assignments | GPIO | Output ID | Switch | Use | |---|---|---|---| | 39 | | | Heater relay (default) | | 40 | | | Grow light relay | Both are pulled LOW by default. Drive HIGH to energize the...",
+    "section": "Hardware",
+    "body": "### Pin assignments | GPIO | Output ID | Switch | Use | |---|---|---|---| | 39 | | | Heater relay (default) | | 40 | | | Grow light relay | Both are pulled LOW by default. Drive HIGH to energize the load through your external relay."
+  },
+  {
+    "title": "Wiring the heater (12V resistive mat)",
+    "url": "/frost_protection.html",
+    "excerpt": "### Wiring the heater (12V resistive mat) A 30W heating mat at 12V draws ~2.5A. The wattplot's Sunapex 10A MPPT has plenty of headroom, but the relay MUST switch the 12V load, not the GPIO....",
+    "section": "Hardware",
+    "body": "### Wiring the heater (12V resistive mat) A 30W heating mat at 12V draws ~2.5A. The wattplot's Sunapex 10A MPPT has plenty of headroom, but the relay MUST switch the 12V load, not the GPIO. Recommended: - Logic-level N-MOSFET (e.g. AO3401A, IRLZ44N) on a small perfboard. Source to GND, drain to relay coil (or directly to the low side of a resistive load if you skip the relay). Gate to GPIO39 via a 100\u03a9 gate resistor. - Or a 12V automotive relay module (the kind with a screw terminal block, ~$3). Drive the relay coil from GPIO39 through a 1k\u03a9 base resistor if the module's input is BJT-based, or direct if it's MOSFET-based. The relay's switched contact handles the heating mat. The heating mat goes in the bed on top of the soil, covered by mulch. The soil-temperature sensor sits in the soil at 5 cm depth within ~30 cm of the mat so the control loop is closed on the temperature the mat is actually warming."
+  },
+  {
+    "title": "Wiring the USB grow light (5V)",
+    "url": "/frost_protection.html",
+    "excerpt": "### Wiring the USB grow light (5V) The wattplot's PCB already carries 5V (the MP1584EN buck output). Tap that rail through a low-side N-MOSFET to a USB-A jack, or use a 5V relay module. Most USB grow...",
+    "section": "Hardware",
+    "body": "### Wiring the USB grow light (5V) The wattplot's PCB already carries 5V (the MP1584EN buck output). Tap that rail through a low-side N-MOSFET to a USB-A jack, or use a 5V relay module. Most USB grow light panels draw 0.5-2A at 5V (2.5-10W) and provide a few degrees of radiant heat. For a 12V grow light panel (more common, brighter, more heat): drive a 12V relay from GPIO40 the same way as the heater."
+  },
+  {
+    "title": "Power budget",
+    "url": "/frost_protection.html",
+    "excerpt": "### Power budget | Load | Voltage | Current | Wattage | |---|---|---|---| | 30W heating mat | 12V | 2.5A | 30W | | 10W USB grow light | 5V | 2A | 10W | | Both (worst case) | mixed | mixed | 40W | At...",
+    "section": "Hardware",
+    "body": "### Power budget | Load | Voltage | Current | Wattage | |---|---|---|---| | 30W heating mat | 12V | 2.5A | 30W | | 10W USB grow light | 5V | 2A | 10W | | Both (worst case) | mixed | mixed | 40W | At 40W the LiFePO4 pack (10Ah \u00d7 12V = 120Wh) lasts ~3 hours. The default 30-min watchdog will trip first \u2014 that's the point. A cold snap that lasts 4 hours will see two watchdog cycles."
+  },
+  {
+    "title": "Sensors required",
+    "url": "/frost_protection.html",
+    "excerpt": "## Sensors required - (DS18B20, 5cm depth, waterproof) \u2014 required - (DS18B20, in plant canopy) \u2014 recommended; without it, only the soil sensor drives the decision. The sensor has placeholder address...",
+    "section": "Frost Protection",
+    "body": "## Sensors required - (DS18B20, 5cm depth, waterproof) \u2014 required - (DS18B20, in plant canopy) \u2014 recommended; without it, only the soil sensor drives the decision. The sensor has placeholder address in \u2014 wire the third probe and replace the address with the real ROM ID from the bus scan log. If only one of the two sensors is wired, the tick uses whichever one is valid. The behavior is symmetric \u2014 the same NaN guard that handles a wiring fault also handles a single-sensor build."
+  },
+  {
+    "title": "Tunable parameters",
+    "url": "/frost_protection.html",
+    "excerpt": "## Tunable parameters All five are entities in Home Assistant. The defaults are tuned for Phoenix, AZ (USDA zone 9b, design temp 25\u00b0F / -4\u00b0C). Tighter for spring transplants, looser for mature fall...",
+    "section": "Frost Protection",
+    "body": "## Tunable parameters All five are entities in Home Assistant. The defaults are tuned for Phoenix, AZ (USDA zone 9b, design temp 25\u00b0F / -4\u00b0C). Tighter for spring transplants, looser for mature fall plants. | Parameter | Default | Range | What it controls | |---|---|---|---| | | 4.0 | -5 to 10 | Below this \u2192 turn ON | | | 2.0 | -5 to 10 | Below this \u2192 turn ON | | | 6.0 | 0 to 15 | Above this (both) \u2192 turn OFF | | | 30 | 5 to 240 | Watchdog (sensor arm) | | | 480 | 30 to 1440 | Watchdog (forecast arm) | | | 50 | 10 to 80 | Force off below this | | | 2.0 | -20 to 10 | NWS forecast preheat trigger |"
+  },
+  {
+    "title": "Frost State text sensor",
+    "url": "/frost_protection.html",
+    "excerpt": "## Frost State text sensor is a 5-second-updated text sensor that surfaces the most recent decision. Values: | Value | Meaning | |---|---| | | is , automation is disabled | | | Mode is enabled but...",
+    "section": "Frost Protection",
+    "body": "## Frost State text sensor is a 5-second-updated text sensor that surfaces the most recent decision. Values: | Value | Meaning | |---|---| | | is , automation is disabled | | | Mode is enabled but temps are above threshold | | | Heater relay is energized | | | Grow light relay is energized | | | Both relays are energized | | | SOC below floor; both forced off | | | Both temps NaN; latched until a sensor recovers |"
+  },
+  {
+    "title": "Logging",
+    "url": "/frost_protection.html",
+    "excerpt": "## Logging The frost tick logs every state change at INFO level under the tag. Watchdog trips log at WARN. Sensor errors log at ERROR (once per latch, not once per tick). To see these in the HA log,...",
+    "section": "Frost Protection",
+    "body": "## Logging The frost tick logs every state change at INFO level under the tag. Watchdog trips log at WARN. Sensor errors log at ERROR (once per latch, not once per tick). To see these in the HA log, make sure the config is in place \u2014 the local log subscriber at writes them to ."
+  },
+  {
+    "title": "Manual control",
+    "url": "/frost_protection.html",
+    "excerpt": "## Manual control Set to and the two switches ( , ) become purely manual \u2014 they can be toggled from HA and the tick will leave them alone. Useful for: - Testing the wiring before trusting automation...",
+    "section": "Frost Protection",
+    "body": "## Manual control Set to and the two switches ( , ) become purely manual \u2014 they can be toggled from HA and the tick will leave them alone. Useful for: - Testing the wiring before trusting automation - Running the heater outside the frost logic (e.g. to dry out the bed after a long rain) - Forcing the lights on during a heat wave (some growers shade with reflective material under the lights)"
+  },
+  {
+    "title": "Limitations",
+    "url": "/frost_protection.html",
+    "excerpt": "## Limitations - NWS forecast errors cost the battery. The forecast is sometimes wrong. If NWS says -5\u00b0C and the actual low is +2\u00b0C, the heater runs for hours for nothing. The watchdog (default 480...",
+    "section": "Frost Protection",
+    "body": "## Limitations - NWS forecast errors cost the battery. The forecast is sometimes wrong. If NWS says -5\u00b0C and the actual low is +2\u00b0C, the heater runs for hours for nothing. The watchdog (default 480 min = 8h) caps the damage. For full overnight coverage, use a low-wattage load (5-10 W LED panel) \u2014 see the power budget table above. - No flat-panel-on-frost optimization. At 35\u00b0 tilt the panel shades most of the bed, which slows solar heating the next morning. The frost tick doesn't change tilt; the user can drop to 0\u00b0 manually if they want the bed to catch morning sun sooner. - Soil moisture is not a guard. The tick will run the heater even if the soil is bone-dry, which is fine (the frost protection takes priority) but the user should still run the irrigation automation. They're independent."
+  },
+  {
+    "title": "Tests",
+    "url": "/frost_protection.html",
+    "excerpt": "## Tests ports the C++ lambda to Python and pins the behavior with 50 tests: - Mode select (Off / Heater / Grow Light / Both) - Threshold + hysteresis logic - Forecast preheat (engages, holds against...",
+    "section": "Frost Protection",
+    "body": "## Tests ports the C++ lambda to Python and pins the behavior with 50 tests: - Mode select (Off / Heater / Grow Light / Both) - Threshold + hysteresis logic - Forecast preheat (engages, holds against hysteresis, ignores stale forecasts, respects battery floor and mode gating, drives load with sensors broken, subjected to watchdog) - NaN guards (single + both sensors) - Battery floor (low SOC, NaN SOC, at-floor) - Watchdog (under, at, over, per-output independence) - End-to-end overnight cycle, cold snap with sensor dropout, battery-during-event ports the C++ JSON parser in the script and pins the behavior with 15 tests: - Wind speed extraction (basic, range, max across periods, missing field) - Rain forecast detection (Rain, Showers, no rain, partial match quirk) - Min temp extraction (first overnight, subsequent ignored, no overnight in 12 periods, missing isDaytime quirk) Run with: The wattplot.yaml is the source of truth \u2014 if you change the C++ in the lambda or script, update the Python port and add a test for the new behavior."
+  },
+  {
+    "title": "Wiring up the canopy sensor (third DS18B20)",
+    "url": "/frost_protection.html",
+    "excerpt": "## Wiring up the canopy sensor (third DS18B20) The 1-Wire bus on GPIO16 currently has 2 sensors (panel back, soil). To add a third: 1. Wire the canopy probe to the same bus (parallel with the other...",
+    "section": "Frost Protection",
+    "body": "## Wiring up the canopy sensor (third DS18B20) The 1-Wire bus on GPIO16 currently has 2 sensors (panel back, soil). To add a third: 1. Wire the canopy probe to the same bus (parallel with the other two, single 4.7k\u03a9 pull-up stays in place). 2. Power up the wattplot and watch the boot log: 3. Copy the third address into : 4. The placeholder will read as if the address is wrong \u2014 easy to spot in HA."
+  },
+  {
+    "title": "GitHub API Reference",
+    "url": "/github.html",
+    "excerpt": "# GitHub API Reference",
+    "section": "(top)",
+    "body": "# GitHub API Reference"
+  },
+  {
+    "title": "Overview",
+    "url": "/github.html",
+    "excerpt": "## Overview Wattplot uses GitHub Pages (hosted from \u2192 branch). All automation uses the GitHub REST API v3. - Base URL: - Auth: (fine-grain or token) - Accept header: - API Version: Repo: Token scopes...",
+    "section": "GitHub API Reference",
+    "body": "## Overview Wattplot uses GitHub Pages (hosted from \u2192 branch). All automation uses the GitHub REST API v3. - Base URL: - Auth: (fine-grain or token) - Accept header: - API Version: Repo: Token scopes needed: (full) or + + + ---"
+  },
+  {
+    "title": "Repositories",
+    "url": "/github.html",
+    "excerpt": "## Repositories",
+    "section": "GitHub API Reference",
+    "body": "## Repositories"
+  },
+  {
+    "title": "Get repository details",
+    "url": "/github.html",
+    "excerpt": "### Get repository details Returns permissions, visibility, etc.",
+    "section": "Repositories",
+    "body": "### Get repository details Returns permissions, visibility, etc."
+  },
+  {
+    "title": "Check authenticated user's permissions on a repo",
+    "url": "/github.html",
+    "excerpt": "### Check authenticated user's permissions on a repo ---",
+    "section": "Repositories",
+    "body": "### Check authenticated user's permissions on a repo ---"
+  },
+  {
+    "title": "GitHub Pages",
+    "url": "/github.html",
+    "excerpt": "## GitHub Pages",
+    "section": "GitHub API Reference",
+    "body": "## GitHub Pages"
+  },
+  {
+    "title": "Get Pages site info",
+    "url": "/github.html",
+    "excerpt": "### Get Pages site info Returns: , , , , , , Example response:",
+    "section": "GitHub Pages",
+    "body": "### Get Pages site info Returns: , , , , , , Example response:"
+  },
+  {
+    "title": "Update Pages site \u2014 SET CUSTOM DOMAIN (primary operation)",
+    "url": "/github.html",
+    "excerpt": "### Update Pages site \u2014 SET CUSTOM DOMAIN (primary operation) Critical notes: - Uses (not or ) - The field is required \u2014 even when just updating the domain, you must include the existing source...",
+    "section": "GitHub Pages",
+    "body": "### Update Pages site \u2014 SET CUSTOM DOMAIN (primary operation) Critical notes: - Uses (not or ) - The field is required \u2014 even when just updating the domain, you must include the existing source config - For apex domains: GitHub verifies DNS automatically once A records are live. HTTPS is enforced separately. Request body: Or just update the domain without touching source: Common errors: - \u2014 endpoint wrong (use , not ) - \u2014 Pages already exists, need to update (this is the wrong error; for PUT should return 204) - \u2014 domain not yet verified by GitHub (DNS not propagated, or A records missing) - \u2014 \u2014 user/org plan doesn't support custom domains (free repos do support custom domains)"
+  },
+  {
+    "title": "Remove custom domain",
+    "url": "/github.html",
+    "excerpt": "### Remove custom domain ---",
+    "section": "GitHub Pages",
+    "body": "### Remove custom domain ---"
+  },
+  {
+    "title": "CNAME File (alternative / complement to API)",
+    "url": "/github.html",
+    "excerpt": "## CNAME File (alternative / complement to API) GitHub Pages for branch-based sites also reads a file in the repo root (or source root). This is the primary mechanism for setting the custom domain...",
+    "section": "GitHub API Reference",
+    "body": "## CNAME File (alternative / complement to API) GitHub Pages for branch-based sites also reads a file in the repo root (or source root). This is the primary mechanism for setting the custom domain for branch-based sources \u2014 GitHub creates it automatically when you save the domain in the UI. For , the source is , so the CNAME file must be at (not repo root). Note: A CNAME file alone is sufficient \u2014 GitHub reads it on every build and configures the domain automatically. The API call above also sets this, but writing the file directly and committing it achieves the same thing and is often more reliable. ---"
+  },
+  {
+    "title": "DNS Verification for GitHub Pages",
+    "url": "/github.html",
+    "excerpt": "## DNS Verification for GitHub Pages For an apex domain ( ) to work with GitHub Pages: 1. Set A records at your DNS provider (Cloudflare) pointing to GitHub's IPs 2. GitHub automatically verifies the...",
+    "section": "GitHub API Reference",
+    "body": "## DNS Verification for GitHub Pages For an apex domain ( ) to work with GitHub Pages: 1. Set A records at your DNS provider (Cloudflare) pointing to GitHub's IPs 2. GitHub automatically verifies the domain within minutes 3. Once verified, GitHub provisions an SSL certificate automatically A records required: AAAA records (optional but recommended): Verification: Run \u2014 should return the IPs above. ---"
+  },
+  {
+    "title": "Workflow: Set up custom domain for GitHub Pages",
+    "url": "/github.html",
+    "excerpt": "## Workflow: Set up custom domain for GitHub Pages",
+    "section": "GitHub API Reference",
+    "body": "## Workflow: Set up custom domain for GitHub Pages"
+  },
+  {
+    "title": "Step 1 \u2014 Ensure DNS is ready",
+    "url": "/github.html",
+    "excerpt": "### Step 1 \u2014 Ensure DNS is ready Before calling the API, Cloudflare must already have A records pointing to GitHub's IPs.",
+    "section": "Workflow: Set up custom domain for GitHub Pages",
+    "body": "### Step 1 \u2014 Ensure DNS is ready Before calling the API, Cloudflare must already have A records pointing to GitHub's IPs."
+  },
+  {
+    "title": "Step 2 \u2014 Create CNAME file (recommended)",
+    "url": "/github.html",
+    "excerpt": "### Step 2 \u2014 Create CNAME file (recommended) ```bash",
+    "section": "Workflow: Set up custom domain for GitHub Pages",
+    "body": "### Step 2 \u2014 Create CNAME file (recommended) ```bash"
+  },
+  {
+    "title": "Write CNAME to docs/CNAME",
+    "url": "/github.html",
+    "excerpt": "# Write CNAME to docs/CNAME echo \"wattplot.org\" > docs/CNAME git add docs/CNAME && git commit -m \"docs: set custom domain to wattplot.org\" git push `` docs/CNAME` and sets the domain on the next...",
+    "section": "(top)",
+    "body": "# Write CNAME to docs/CNAME echo \"wattplot.org\" > docs/CNAME git add docs/CNAME && git commit -m \"docs: set custom domain to wattplot.org\" git push `` docs/CNAME` and sets the domain on the next build."
+  },
+  {
+    "title": "Step 3 \u2014 Call API (alternative / confirmation)",
+    "url": "/github.html",
+    "excerpt": "### Step 3 \u2014 Call API (alternative / confirmation)",
+    "section": "Write CNAME to docs/CNAME",
+    "body": "### Step 3 \u2014 Call API (alternative / confirmation)"
+  },
+  {
+    "title": "Step 4 \u2014 Wait for SSL provisioning",
+    "url": "/github.html",
+    "excerpt": "### Step 4 \u2014 Wait for SSL provisioning GitHub provisions SSL automatically after domain verification. Can take up to 24 hours. Poll with: Watch for and . ---",
+    "section": "Write CNAME to docs/CNAME",
+    "body": "### Step 4 \u2014 Wait for SSL provisioning GitHub provisions SSL automatically after domain verification. Can take up to 24 hours. Poll with: Watch for and . ---"
+  },
+  {
+    "title": "Reference: Common Endpoints",
+    "url": "/github.html",
+    "excerpt": "## Reference: Common Endpoints | Operation | Method | URL | |---|---|---| | Get Pages site | GET | | | Set custom domain | PUT | | | Trigger Pages build | POST | | | List Pages deployments | GET | |...",
+    "section": "Write CNAME to docs/CNAME",
+    "body": "## Reference: Common Endpoints | Operation | Method | URL | |---|---|---| | Get Pages site | GET | | | Set custom domain | PUT | | | Trigger Pages build | POST | | | List Pages deployments | GET | | ---"
+  },
+  {
+    "title": "Notes",
+    "url": "/github.html",
+    "excerpt": "## Notes - The in is your fine-grain PAT with scope - User has on - Source: branch , path - Build type: (GitHub-managed Jekyll) - GitHub Pages URL:",
+    "section": "Write CNAME to docs/CNAME",
+    "body": "## Notes - The in is your fine-grain PAT with scope - User has on - Source: branch , path - Build type: (GitHub-managed Jekyll) - GitHub Pages URL:"
+  },
+  {
     "title": "Glossary",
     "url": "/glossary.html",
     "excerpt": "# Glossary Terms that appear across the docs without a single canonical reference, with the definition + where to look for the detail. Roughly grouped domain-by-domain.",
@@ -3509,9 +3999,9 @@
   {
     "title": "Open source",
     "url": "/one_pager.html",
-    "excerpt": "## Open source Wattplot is MIT-licensed, open-source, code-first. - Repo: github.com/mokahlo/wattplot - 3D viewer: mokahlo.github.io/wattplot - Upcycling guide: docs/upcycling.md - License: MIT (use,...",
+    "excerpt": "## Open source Wattplot is MIT-licensed, open-source, code-first. - Repo: github.com/mokahlo/wattplot - 3D viewer: wattplot.org - Upcycling guide: docs/upcycling.md - License: MIT (use, modify, sell,...",
     "section": "Wattplot",
-    "body": "## Open source Wattplot is MIT-licensed, open-source, code-first. - Repo: github.com/mokahlo/wattplot - 3D viewer: mokahlo.github.io/wattplot - Upcycling guide: docs/upcycling.md - License: MIT (use, modify, sell, attribution appreciated) If you build one, send photos. If you sell one, attribution. If you find a bug, open an issue. ---"
+    "body": "## Open source Wattplot is MIT-licensed, open-source, code-first. - Repo: github.com/mokahlo/wattplot - 3D viewer: wattplot.org - Upcycling guide: docs/upcycling.md - License: MIT (use, modify, sell, attribution appreciated) If you build one, send photos. If you sell one, attribution. If you find a bug, open an issue. ---"
   },
   {
     "title": "Contact",
