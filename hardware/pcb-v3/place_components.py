@@ -38,7 +38,6 @@ def mm(x):
 PLACEMENT = {
     # ----- Power tree (left side, top-to-bottom flow) -----
     "J1":  (5.0,  8.0, 0, "top"),     # XT60 battery input
-    "F1":  (12.0, 8.0, 0, "top"),     # 3A PTC fuse
     "D1":  (18.0, 8.0, 0, "top"),     # SMBJ16A TVS
     "U1":  (28.0, 8.0, 0, "top"),     # MP1584EN buck
     "L1":  (34.0, 5.0, 0, "top"),     # 4.7µH inductor
@@ -54,7 +53,6 @@ PLACEMENT = {
     "U4":  (52.0, 45.0, 0, "top"),    # USBLC6-2P6 ESD
     "SW1": (52.0, 38.0, 0, "top"),    # Reset button
     "SW2": (28.0, 38.0, 0, "top"),    # Boot button
-    "D2":  (28.0, 45.0, 0, "top"),    # Status LED
     "R1":  (28.0, 50.0, 0, "top"),    # 1k LED series
     "R2":  (52.0, 50.0, 0, "top"),    # 5.1k CC1 pull-down
     "R3":  (60.0, 45.0, 0, "top"),    # 5.1k CC2 pull-down
@@ -74,7 +72,6 @@ PLACEMENT = {
     # ----- 2x INA219 (center) -----
     "U7":  (15.0, 22.0, 0, "top"),    # INA219 panel (0x41)
     "U8":  (15.0, 30.0, 0, "top"),    # INA219 actuator (0x40)
-    "R10": (10.0, 22.0, 0, "top"),    # 0.1Ω panel shunt
     "R11": (10.0, 30.0, 0, "top"),    # 0.1Ω actuator shunt
 
     # ----- Connectors (bottom edge) -----
@@ -82,14 +79,20 @@ PLACEMENT = {
     "J4":  (24.0, 55.0, 0, "top"),    # Solenoid valve
     "J5":  (40.0, 55.0, 0, "top"),    # 1-Wire sensors
     "J6":  (52.0, 55.0, 0, "top"),    # Soil moisture
+    "J7":  (66.0, 45.0, 0, "top"),    # Frost heater
+    "J8":  (66.0, 50.0, 0, "top"),    # Frost grow light
     "R12": (40.0, 50.0, 0, "top"),    # 4.7k 1-Wire pull-up
+
+    # ----- Extra caps from schematic -----
+    "C7":  (28.0, 18.0, 0, "top"),    # bootstrap cap
+    "C8":  (60.0, 40.0, 0, "top"),    # extra VM cap
+    "C10": (50.0, 18.0, 0, "top"),    # LDO bulk
+    "C12": (32.0, 14.0, 0, "top"),    # 100nF bypass
+    "C13": (40.0, 50.0, 0, "top"),    # 100nF bypass
 
     # ----- Test points (left edge) -----
     "TP1": (3.0,  8.0, 0, "top"),     # +12V
-    "TP2": (3.0, 22.0, 0, "top"),     # +5V
     "TP3": (3.0, 30.0, 0, "top"),     # +3.3V
-    "TP4": (3.0, 45.0, 0, "top"),     # GND
-    "TP5": (3.0, 55.0, 0, "top"),     # VBAT
 }
 
 
@@ -114,7 +117,7 @@ def main():
             continue
         fp = all_fps[ref]
         fp.SetPosition(pcbnew.VECTOR2I(mm(x), mm(y)))
-        fp.SetOrientation(rot * 10)  # tenths of degrees
+        fp.SetOrientation(pcbnew.EDA_ANGLE(rot, pcbnew.DEGREES_T))
         if side == "bot":
             fp.SetLayer(pcbnew.B_Cu)
         else:
